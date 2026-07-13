@@ -1,0 +1,27 @@
+TeachMe — Socratic Scenarios
+Copyright 2026 William Gray Roncal
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+------------------------------------------------------------------------
+DATA PROVENANCE NOTICE
+------------------------------------------------------------------------
+The Apache License 2.0 covers the SOURCE CODE of this project.
+
+The training corpus and knowledge graph are derived from third-party
+technical documents (vendor manuals, peer-reviewed papers, government
+guidance). The license above does NOT grant any rights to those underlying
+third-party documents. The raw source documents are NOT redistributed in
+this repository — only extracted/abstracted text is included, for research
+purposes. Users are responsible for the rights to any underlying
+third-party material.
+
+Machine-configuration exports from real deployments (network addresses,
+serial numbers, recipe/toolpath filenames) are deliberately excluded and
+never ingested.
+
+See:
+  - sources/SOURCES_LOG.md              (per-source provenance ledger)
+  - docs/SOURCE_PROVENANCE_AUDIT.md     (source evaluation + decisions)
+  - docs/DATA_CATALOG.md                (data-store map + sensitivity)
+  - SECURITY.md                         (secrets & provenance policy)
