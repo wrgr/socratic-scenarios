@@ -1,0 +1,770 @@
+/* AJP focused mode styles: model backdrop, mission framing, and sectional hierarchy. */
+.ajp-mode-shell {
+  position: relative;
+  border-radius: calc(var(--radius-lg) + 8px);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  background:
+    radial-gradient(circle at 8% 10%, color-mix(in srgb, var(--accent) 14%, transparent) 0%, transparent 42%),
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--warning) 18%, transparent) 0%, transparent 35%),
+    linear-gradient(160deg, color-mix(in srgb, var(--bg-card) 92%, white) 0%, var(--bg-card) 100%);
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.ajp-mode-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(11, 114, 133, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(11, 114, 133, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.45;
+}
+
+.ajp-mode-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* High-stress variant: decoration stripped, amber signal edge. The flat
+   surface is deliberate — every gradient and grid line removed is one less
+   thing competing for an overloaded operator's attention. */
+.ajp-mode-shell--high-stress {
+  border-color: color-mix(in srgb, var(--warning) 55%, var(--border));
+  background: var(--bg-card);
+}
+
+.ajp-mode-shell--high-stress::after {
+  display: none;
+}
+
+/* About / Architecture full-tab views — render flush inside the content
+   surface (no nested card chrome), just a light entrance animation. */
+.ajp-about-view,
+.ajp-architecture-view {
+  animation: ajpSlideIn 300ms ease-out;
+}
+
+.ajp-model-header h2 {
+  margin-bottom: 0.35rem;
+}
+
+.ajp-model-header p {
+  margin-bottom: 0;
+  color: var(--text-muted);
+}
+
+.ajp-model-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.45rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--border));
+  color: color-mix(in srgb, var(--accent) 88%, #0b3241);
+  font-size: 0.74rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 10%, white);
+}
+
+.ajp-diagram-grid {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.ajp-diagram-card {
+  border: 1px solid color-mix(in srgb, var(--border) 80%, var(--accent));
+  border-radius: 12px;
+  background: color-mix(in srgb, white 90%, var(--bg-input));
+  overflow: hidden;
+  margin: 0;
+}
+
+.ajp-diagram-card--interactive {
+  cursor: zoom-in;
+}
+
+.ajp-diagram-card img {
+  display: block;
+  width: 100%;
+  height: 220px;
+  object-fit: contain;
+  background: #ffffff;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, var(--accent));
+}
+
+.ajp-diagram-card figcaption {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.55rem 0.65rem;
+}
+
+.ajp-diagram-card strong {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--accent) 80%, #16303a);
+}
+
+.ajp-diagram-card span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.ajp-diagram-lightbox {
+  position: fixed;
+  inset: 0;
+  /* Must sit above the sticky masthead (z-index 100) so the modal fully
+     covers the page; stays below the API-key modal at z-index 200. */
+  z-index: 150;
+  background: rgba(7, 14, 22, 0.72);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.ajp-diagram-lightbox-content {
+  position: relative;
+  width: min(1200px, 96vw);
+  max-height: 94vh;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, #ffffff);
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 16px 50px rgba(7, 14, 22, 0.34);
+}
+
+.ajp-diagram-lightbox-content img {
+  display: block;
+  width: 100%;
+  max-height: calc(94vh - 70px);
+  object-fit: contain;
+  background: #ffffff;
+}
+
+.ajp-diagram-lightbox-caption {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.45rem 0.65rem 0.6rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 80%, var(--accent));
+}
+
+.ajp-diagram-lightbox-caption strong {
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--accent) 85%, #16303a);
+}
+
+.ajp-diagram-lightbox-caption span {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.ajp-diagram-lightbox-close,
+.ajp-modal-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.96);
+  color: color-mix(in srgb, var(--accent) 85%, #16303a);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(10, 22, 40, 0.14);
+  transition: background 0.12s ease, color 0.12s ease, transform 0.12s ease;
+}
+
+.ajp-diagram-lightbox-close:hover,
+.ajp-modal-close:hover {
+  background: var(--ink);
+  color: #fafaf7;
+  transform: scale(1.06);
+  border-color: var(--ink);
+}
+
+.ajp-modal-close > span {
+  display: block;
+  transform: translateY(-1px);
+}
+
+.ajp-text-lightbox-content {
+  position: relative;
+  width: min(520px, 94vw);
+  max-height: min(640px, 86vh);
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, #ffffff);
+  background: #ffffff;
+  box-shadow: 0 16px 50px rgba(7, 14, 22, 0.34);
+  padding: 2.25rem 1.15rem 1.15rem;
+}
+
+.ajp-text-lightbox-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ajp-text-lightbox-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: color-mix(in srgb, var(--accent) 85%, #16303a);
+}
+
+.ajp-text-lightbox-lead {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.ajp-text-lightbox-bullets {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.ajp-text-lightbox-bullets li {
+  margin-bottom: 0.35rem;
+}
+
+.ajp-text-lightbox-para {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.ajp-text-callout {
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, white);
+  border-radius: 12px;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  font-weight: 650;
+  color: color-mix(in srgb, var(--accent) 85%, #16303a);
+}
+
+.ajp-text-checklist {
+  border: 1px solid color-mix(in srgb, var(--border) 90%, var(--accent));
+  background: color-mix(in srgb, var(--bg-input) 65%, white);
+  border-radius: 12px;
+  padding: 0.55rem 0.7rem;
+}
+
+.ajp-text-checklist-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 800;
+  color: var(--text-dim);
+}
+
+.ajp-text-checklist-items {
+  margin: 0;
+  padding-left: 1.05rem;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.ajp-text-checklist-items li {
+  margin-bottom: 0.3rem;
+}
+
+.ajp-text-checklist-items li:last-child {
+  margin-bottom: 0;
+}
+
+.ajp-expandable-tile {
+  cursor: zoom-in;
+  outline-offset: 2px;
+}
+
+.ajp-expandable-tile:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+
+.ajp-whitepaper-footer {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 85%, var(--accent));
+}
+
+.ajp-whitepaper-footer-heading {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+
+.ajp-whitepaper-footer-intro {
+  margin: 0 0 0.5rem;
+  font-size: 0.86rem;
+}
+
+.ajp-whitepaper-link {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--accent) 88%, #0b3241);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ajp-whitepaper-points-label {
+  margin: 0.35rem 0 0.25rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.ajp-whitepaper-points {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.ajp-whitepaper-points li {
+  margin-bottom: 0.4rem;
+}
+
+.ajp-references-block {
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed color-mix(in srgb, var(--border) 90%, var(--accent));
+}
+
+.ajp-references-heading {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+}
+
+.ajp-reference-topic {
+  margin-bottom: 0.85rem;
+}
+
+.ajp-reference-topic:last-child {
+  margin-bottom: 0;
+}
+
+.ajp-reference-topic-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--accent) 75%, #16303a);
+}
+
+.ajp-reference-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.ajp-reference-item {
+  display: grid;
+  gap: 0.15rem;
+  margin-bottom: 0.55rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 92%, transparent);
+  font-size: 0.82rem;
+}
+
+.ajp-reference-item:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.ajp-reference-link {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--accent) 88%, #0b3241);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ajp-reference-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ajp-reference-summary {
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* ── References footer trigger ─────────────────────────────────── */
+
+.ajp-refs-footer {
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed color-mix(in srgb, var(--border) 90%, var(--accent));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.ajp-refs-trigger-btn {
+  flex-shrink: 0;
+  padding: 0.38rem 1rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  background: transparent;
+  color: color-mix(in srgb, var(--accent) 88%, #0b3241);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.13s, color 0.13s;
+}
+
+.ajp-refs-trigger-btn:hover {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+
+/* ── References modal ───────────────────────────────────────────── */
+
+.ajp-refs-modal {
+  position: relative;
+  width: min(680px, 94vw);
+  max-height: min(82vh, 800px);
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, #ffffff);
+  background: #ffffff;
+  box-shadow: 0 16px 50px rgba(7, 14, 22, 0.34);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ajp-refs-modal-header {
+  padding: 1.35rem 1.35rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, var(--accent));
+  flex-shrink: 0;
+}
+
+.ajp-refs-modal-heading {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  color: color-mix(in srgb, var(--accent) 85%, #16303a);
+  padding-right: 3rem;
+}
+
+/* ── Topic filter pills ─────────────────────────────────────────── */
+
+.ajp-refs-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ajp-refs-filter-pill {
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border) 90%, var(--accent));
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+
+.ajp-refs-filter-pill:hover {
+  border-color: var(--accent);
+  color: color-mix(in srgb, var(--accent) 88%, #0b3241);
+}
+
+.ajp-refs-filter-pill--active {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+
+/* ── Modal scrollable body ──────────────────────────────────────── */
+
+.ajp-refs-modal-body {
+  overflow-y: auto;
+  padding: 1rem 1.35rem 1.5rem;
+  flex: 1;
+}
+
+.ajp-refs-section {
+  margin-bottom: 1.25rem;
+}
+
+.ajp-refs-section:last-child {
+  margin-bottom: 0;
+}
+
+.ajp-refs-item-bullets {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  list-style: disc;
+}
+
+.ajp-refs-item-bullets li {
+  margin-bottom: 0.3rem;
+}
+
+.ajp-refs-item-bullets li:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Domain Sources panel ───────────────────────────────────────── */
+
+.domain-sources-intro {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0 0 1.1rem;
+}
+
+.domain-sources-group {
+  margin-bottom: 1.4rem;
+}
+
+.domain-sources-group:last-child {
+  margin-bottom: 0;
+}
+
+.domain-sources-subheading {
+  margin-top: 1rem;
+}
+
+.domain-sources-hint {
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 0 0 0.5rem;
+  font-style: italic;
+}
+
+.domain-sources-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.domain-source-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 92%, transparent);
+  font-size: 0.82rem;
+}
+
+.domain-source-row:last-child {
+  border-bottom: none;
+}
+
+.domain-source-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.domain-source-id {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.domain-source-badge {
+  flex-shrink: 0;
+  padding: 0.16rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.domain-source-badge--used {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 14%, white);
+}
+
+.domain-source-badge--unused {
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 12%, white);
+}
+
+.domain-source-badge--not-parsed {
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 12%, white);
+}
+
+.domain-source-badge--not-ingested {
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--text-dim) 10%, white);
+}
+
+.domain-source-badge--info {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, white);
+}
+
+.domain-source-badge--excluded {
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--text-dim) 14%, white);
+  border: 1px dashed color-mix(in srgb, var(--text-dim) 40%, transparent);
+  cursor: help;
+}
+
+.ajp-flow-model {
+  margin-top: 0.9rem;
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-input) 76%, white);
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+}
+
+.ajp-flow-step {
+  display: flex;
+  align-items: stretch;
+  gap: 0.45rem;
+  min-width: 180px;
+}
+
+.ajp-flow-node {
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+  padding: 0.55rem 0.65rem;
+  background: white;
+  animation: ajpFadeUp 420ms ease both;
+}
+
+.ajp-flow-step:nth-child(2) .ajp-flow-node { animation-delay: 70ms; }
+.ajp-flow-step:nth-child(3) .ajp-flow-node { animation-delay: 130ms; }
+.ajp-flow-step:nth-child(4) .ajp-flow-node { animation-delay: 190ms; }
+.ajp-flow-step:nth-child(5) .ajp-flow-node { animation-delay: 250ms; }
+
+.ajp-flow-node h3 {
+  font-size: 0.88rem;
+  margin-bottom: 0.2rem;
+}
+
+.ajp-flow-node p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.ajp-flow-arrow {
+  align-self: center;
+  color: color-mix(in srgb, var(--accent) 70%, #0b3241);
+  font-weight: 700;
+}
+
+.ajp-pillars-grid {
+  margin-top: 0.9rem;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ajp-pillar-card {
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+  border-radius: 12px;
+  padding: 0.75rem 0.8rem;
+  background: white;
+  animation: ajpFadeUp 440ms ease both;
+}
+
+.ajp-pillar-card:nth-child(2) { animation-delay: 90ms; }
+.ajp-pillar-card:nth-child(3) { animation-delay: 180ms; }
+
+.ajp-pillar-card h3 {
+  margin-bottom: 0.45rem;
+  font-size: 0.92rem;
+}
+
+.ajp-pillar-card ul {
+  padding-left: 1rem;
+}
+
+.ajp-pillar-card li {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin-bottom: 0.38rem;
+}
+
+.ajp-content-surface {
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, white 96%, var(--bg-card));
+  padding: 0.85rem;
+}
+
+@keyframes ajpSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ajpFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 980px) {
+  .ajp-pillars-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .ajp-mode-shell {
+    padding: 0.75rem;
+  }
+
+  .ajp-diagram-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ajp-diagram-card img {
+    height: 180px;
+  }
+
+  .ajp-pillars-grid {
+    grid-template-columns: 1fr;
+  }
+}

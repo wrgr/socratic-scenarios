@@ -1,0 +1,359 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="830" viewBox="0 0 1440 830">
+<defs>
+  <style>@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=DM+Serif+Display&amp;display=swap');</style>
+  <marker id="arrBlue"   viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="#3b82f6"/></marker>
+  <marker id="arrGreen"  viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="#10b981"/></marker>
+  <marker id="arrPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="#7c3aed"/></marker>
+  <marker id="arrNavy"   viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="#1d4ed8"/></marker>
+  <marker id="arrAmber"  viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="#d97706"/></marker>
+  <filter id="fCard" x="-6%" y="-6%" width="118%" height="126%">
+    <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.09"/>
+  </filter>
+  <filter id="fHub" x="-20%" y="-20%" width="148%" height="148%">
+    <feDropShadow dx="0" dy="8" stdDeviation="20" flood-color="#1d4ed8" flood-opacity="0.28"/>
+  </filter>
+  <filter id="fOut" x="-5%" y="-12%" width="115%" height="138%">
+    <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#1d4ed8" flood-opacity="0.30"/>
+  </filter>
+  <filter id="fBand" x="-2%" y="-8%" width="106%" height="128%">
+    <feDropShadow dx="0" dy="2" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.09"/>
+  </filter>
+  <radialGradient id="gHub" cx="50%" cy="38%" r="62%">
+    <stop offset="0%" stop-color="#2563eb"/>
+    <stop offset="100%" stop-color="#1e3a8a"/>
+  </radialGradient>
+  <linearGradient id="gTitleBar" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#1e3a8a" stop-opacity="0"/>
+    <stop offset="50%"  stop-color="#1e3a8a" stop-opacity="0.10"/>
+    <stop offset="100%" stop-color="#1e3a8a" stop-opacity="0"/>
+  </linearGradient>
+  <linearGradient id="gInput" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#f8fafc"/>
+    <stop offset="100%" stop-color="#f1f5f9"/>
+  </linearGradient>
+  <linearGradient id="gLearn" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#ecfdf5"/>
+    <stop offset="100%" stop-color="#d1fae5"/>
+  </linearGradient>
+  <linearGradient id="gDo" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#eff6ff"/>
+    <stop offset="100%" stop-color="#dbeafe"/>
+  </linearGradient>
+  <linearGradient id="gReach" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#fdf4ff"/>
+    <stop offset="100%" stop-color="#ede9fe"/>
+  </linearGradient>
+  <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+    <circle cx="1" cy="1" r="0.9" fill="#94a3b8" opacity="0.26"/>
+  </pattern>
+</defs>
+
+<!--
+  ══════════════════════════════════════════════════════
+  KEY MEASUREMENTS
+
+  Canvas: 1440 × 830
+
+  Header: y=0–72
+
+  INPUTS container: x=32 y=86 w=270
+    Cards x=48 w=238:
+      Card 1 Expert Knowledge     y=116 h=52  mid=142  bottom=168
+      Card 2 Formal Sources       y=180 h=52  mid=206  bottom=232
+      Card 3 Cases & Artifacts    y=244 h=52  mid=270  bottom=296
+      Card 4 Operational Context  y=308 h=52  mid=334  bottom=360
+    Container bottom = 360+20 = 380  → h=294  right=302
+
+  Input spine: x=370 (right of cards 302, left of hub 572)
+    Card right edges: x=286
+    Horizontals from card mid-y to x=370: y=142, 206, 270, 334
+    Spine vertical: x=370, y=142→334
+    Arrow: x=370,y=334 → x=572,y=334
+
+  HUB: cx=720 cy=320 r=148
+    left=572  right=868  top=172  bottom=468
+
+  MODES container: x=1138 y=86 w=270
+    Cards x=1150 w=246:
+      Learn     y=116 h=110  mid=171  bottom=226
+      Do        y=238 h= 90  mid=283  bottom=328
+      Reachback y=340 h=128  mid=404  bottom=468
+    Container bottom = 468+20 = 488  → h=402  right=1408
+
+  Hub→modes spine: x=1010
+    Hub exits right at y=248, y=320, y=398
+    → Learn mid y=171, → Do mid y=283, → Reachback mid y=404
+    Arrows enter modes left x=1150
+
+  OUTPUTS container: x=32 y=506 w=1376 h=72  bottom=578
+    Three chips: Learner x=200 w=254, Performance x=474 w=254, Scenario x=748 w=254
+    Chips y=516 h=50  text-baseline y=545
+
+  Hub bottom y=468 → OUTPUTS top y=506: 38px gap → solid navy arrow x=720
+
+  ITERATIVE CYCLE strip: x=32 y=596 w=1376 h=74  bottom=670
+    Label y=614
+    Boxes y=620 h=38:
+      Box1 Refresh Evidence Base         x=52  w=330  mid=217
+      Box2 Incorporate Output Findings   x=408 w=330  mid=573
+      Box3 Expert Injection: Tacit &     x=764 w=620  mid=1074
+           Explicit Knowledge (two lines)
+    Inter-box arrows at y=639
+
+  OUTPUTS → CYCLE: single solid navy arrow
+    From OUTPUTS bottom centre x=720,y=578 → CYCLE top x=720,y=596
+    (18px gap — just one short segment)
+
+  CYCLE → HUB (iterative improvement):
+    Enters hub LEFT tangent (x=572, y=320) — same face as inputs.
+    Route: CYCLE strip left edge x=32, y=639 → left gutter x=14
+           → up to y=320 → right to hub left x=572
+    Left gutter x=14 is clear (INPUTS container starts x=32).
+    Cycle strip left at x=32, gutter arrow exits x=32 → x=14 at y=639.
+
+  OUTPUT BANNER: y=688–728
+  ══════════════════════════════════════════════════════
+-->
+
+<!-- BACKGROUND -->
+<rect width="1440" height="830" fill="#f0f4f8"/>
+<rect width="1440" height="830" fill="url(#dots)"/>
+<rect x="0" y="0" width="1440" height="76" fill="url(#gTitleBar)"/>
+
+<!-- HEADER -->
+<text x="720" y="46" text-anchor="middle">
+  <tspan font-family="'DM Serif Display',Georgia,serif"
+         font-size="34" fill="#0f172a" letter-spacing="-0.5">TeachMe </tspan><tspan
+         font-family="'DM Sans','Helvetica Neue',sans-serif"
+         font-size="34" font-weight="700" fill="#1d4ed8" letter-spacing="-0.5">EDDIE</tspan>
+</text>
+<text x="720" y="66" text-anchor="middle"
+      font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="12" font-weight="500" fill="#64748b" letter-spacing="1.8">
+  Elicit · Distill · Document · Integrate · Evaluate
+</text>
+
+<!-- ══════════════════════════════════════════════════════
+     INPUTS CONTAINER  x=32 y=86 w=270 h=294  bottom=380
+     ══════════════════════════════════════════════════════ -->
+<rect x="32" y="86" width="270" height="294" rx="16"
+      fill="#e8edf4" stroke="#cbd5e1" stroke-width="1.5" filter="url(#fCard)"/>
+<text x="167" y="107" text-anchor="middle"
+      font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="10" font-weight="700" fill="#475569" letter-spacing="2.2">INPUTS</text>
+
+<rect x="48" y="116" width="238" height="52" rx="10" fill="url(#gInput)" stroke="#e2e8f0" stroke-width="1.5" filter="url(#fCard)"/>
+<rect x="48" y="116" width="4"   height="52" rx="2"  fill="#3b82f6"/>
+<text x="68" y="147" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="13" font-weight="700" fill="#1f2937">Expert Knowledge</text>
+
+<rect x="48" y="180" width="238" height="52" rx="10" fill="url(#gInput)" stroke="#e2e8f0" stroke-width="1.5" filter="url(#fCard)"/>
+<rect x="48" y="180" width="4"   height="52" rx="2"  fill="#3b82f6"/>
+<text x="68" y="211" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="13" font-weight="700" fill="#1f2937">Formal Sources</text>
+
+<rect x="48" y="244" width="238" height="52" rx="10" fill="url(#gInput)" stroke="#e2e8f0" stroke-width="1.5" filter="url(#fCard)"/>
+<rect x="48" y="244" width="4"   height="52" rx="2"  fill="#3b82f6"/>
+<text x="68" y="275" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="13" font-weight="700" fill="#1f2937">Cases &amp; Artifacts</text>
+
+<rect x="48" y="308" width="238" height="52" rx="10" fill="url(#gInput)" stroke="#e2e8f0" stroke-width="1.5" filter="url(#fCard)"/>
+<rect x="48" y="308" width="4"   height="52" rx="2"  fill="#3b82f6"/>
+<text x="68" y="339" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="13" font-weight="700" fill="#1f2937">Operational Context</text>
+
+<!-- ══════════════════════════════════════════════════════
+     INPUTS → HUB
+     Cards right=286. Spine x=370. Hub left=572. Hub cy=320.
+     Card mid-y values: 142, 206, 270, 334
+     ══════════════════════════════════════════════════════ -->
+<line x1="286" y1="142" x2="370" y2="142" stroke="#3b82f6" stroke-width="1.5" opacity="0.65"/>
+<line x1="286" y1="206" x2="370" y2="206" stroke="#3b82f6" stroke-width="1.5" opacity="0.65"/>
+<line x1="286" y1="270" x2="370" y2="270" stroke="#3b82f6" stroke-width="1.5" opacity="0.65"/>
+<line x1="286" y1="334" x2="370" y2="334" stroke="#3b82f6" stroke-width="1.5" opacity="0.65"/>
+<line x1="370" y1="142" x2="370" y2="334" stroke="#3b82f6" stroke-width="1.5" opacity="0.65"/>
+<line x1="370" y1="320" x2="572" y2="320" stroke="#3b82f6" stroke-width="1.8" marker-end="url(#arrBlue)"/>
+
+<!-- ══════════════════════════════════════════════════════
+     HUB  cx=720 cy=320 r=148
+     left=572  right=868  top=172  bottom=468
+     ══════════════════════════════════════════════════════ -->
+<circle cx="720" cy="320" r="174" fill="none"
+        stroke="#bfdbfe" stroke-width="1.2" stroke-dasharray="5 5" opacity="0.40"/>
+<circle cx="720" cy="320" r="148" fill="url(#gHub)" filter="url(#fHub)"/>
+<circle cx="720" cy="320" r="140" fill="none" stroke="rgba(255,255,255,0.13)" stroke-width="1.5"/>
+
+<text x="720" y="288" text-anchor="middle">
+  <tspan font-family="'DM Serif Display',Georgia,serif"
+         font-size="22" fill="white" letter-spacing="-0.2">TeachMe </tspan><tspan
+         font-family="'DM Sans','Helvetica Neue',sans-serif"
+         font-size="22" font-weight="700" fill="#93c5fd">EDDIE</tspan>
+</text>
+<text x="720" y="306" text-anchor="middle"
+      font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="9" font-weight="600" fill="#7dd3fc" letter-spacing="2.5">KNOWLEDGE ENGINE</text>
+<line x1="624" y1="315" x2="816" y2="315" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+
+<rect x="644" y="323" width="152" height="48" rx="9" fill="rgba(255,255,255,0.12)"/>
+<text x="720" y="340" text-anchor="middle"
+      font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="11" font-weight="700" fill="white">Learning Database</text>
+<text x="720" y="354" text-anchor="middle"
+      font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="10" fill="#bfdbfe">Concepts · Prerequisites · Probes</text>
+
+<rect x="644" y="377" width="152" height="36" rx="9" fill="rgba(255,255,255,0.12)"/>
+<text x="720" y="391" text-anchor="middle"
+      font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="11" font-weight="700" fill="white">Scenario Database</text>
+<text x="720" y="405" text-anchor="middle"
+      font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="10" fill="#bfdbfe">Cases · Fault Paths</text>
+
+<rect x="654" y="419" width="132" height="20" rx="10" fill="rgba(255,255,255,0.20)"/>
+<text x="720" y="433" text-anchor="middle"
+      font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="10" font-weight="700" fill="white">Teaching &amp; Decision Logic</text>
+
+<!-- ══════════════════════════════════════════════════════
+     MODES CONTAINER  x=1138 y=86 w=270 h=402  bottom=488
+     ══════════════════════════════════════════════════════ -->
+<rect x="1138" y="86" width="270" height="402" rx="16"
+      fill="#e8edf4" stroke="#cbd5e1" stroke-width="1.5" filter="url(#fCard)"/>
+<text x="1273" y="107" text-anchor="middle"
+      font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="10" font-weight="700" fill="#475569" letter-spacing="2.2">THREE MODES</text>
+
+<!-- Learn  y=116 h=110  mid=171 -->
+<rect x="1150" y="116" width="246" height="110" rx="10" fill="url(#gLearn)" stroke="#86efac" stroke-width="1.5" filter="url(#fCard)"/>
+<rect x="1150" y="116" width="4"   height="110" rx="2"  fill="#10b981"/>
+<text x="1170" y="142" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="14" font-weight="700" fill="#065f46">Learn</text>
+<text x="1170" y="159" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="11" font-weight="600" fill="#374151">Build understanding before the task</text>
+<line x1="1170" y1="167" x2="1382" y2="167" stroke="#86efac" stroke-width="1"/>
+
+<!-- Do  y=238 h=90  mid=283 -->
+<rect x="1150" y="238" width="246" height="90" rx="10" fill="url(#gDo)" stroke="#93c5fd" stroke-width="1.5" filter="url(#fCard)"/>
+<rect x="1150" y="238" width="4"   height="90" rx="2"  fill="#3b82f6"/>
+<text x="1170" y="264" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="14" font-weight="700" fill="#1e3a8a">Do</text>
+<text x="1170" y="281" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="11" font-weight="600" fill="#374151">Support execution during the task</text>
+<line x1="1170" y1="289" x2="1382" y2="289" stroke="#93c5fd" stroke-width="1"/>
+
+<!-- Reachback  y=340 h=128  mid=404 — text wrapped across two lines -->
+<rect x="1150" y="340" width="246" height="128" rx="10" fill="url(#gReach)" stroke="#c4b5fd" stroke-width="1.5" filter="url(#fCard)"/>
+<rect x="1150" y="340" width="4"   height="128" rx="2"  fill="#7c3aed"/>
+<text x="1170" y="366" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="14" font-weight="700" fill="#4c1d95">Reachback</text>
+<text x="1170" y="384" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="11" font-weight="600" fill="#374151">Resolve uncertainty</text>
+<text x="1170" y="399" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="11" font-weight="600" fill="#374151">beyond local confidence</text>
+<line x1="1170" y1="407" x2="1382" y2="407" stroke="#c4b5fd" stroke-width="1"/>
+
+<!-- ══════════════════════════════════════════════════════
+     HUB → MODES
+     Spine x=1010. Hub exits right at y=248, y=320, y=396.
+     → Learn mid y=171, → Do mid y=283, → Reachback mid y=404
+     Arrows enter mode cards left edge x=1150.
+     ══════════════════════════════════════════════════════ -->
+<line x1="868" y1="248" x2="1010" y2="248" stroke="#10b981" stroke-width="1.8" opacity="0.85"/>
+<line x1="1010" y1="248" x2="1010" y2="171" stroke="#10b981" stroke-width="1.8" opacity="0.85"/>
+<line x1="1010" y1="171" x2="1150" y2="171" stroke="#10b981" stroke-width="1.8" marker-end="url(#arrGreen)" opacity="0.85"/>
+
+<line x1="868" y1="308" x2="1010" y2="308" stroke="#3b82f6" stroke-width="1.8" opacity="0.85"/>
+<line x1="1010" y1="308" x2="1010" y2="283" stroke="#3b82f6" stroke-width="1.8" opacity="0.85"/>
+<line x1="1010" y1="283" x2="1150" y2="283" stroke="#3b82f6" stroke-width="1.8" marker-end="url(#arrBlue)" opacity="0.85"/>
+
+<line x1="868" y1="380" x2="1010" y2="380" stroke="#7c3aed" stroke-width="1.8" opacity="0.85"/>
+<line x1="1010" y1="380" x2="1010" y2="404" stroke="#7c3aed" stroke-width="1.8" opacity="0.85"/>
+<line x1="1010" y1="404" x2="1150" y2="404" stroke="#7c3aed" stroke-width="1.8" marker-end="url(#arrPurple)" opacity="0.85"/>
+
+<!-- ══════════════════════════════════════════════════════
+     OUTPUTS CONTAINER  x=32 y=506 w=1376 h=72  bottom=578
+     Three chips, centre-aligned within the band
+     ══════════════════════════════════════════════════════ -->
+<rect x="32" y="506" width="1376" height="72" rx="14"
+      fill="#e8edf4" stroke="#cbd5e1" stroke-width="1.5" filter="url(#fCard)"/>
+<text x="80" y="526" font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="10" font-weight="700" fill="#475569" letter-spacing="2.2">OUTPUTS</text>
+
+<!-- Learner Data  x=200 w=254 -->
+<rect x="200" y="516" width="254" height="44" rx="9" fill="white" stroke="#fcd34d" stroke-width="1.5"/>
+<rect x="200" y="516" width="4"   height="44" rx="2"  fill="#f59e0b"/>
+<text x="223" y="543" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="13" font-weight="700" fill="#78350f">Learner Data</text>
+
+<!-- Performance Data  x=474 w=254 -->
+<rect x="474" y="516" width="254" height="44" rx="9" fill="white" stroke="#fcd34d" stroke-width="1.5"/>
+<rect x="474" y="516" width="4"   height="44" rx="2"  fill="#f59e0b"/>
+<text x="497" y="543" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="13" font-weight="700" fill="#78350f">Performance Data</text>
+
+<!-- Scenario & Gap Data  x=748 w=254 -->
+<rect x="748" y="516" width="254" height="44" rx="9" fill="white" stroke="#fcd34d" stroke-width="1.5"/>
+<rect x="748" y="516" width="4"   height="44" rx="2"  fill="#f59e0b"/>
+<text x="771" y="543" font-family="'DM Sans','Helvetica Neue',sans-serif" font-size="13" font-weight="700" fill="#78350f">Scenario &amp; Gap Data</text>
+
+<!-- ══════════════════════════════════════════════════════
+     Hub bottom (y=468) → OUTPUTS top (y=506): solid navy arrow
+     38px gap, straight down at x=720
+     ══════════════════════════════════════════════════════ -->
+<line x1="720" y1="468" x2="720" y2="506" stroke="#1d4ed8" stroke-width="2.2" marker-end="url(#arrNavy)"/>
+
+<!-- ══════════════════════════════════════════════════════
+     ITERATIVE CYCLE STRIP  x=32 y=596 w=1376 h=74  bottom=670
+     ══════════════════════════════════════════════════════ -->
+<rect x="32" y="596" width="1376" height="74" rx="14"
+      fill="#fffbeb" stroke="#fcd34d" stroke-width="1.5" filter="url(#fBand)"/>
+<text x="720" y="614" text-anchor="middle"
+      font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="10" font-weight="700" fill="#92400e" letter-spacing="2.2">ITERATIVE IMPROVEMENT CYCLE</text>
+
+<!-- Box 1: Refresh Evidence Base  x=52 w=310 -->
+<rect x="52"  y="620" width="310" height="38" rx="8" fill="white" stroke="#fcd34d" stroke-width="1.5"/>
+<text x="207" y="643" text-anchor="middle"
+      font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="12" font-weight="700" fill="#92400e">Refresh Evidence Base</text>
+
+<!-- Arrow 1→2 -->
+<line x1="362" y1="639" x2="388" y2="639" stroke="#d97706" stroke-width="2.0" marker-end="url(#arrAmber)"/>
+
+<!-- Box 2: Incorporate Output Findings  x=392 w=310 -->
+<rect x="392" y="620" width="310" height="38" rx="8" fill="white" stroke="#fcd34d" stroke-width="1.5"/>
+<text x="547" y="643" text-anchor="middle"
+      font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="12" font-weight="700" fill="#92400e">Incorporate Output Findings</text>
+
+<!-- Arrow 2→3 -->
+<line x1="702" y1="639" x2="728" y2="639" stroke="#d97706" stroke-width="2.0" marker-end="url(#arrAmber)"/>
+
+<!-- Box 3: Expert Injection  x=732 w=648 — two text lines -->
+<rect x="732" y="620" width="648" height="38" rx="8" fill="white" stroke="#fcd34d" stroke-width="1.5"/>
+<text x="1056" y="639" text-anchor="middle" dominant-baseline="central"
+      font-family="'DM Sans','Helvetica Neue',sans-serif"
+      font-size="12" font-weight="700" fill="#92400e">Expert Injection: Tacit &amp; Explicit Knowledge</text>
+
+<!-- ══════════════════════════════════════════════════════
+     OUTPUTS bottom → CYCLE top: single solid navy arrow
+     OUTPUTS bottom y=578. CYCLE top y=596. Gap=18px. x=720.
+     ══════════════════════════════════════════════════════ -->
+<line x1="720" y1="578" x2="720" y2="596" stroke="#1d4ed8" stroke-width="2.2" marker-end="url(#arrNavy)"/>
+
+<!-- ══════════════════════════════════════════════════════
+     ITERATIVE CYCLE → HUB  (amber dashed, enters hub LEFT tangent)
+     Hub left tangent: x=572, cy=320.
+     Route: CYCLE strip left edge x=32, mid-y=639
+       → exit left from strip at x=32,y=639
+       → left gutter x=14 (clear: INPUTS container starts x=32)
+       → UP to y=320 (hub mid / left tangent y)
+       → RIGHT to hub left edge x=572
+     All segments clear of boxes.
+     ══════════════════════════════════════════════════════ -->
+<!-- Route: cycle strip left x=32,y=639 → gutter x=14 → up to y=460
+     (below INPUTS bottom y=380, above OUTPUTS top y=506 — clear)
+     → right to x=672,y=460 → arrowhead into hub arc at (672,460)
+     Check: hub cx=720 cy=320 r=148. Point (672,460):
+       dist = sqrt((720-672)²+(320-460)²) = sqrt(2304+19600) = sqrt(21904) = 148 ✓ on circle -->
+<line x1="32"  y1="639" x2="14"  y2="639" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4" opacity="0.85"/>
+<line x1="14"  y1="639" x2="14"  y2="460" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4" opacity="0.85"/>
+<line x1="14"  y1="460" x2="670" y2="460" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#arrAmber)" opacity="0.85"/>
+
+<!-- ══════════════════════════════════════════════════════
+     OUTPUT BANNER  y=688–728
+     ══════════════════════════════════════════════════════ -->
+<rect x="180" y="692" width="1080" height="44" rx="11" fill="#1d4ed8" filter="url(#fOut)"/>
+<text x="720" y="719" text-anchor="middle"
+      font-family="'DM Serif Display',Georgia,serif"
+      font-size="18" fill="white" letter-spacing="-0.1">Improved Human Performance and Mission Capability</text>
+
+</svg>

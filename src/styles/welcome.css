@@ -1,0 +1,264 @@
+/* ─── Welcome / domain picker ─────────────────────────────────────
+   Landing surface shown before a domain is entered: a short hero, then a
+   grid of domain cards (available + planned). Uses the shared design tokens
+   from app-foundation.css so it reads as part of the same system. */
+
+.welcome-screen {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0.5rem 0 2.5rem;
+  animation: welcomeFade 420ms ease-out;
+}
+
+@keyframes welcomeFade {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Hero ─────────────────────────────────────────────────────── */
+.welcome-hero {
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(ellipse at 88% -10%, color-mix(in srgb, var(--accent-bright) 16%, transparent), transparent 55%),
+    linear-gradient(180deg, var(--bg-card), color-mix(in srgb, var(--bg-card) 88%, var(--bg-input)));
+  box-shadow: var(--shadow);
+  padding: 2.25rem 2.25rem 2rem;
+  overflow: hidden;
+}
+
+.welcome-eyebrow {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent) 82%, var(--text));
+  margin-bottom: 0.9rem;
+}
+
+.welcome-title {
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 600;
+  line-height: 1.06;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin: 0 0 0.9rem;
+  max-width: 20ch;
+}
+
+.welcome-lead {
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 62ch;
+  margin: 0 0 1.4rem;
+}
+
+.welcome-science {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.welcome-science-chip {
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--accent) 85%, var(--text));
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+}
+
+/* ── Domain picker ────────────────────────────────────────────── */
+.welcome-domains {
+  margin-top: 2rem;
+}
+
+.welcome-domains-head {
+  margin-bottom: 1rem;
+}
+
+.welcome-domains-head h2 {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+  margin: 0 0 0.25rem;
+  color: var(--text);
+}
+
+.welcome-domains-head p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.welcome-domain-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.welcome-domain-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  padding: 1.15rem 1.2rem 1.2rem;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+}
+
+.welcome-domain-card--available {
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+}
+
+.welcome-domain-card--available:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--accent);
+}
+
+.welcome-domain-card--upcoming {
+  background: color-mix(in srgb, var(--bg-card) 70%, var(--bg-input));
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.welcome-domain-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+}
+
+.welcome-domain-badge {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fafaf7;
+  background: linear-gradient(90deg, var(--ink), var(--ink-soft));
+  border-radius: 6px;
+  padding: 0.28rem 0.55rem;
+}
+
+.welcome-domain-card--upcoming .welcome-domain-badge {
+  background: color-mix(in srgb, var(--text-dim) 55%, var(--bg-input));
+  color: var(--bg-card);
+}
+
+.welcome-domain-status {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.welcome-domain-status--live {
+  color: var(--success);
+}
+
+.welcome-domain-name {
+  font-family: var(--display);
+  font-size: 1.02rem;
+  line-height: 1.25;
+  margin: 0 0 0.5rem;
+  color: var(--text);
+}
+
+.welcome-domain-desc {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0 0 1rem;
+  flex: 1;
+}
+
+.welcome-domain-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.welcome-domain-stats strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.welcome-domain-cta {
+  align-self: flex-start;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fafaf7;
+  cursor: pointer;
+  transition: background 0.13s, transform 0.13s;
+}
+
+.welcome-domain-cta:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateX(2px);
+}
+
+.welcome-domain-cta:disabled {
+  cursor: not-allowed;
+  background: transparent;
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+
+.welcome-footnote {
+  margin-top: 1.75rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* ── Masthead: change-domain affordance ───────────────────────── */
+.app-masthead-domain-btn {
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(250, 250, 247, 0.28);
+  background: rgba(250, 250, 247, 0.06);
+  color: rgba(250, 250, 247, 0.9);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.13s, border-color 0.13s;
+}
+
+.app-masthead-domain-btn:hover {
+  background: rgba(61, 220, 198, 0.14);
+  border-color: rgba(61, 220, 198, 0.5);
+}
+
+@media (max-width: 680px) {
+  .welcome-hero {
+    padding: 1.5rem 1.25rem;
+  }
+  .welcome-domain-grid {
+    grid-template-columns: 1fr;
+  }
+  .app-masthead-domain-btn {
+    display: none;
+  }
+}

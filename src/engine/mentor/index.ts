@@ -1,0 +1,187 @@
+/**
+ * LLM Mentor service for AJP training — Phase 3 multi-agent layer.
+ * Uses Gemini Flash to evaluate free-text learner responses against the
+ * expectedConcepts of a SocraticProbe node, then generates a targeted
+ * follow-up probe without revealing the answer on first attempt.
+ *
+ * Usage (App.tsx):
+ *   import { setMentorService, createMentorService } from './engine/mentor';
+ *   if (geminiKey) setMentorService(createMentorService(geminiKey));
+ *
+ * Consumer pattern: call getMentorService() — returns null when no API key is set,
+ * allowing callers to gracefully degrade to static probe display.
+ */
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// ─── Public Interfaces ────────────────────────────────────────────
+
+/** Input context for a single Mentor evaluation call. */
+export interface MentorContext {
+  /** The Socratic probe question shown to the learner. */
+  probeQuestion: string;
+  /** Key concepts a complete answer must address (from SocraticProbe node). */
+  expectedConcepts: string[];
+  /** Common wrong answers with context (optional enrichment). */
+  commonWrongAnswers?: string[];
+  /** The learner's free-text response. */
+  learnerResponse: string;
+  /**
+   * Number of prior attempts on this probe (0 = first attempt).
+   * At attempt ≥ 2 the Mentor is permitted to reveal the answer.
+   */
+  priorAttempts: number;
+  /** When true, mastery threshold is raised to 0.90 and feedback is firmer. */
+  safetyGate?: boolean;
+  /**
+   * Optional corpus-grounded context from hybrid retrieval (graph + dense).
+   * Produced by formatHybridContext() in hybrid-retrieval.ts.
+   * When present, the Mentor grounds its response in this retrieved content
+   * rather than relying solely on training data.
+   */
+  retrievalContext?: string;
+}
+
+/** Structured result returned by the Mentor service. */
+export interface MentorEvaluation {
+  /** Fraction of expected concepts adequately addressed (0–1). */
+  score: number;
+  /** 2–3 sentence feedback: acknowledges correct elements, identifies the main gap. */
+  feedback: string;
+  /** One-sentence follow-up probe targeting the most important missing concept. */
+  followUpProbe: string;
+  /** True when score ≥ masteryThreshold (default 0.80, 0.90 for safetyGate). */
+  masteryPassed: boolean;
+}
+
+/** Mentor service — evaluate a learner response and generate a follow-up probe. */
+export interface MentorService {
+  evaluate(ctx: MentorContext): Promise<MentorEvaluation>;
+}
+
+// ─── Singleton Registry ───────────────────────────────────────────
+
+let _mentorService: MentorService | null = null;
+
+export function setMentorService(service: MentorService): void {
+  _mentorService = service;
+}
+
+export function getMentorService(): MentorService | null {
+  return _mentorService;
+}
+
+// ─── Gemini Flash Implementation ──────────────────────────────────
+
+const SYSTEM_INSTRUCTION = `You are an expert AJP (Aerosol Jet Printing) repair training mentor.
+Your role is to evaluate learner responses to Socratic probe questions and provide targeted scaffolding.
+You speak directly to the learner in second person, are encouraging but precise, and never pad with filler phrases.
+Return ONLY valid JSON — no markdown fences, no explanation outside the JSON object.`;
+
+function buildPrompt(ctx: MentorContext): string {
+  const threshold = ctx.safetyGate ? 0.90 : 0.80;
+  const revealAnswer = ctx.priorAttempts >= 2;
+
+  const wrongAnswerBlock =
+    ctx.commonWrongAnswers && ctx.commonWrongAnswers.length > 0
+      ? `\nCOMMON WRONG ANSWERS TO WATCH FOR:\n${ctx.commonWrongAnswers.map((w) => `- ${w}`).join('\n')}`
+      : '';
+
+  const retrievalBlock = ctx.retrievalContext && ctx.retrievalContext.trim().length > 0
+    ? `CORPUS CONTEXT (graph + dense retrieval — ground your response in this content):\n${ctx.retrievalContext}\n\n`
+    : '';
+
+  return `${retrievalBlock}PROBE QUESTION:
+"${ctx.probeQuestion}"
+
+EXPECTED CONCEPTS (a complete answer addresses most of these):
+${ctx.expectedConcepts.map((c, i) => `${i + 1}. ${c}`).join('\n')}${wrongAnswerBlock}
+
+LEARNER RESPONSE (attempt ${ctx.priorAttempts + 1}):
+"${ctx.learnerResponse}"
+
+MASTERY THRESHOLD: ${threshold}
+REVEAL ANSWER IF STILL MISSING: ${revealAnswer}
+
+EVALUATION TASK:
+1. Score 0.0–1.0: what fraction of expected concepts did the learner adequately address?
+2. Feedback (2–3 sentences):
+   - Acknowledge what was correct (be specific about which concepts)
+   - Identify the single most important missing or incomplete concept
+   - If revealAnswer=true: provide the correct explanation for the gap directly
+   - If revealAnswer=false: guide toward the gap WITHOUT giving the answer
+3. FollowUpProbe (1 sentence): a question that targets the most important remaining gap.
+   If masteryPassed, the follow-up should deepen understanding rather than re-test.
+
+Respond with ONLY this JSON (no other text):
+{"score": <number>, "feedback": "<string>", "followUpProbe": "<string>"}`;
+}
+
+function parseMentorResponse(
+  raw: string,
+  ctx: MentorContext,
+): MentorEvaluation {
+  const threshold = ctx.safetyGate ? 0.90 : 0.80;
+  let parsed: { score?: unknown; feedback?: unknown; followUpProbe?: unknown };
+
+  try {
+    // Strip any accidental markdown fences
+    const cleaned = raw.replace(/```(?:json)?/g, '').trim();
+    parsed = JSON.parse(cleaned) as typeof parsed;
+  } catch {
+    // Fallback if LLM returns malformed JSON
+    return {
+      score: 0.5,
+      feedback:
+        'I had trouble processing your response. Please try restating your answer more clearly.',
+      followUpProbe: ctx.probeQuestion,
+      masteryPassed: false,
+    };
+  }
+
+  const score = typeof parsed.score === 'number'
+    ? Math.max(0, Math.min(1, parsed.score))
+    : 0.5;
+
+  return {
+    score,
+    feedback:
+      typeof parsed.feedback === 'string' && parsed.feedback.trim().length > 0
+        ? parsed.feedback.trim()
+        : 'Keep developing your answer.',
+    followUpProbe:
+      typeof parsed.followUpProbe === 'string' && parsed.followUpProbe.trim().length > 0
+        ? parsed.followUpProbe.trim()
+        : ctx.probeQuestion,
+    masteryPassed: score >= threshold,
+  };
+}
+
+/** Create a Mentor service backed by Gemini Flash. */
+export function createMentorService(apiKey: string): MentorService {
+  const genai = new GoogleGenerativeAI(apiKey);
+  const model = genai.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    systemInstruction: SYSTEM_INSTRUCTION,
+  });
+
+  return {
+    async evaluate(ctx: MentorContext): Promise<MentorEvaluation> {
+      const prompt = buildPrompt(ctx);
+      try {
+        const result = await model.generateContent(prompt);
+        const raw = result.response.text();
+        return parseMentorResponse(raw, ctx);
+      } catch (err) {
+        // Network error or quota exceeded — fail gracefully
+        console.error('[MentorService] Gemini call failed:', err);
+        return {
+          score: 0,
+          feedback:
+            'The Mentor is temporarily unavailable. Review your answer against the expected concepts and try again.',
+          followUpProbe: ctx.probeQuestion,
+          masteryPassed: false,
+        };
+      }
+    },
+  };
+}

@@ -1,0 +1,451 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="980" viewBox="0 0 1440 980">
+<defs>
+  <style>@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=DM+Sans:wght@400;500;600;700&amp;display=swap');</style>
+  <marker id="dep"    viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="#475569"/></marker>
+  <marker id="depOrg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="#fb923c"/></marker>
+  <marker id="depExt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="#f97316"/></marker>
+  <marker id="depCyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 Z" fill="#7dd3fc"/></marker>
+  <filter id="s"  x="-8%" y="-8%" width="122%" height="130%"><feDropShadow dx="0" dy="2" stdDeviation="4"  flood-color="#0f172a" flood-opacity="0.14"/></filter>
+  <filter id="ss" x="-8%" y="-8%" width="122%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="7"  flood-color="#0f172a" flood-opacity="0.20"/></filter>
+  <pattern id="bg" width="24" height="24" patternUnits="userSpaceOnUse">
+    <path d="M24,0 L0,0 0,24" fill="none" stroke="#334155" stroke-width="0.35" opacity="0.22"/>
+  </pattern>
+</defs>
+
+<!--
+  ═══════════════════════════════════════════════════
+  ROW Y-COORDINATES  (top / bottom of each row)
+
+  Title bar:     0 – 52
+  Legend:        62 – 80
+  R1 Entry:      96 – 150   mid=123
+  R2 UI:        185 – 245   mid=215
+  R3 Hooks:     282 – 348   mid=315
+  R4 Engine:    385 – 515   mid=450
+  R5a Embed:    550 – 612   mid=581
+  R5b Scenario: 550 – 632   mid=591
+  R6 Experiment:664 – 750   mid=707
+  R7 Corpus:    782 – 858   mid=820
+  Status bar:   960 – 1000
+
+  ROUTING CHANNELS (horizontal gaps between rows)
+  Ch-A: y=160  (R1 bottom 150 → R2 top 185)
+  Ch-B: y=262  (R2 bottom 245 → R3 top 282)
+  Ch-C: y=362  (R3 bottom 348 → R4 top 385)
+  Ch-D: y=530  (R4 bottom 515 → R5 top 550)
+  Ch-E: y=644  (R5 bottom 632 → R6 top 664)
+  Ch-F: y=762  (R6 bottom 750 → R7 top 782)
+
+  LEFT GUTTER:  x=30   (R2 leftmost box starts x=60)
+  RIGHT GUTTER: x=1410 (R4 rightmost box ends x=1258)
+
+  BOX POSITIONS per row (x left edge, width)
+  R2: Welcome=60w190, Learning=272w190, Assessment=484w190,
+      Results=696w190, Simulation=908w190, AJP-UI=1120w190
+  R3: useExperiment=340w468  (x=340–808)
+  R4: Retrieval=60w280, LearnerModel=366w280,
+      Assessment=672w280, Mentor=978w280
+  R5a:EmbedIface=60w180, GeminiProv=256w180, SimProv=452w180
+  R5b:ScenarioEng=800w440
+  R6: session=60w200, metrics=276w200, harness=492w200, op-cap=708w220
+  R7: domains=60w192, swarch=268w192, ajp=476w192,
+      elegoo=684w192, types=892w192, scripts=1100w192
+  External API: x=1260w160  y=548
+  ═══════════════════════════════════════════════════
+-->
+
+<rect width="1440" height="980" fill="#0f172a"/>
+<rect width="1440" height="980" fill="url(#bg)"/>
+
+<!-- Title bar -->
+<rect x="0" y="0" width="1440" height="52" fill="#1e293b"/>
+<line x1="0" y1="52" x2="1440" y2="52" stroke="#334155" stroke-width="1"/>
+<text x="32" y="33" font-family="'JetBrains Mono','Courier New',monospace" font-size="15" font-weight="600" fill="#f1f5f9">TeachMe</text>
+<text x="126" y="33" font-family="'JetBrains Mono','Courier New',monospace" font-size="15" fill="#475569"> / </text>
+<text x="142" y="33" font-family="'JetBrains Mono','Courier New',monospace" font-size="15" fill="#7dd3fc">Package Architecture</text>
+<text x="1408" y="33" text-anchor="end" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" fill="#475569">v1.0 · AJP Training System</text>
+
+<!-- Legend -->
+<rect x="32"  y="64" width="12" height="12" rx="2" fill="#1e40af"/>  <text x="50"  y="74" font-family="'DM Sans',sans-serif" font-size="11" fill="#94a3b8">Entry/App</text>
+<rect x="130" y="64" width="12" height="12" rx="2" fill="#166534"/>  <text x="148" y="74" font-family="'DM Sans',sans-serif" font-size="11" fill="#94a3b8">UI Components</text>
+<rect x="258" y="64" width="12" height="12" rx="2" fill="#92400e"/>  <text x="276" y="74" font-family="'DM Sans',sans-serif" font-size="11" fill="#94a3b8">State/Hooks</text>
+<rect x="364" y="64" width="12" height="12" rx="2" fill="#7c2d12"/>  <text x="382" y="74" font-family="'DM Sans',sans-serif" font-size="11" fill="#94a3b8">Engine</text>
+<rect x="436" y="64" width="12" height="12" rx="2" fill="#581c87"/>  <text x="454" y="74" font-family="'DM Sans',sans-serif" font-size="11" fill="#94a3b8">Experiment</text>
+<rect x="538" y="64" width="12" height="12" rx="2" fill="#1e3a5f"/>  <text x="556" y="74" font-family="'DM Sans',sans-serif" font-size="11" fill="#94a3b8">Corpus/Types</text>
+<rect x="648" y="64" width="12" height="12" rx="2" fill="#431407"/>  <text x="666" y="74" font-family="'DM Sans',sans-serif" font-size="11" fill="#94a3b8">External API</text>
+<line x1="750" y1="70" x2="780" y2="70" stroke="#475569" stroke-width="1.5" marker-end="url(#dep)"/>
+<text x="786" y="74" font-family="'DM Sans',sans-serif" font-size="11" fill="#94a3b8">imports</text>
+<line x1="848" y1="70" x2="878" y2="70" stroke="#f97316" stroke-width="1.5" stroke-dasharray="4 2" marker-end="url(#depExt)"/>
+<text x="884" y="74" font-family="'DM Sans',sans-serif" font-size="11" fill="#94a3b8">external call</text>
+
+<!-- ══════════════════════════════════════════════════════
+     R1  Entry  y=96–150
+     ══════════════════════════════════════════════════════ -->
+<rect x="560" y="96" width="140" height="54" rx="8" fill="#1e3a8a" stroke="#3b82f6" stroke-width="1.5" filter="url(#s)"/>
+<rect x="560" y="96" width="140" height="8"  rx="8" fill="#3b82f6"/>
+<text x="630" y="120" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" font-weight="600" fill="#bfdbfe">main.tsx</text>
+<text x="630" y="136" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#7dd3fc">entry point</text>
+
+<rect x="740" y="96" width="140" height="54" rx="8" fill="#1e3a8a" stroke="#3b82f6" stroke-width="1.5" filter="url(#s)"/>
+<rect x="740" y="96" width="140" height="8"  rx="8" fill="#3b82f6"/>
+<text x="810" y="120" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" font-weight="600" fill="#bfdbfe">App.tsx</text>
+<text x="810" y="136" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#7dd3fc">root component</text>
+
+<!-- main → App: horizontal -->
+<line x1="700" y1="123" x2="738" y2="123" stroke="#475569" stroke-width="1.4" marker-end="url(#dep)"/>
+
+<!-- ══════════════════════════════════════════════════════
+     R2  UI Components  y=185–245
+     App fans out via channel Ch-A y=160
+     ══════════════════════════════════════════════════════ -->
+<text x="660" y="175" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600" fill="#4ade80" letter-spacing="1.5">UI COMPONENTS  src/components/</text>
+
+<rect x=" 60" y="185" width="190" height="60" rx="8" fill="#14532d" stroke="#4ade80" stroke-width="1.2" filter="url(#s)"/>
+<text x="155"  y="208" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" font-weight="600" fill="#bbf7d0">WelcomeScreen</text>
+<text x="155"  y="224" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#86efac">domain / role / condition</text>
+<text x="155"  y="238" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#4ade80">WelcomeScreen.tsx</text>
+
+<rect x="272" y="185" width="190" height="60" rx="8" fill="#14532d" stroke="#4ade80" stroke-width="1.2" filter="url(#s)"/>
+<text x="367"  y="208" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" font-weight="600" fill="#bbf7d0">LearningView</text>
+<text x="367"  y="224" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#86efac">retrieval + chunk display</text>
+<text x="367"  y="238" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#4ade80">LearningView.tsx</text>
+
+<rect x="484" y="185" width="190" height="60" rx="8" fill="#14532d" stroke="#4ade80" stroke-width="1.2" filter="url(#s)"/>
+<text x="579"  y="208" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" font-weight="600" fill="#bbf7d0">AssessmentView</text>
+<text x="579"  y="224" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#86efac">MCQ display + hint usage</text>
+<text x="579"  y="238" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#4ade80">AssessmentView.tsx</text>
+
+<rect x="696" y="185" width="190" height="60" rx="8" fill="#14532d" stroke="#4ade80" stroke-width="1.2" filter="url(#s)"/>
+<text x="791"  y="208" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" font-weight="600" fill="#bbf7d0">ResultsDashboard</text>
+<text x="791"  y="224" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#86efac">session outcomes + export</text>
+<text x="791"  y="238" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#4ade80">ResultsDashboard.tsx</text>
+
+<rect x="908" y="185" width="190" height="60" rx="8" fill="#14532d" stroke="#4ade80" stroke-width="1.2" filter="url(#s)"/>
+<text x="1003" y="208" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" font-weight="600" fill="#bbf7d0">SimulationPanel</text>
+<text x="1003" y="224" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#86efac">batch study + ablation</text>
+<text x="1003" y="238" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#4ade80">SimulationPanel.tsx</text>
+
+<rect x="1120" y="185" width="192" height="60" rx="8" fill="#14532d" stroke="#4ade80" stroke-width="1.2" filter="url(#s)"/>
+<text x="1216" y="202" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#bbf7d0">InOperationView</text>
+<text x="1216" y="216" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#bbf7d0">SocraticView</text>
+<text x="1216" y="230" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#bbf7d0">ScenarioView</text>
+<text x="1216" y="242" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="9" fill="#4ade80">AJP three-mode UI</text>
+
+<!-- App → R2 components via Ch-A y=160 -->
+<line x1="810" y1="150" x2="810" y2="160" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+<line x1="155" y1="160" x2="1216" y2="160" stroke="#475569" stroke-width="1.2" opacity="0.4"/>
+<line x1="155"  y1="160" x2="155"  y2="185" stroke="#475569" stroke-width="1.2" marker-end="url(#dep)" opacity="0.7"/>
+<line x1="367"  y1="160" x2="367"  y2="185" stroke="#475569" stroke-width="1.2" marker-end="url(#dep)" opacity="0.7"/>
+<line x1="579"  y1="160" x2="579"  y2="185" stroke="#475569" stroke-width="1.2" marker-end="url(#dep)" opacity="0.7"/>
+<line x1="791"  y1="160" x2="791"  y2="185" stroke="#475569" stroke-width="1.2" marker-end="url(#dep)" opacity="0.7"/>
+<line x1="1003" y1="160" x2="1003" y2="185" stroke="#475569" stroke-width="1.2" marker-end="url(#dep)" opacity="0.7"/>
+<line x1="1216" y1="160" x2="1216" y2="185" stroke="#475569" stroke-width="1.2" marker-end="url(#dep)" opacity="0.7"/>
+
+<!-- ══════════════════════════════════════════════════════
+     R3  State/Hooks  y=282–348
+     useExperiment x=340–808  mid-x=574
+     All R2 components point down via Ch-B y=262 to x=574 then into box top
+     ══════════════════════════════════════════════════════ -->
+<text x="574" y="272" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600" fill="#fb923c" letter-spacing="1.5">STATE MANAGEMENT  src/hooks/</text>
+
+<rect x="340" y="282" width="468" height="66" rx="8" fill="#431407" stroke="#fb923c" stroke-width="1.5" filter="url(#ss)"/>
+<rect x="340" y="282" width="468" height="8"  rx="8" fill="#fb923c"/>
+<text x="574" y="305" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="12" font-weight="600" fill="#fed7aa">useExperiment()</text>
+<text x="574" y="321" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="11" fill="#fca5a5">startExperiment · advancePhase · recordInteraction · exportSession</text>
+<text x="574" y="337" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#fb923c">holds ExperimentSession + LearnerProfile in React state</text>
+
+<!-- R2 → useExperiment via Ch-B y=262 -->
+<line x1="155"  y1="245" x2="155"  y2="262" stroke="#475569" stroke-width="1.1" opacity="0.55"/>
+<line x1="367"  y1="245" x2="367"  y2="262" stroke="#475569" stroke-width="1.1" opacity="0.55"/>
+<line x1="579"  y1="245" x2="579"  y2="262" stroke="#475569" stroke-width="1.1" opacity="0.55"/>
+<line x1="791"  y1="245" x2="791"  y2="262" stroke="#475569" stroke-width="1.1" opacity="0.55"/>
+<line x1="1003" y1="245" x2="1003" y2="262" stroke="#475569" stroke-width="1.1" opacity="0.55"/>
+<!-- Horizontal collector at y=262 from x=155 to x=1003 -->
+<line x1="155"  y1="262" x2="1003" y2="262" stroke="#475569" stroke-width="1.1" opacity="0.35"/>
+<!-- Drop into box at mid-x=574 -->
+<line x1="574"  y1="262" x2="574"  y2="282" stroke="#475569" stroke-width="1.3" marker-end="url(#dep)" opacity="0.7"/>
+
+<!-- ══════════════════════════════════════════════════════
+     R4  Engine  y=385–515
+     Retrieval x=60–340, LearnerModel x=366–646,
+     Assessment x=672–952, Mentor x=978–1258
+     useExperiment fans out via Ch-C y=362
+     ══════════════════════════════════════════════════════ -->
+<text x="660" y="374" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600" fill="#f87171" letter-spacing="1.5">CORE ENGINE  src/engine/</text>
+
+<rect x=" 60" y="385" width="280" height="130" rx="8" fill="#450a0a" stroke="#f87171" stroke-width="1.5" filter="url(#ss)"/>
+<rect x=" 60" y="385" width="280" height="8"  rx="8" fill="#f87171"/>
+<text x="200" y="408" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" font-weight="600" fill="#fca5a5">retrieval/</text>
+<text x="200" y="424" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#fca5a5">retrieve(query, learnerProfile)</text>
+<line x1="80"  y1="432" x2="320" y2="432" stroke="#7f1d1d" stroke-width="1"/>
+<text x="200" y="447" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">graph-retrieval.ts</text>
+<text x="200" y="461" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">hybrid-retrieval.ts</text>
+<text x="200" y="475" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">dense-retrieval.ts</text>
+<text x="200" y="489" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">corpus-sources.ts</text>
+<text x="200" y="507" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="9.5" fill="#ef4444">sim+prof+role+xfer scoreBreakdown</text>
+
+<rect x="366" y="385" width="280" height="130" rx="8" fill="#450a0a" stroke="#f87171" stroke-width="1.5" filter="url(#ss)"/>
+<rect x="366" y="385" width="280" height="8"  rx="8" fill="#f87171"/>
+<text x="506" y="408" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" font-weight="600" fill="#fca5a5">learner-model/</text>
+<text x="506" y="424" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#fca5a5">updateProficiency(concept, result)</text>
+<line x1="386" y1="432" x2="626" y2="432" stroke="#7f1d1d" stroke-width="1"/>
+<text x="506" y="447" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">proficiency: level + confidence</text>
+<text x="506" y="461" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">attempts + successRate</text>
+<text x="506" y="475" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">declarativeScore (AJP)</text>
+<text x="506" y="489" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">proceduralScore (AJP)</text>
+<text x="506" y="507" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="9.5" fill="#ef4444">dual-axis KT for AJP domain</text>
+
+<rect x="672" y="385" width="280" height="130" rx="8" fill="#450a0a" stroke="#f87171" stroke-width="1.5" filter="url(#ss)"/>
+<rect x="672" y="385" width="280" height="8"  rx="8" fill="#f87171"/>
+<text x="812" y="408" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" font-weight="600" fill="#fca5a5">assessment/</text>
+<text x="812" y="424" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#fca5a5">evaluateOptionResponse()</text>
+<line x1="692" y1="432" x2="932" y2="432" stroke="#7f1d1d" stroke-width="1"/>
+<text x="812" y="447" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">rubric-weighted scoring</text>
+<text x="812" y="461" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">hint dependency tracking</text>
+<text x="812" y="475" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">mastery gate eval</text>
+<text x="812" y="489" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">scaffold auto-adjust</text>
+<text x="812" y="507" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="9.5" fill="#ef4444">policyId · masteryGateState</text>
+
+<rect x="978" y="385" width="280" height="130" rx="8" fill="#450a0a" stroke="#f87171" stroke-width="1.5" filter="url(#ss)"/>
+<rect x="978" y="385" width="280" height="8"  rx="8" fill="#f87171"/>
+<text x="1118" y="408" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" font-weight="600" fill="#fca5a5">mentor/  (AJP)</text>
+<text x="1118" y="424" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#fca5a5">Gemini Flash · Socratic agent</text>
+<line x1="998" y1="432" x2="1238" y2="432" stroke="#7f1d1d" stroke-width="1"/>
+<text x="1118" y="447" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">probe → hint → explain</text>
+<text x="1118" y="461" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">ZPD-aware sequencing</text>
+<text x="1118" y="475" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">safety gate enforcement</text>
+<text x="1118" y="489" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">Narrator: corpus-only, no gen</text>
+<text x="1118" y="507" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="9.5" fill="#ef4444">mentor/index.ts</text>
+
+<!-- useExperiment → R4 via Ch-C y=362 -->
+<!-- useExperiment bottom y=348. Channel y=362. Engine tops y=385. -->
+<!-- Exit useExperiment bottom at four x-points, meet channel, drop into each engine box. -->
+<line x1="450" y1="348" x2="450" y2="362" stroke="#fb923c" stroke-width="1.3"/>
+<line x1="520" y1="348" x2="520" y2="362" stroke="#fb923c" stroke-width="1.3"/>
+<line x1="640" y1="348" x2="640" y2="362" stroke="#fb923c" stroke-width="1.3"/>
+<line x1="720" y1="348" x2="720" y2="362" stroke="#fb923c" stroke-width="1.3" opacity="0.7"/>
+<!-- Horizontal span at y=362 -->
+<line x1="200"  y1="362" x2="1118" y2="362" stroke="#fb923c" stroke-width="1.3" opacity="0.35"/>
+<!-- Drop into each engine box at its mid-x -->
+<line x1="200"  y1="362" x2="200"  y2="385" stroke="#fb923c" stroke-width="1.3" marker-end="url(#dep)"/>
+<line x1="506"  y1="362" x2="506"  y2="385" stroke="#fb923c" stroke-width="1.3" marker-end="url(#dep)"/>
+<line x1="812"  y1="362" x2="812"  y2="385" stroke="#fb923c" stroke-width="1.3" marker-end="url(#dep)"/>
+<line x1="1118" y1="362" x2="1118" y2="385" stroke="#fb923c" stroke-width="1.3" marker-end="url(#dep)" opacity="0.7"/>
+
+<!-- ══════════════════════════════════════════════════════
+     R5a  Embedding Providers  y=550–612  (left)
+     EmbedIface x=60–240, GeminiProv x=256–436, SimProv x=452–632
+     Retrieval (mid-x=200) → down via Ch-D y=530 → drop to EmbedIface top
+     ══════════════════════════════════════════════════════ -->
+<text x="346" y="540" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600" fill="#fdba74" letter-spacing="1.5">EMBEDDING PROVIDERS</text>
+
+<rect x=" 60" y="550" width="180" height="60" rx="8" fill="#431407" stroke="#fb923c" stroke-width="1.2" filter="url(#s)"/>
+<text x="150" y="572" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#fed7aa">EmbeddingProvider</text>
+<text x="150" y="587" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#fb923c">interface</text>
+<text x="150" y="601" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#fdba74">embed(text): vector</text>
+
+<rect x="256" y="550" width="180" height="60" rx="8" fill="#431407" stroke="#f97316" stroke-width="1.2" filter="url(#s)"/>
+<text x="346" y="572" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#fed7aa">GeminiProvider</text>
+<text x="346" y="587" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#fb923c">Google AI SDK</text>
+<text x="346" y="601" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#fdba74">gemini-embedding-004</text>
+
+<rect x="452" y="550" width="180" height="60" rx="8" fill="#431407" stroke="#fb923c" stroke-width="1.2" filter="url(#s)"/>
+<text x="542" y="572" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#fed7aa">SimulatedProvider</text>
+<text x="542" y="587" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#fb923c">deterministic TF-IDF</text>
+<text x="542" y="601" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#fdba74">no external calls</text>
+
+<!-- Retrieval (bottom y=515, mid-x=200) → Ch-D y=530 → EmbedIface top (x=150,y=550) -->
+<line x1="200" y1="515" x2="200" y2="530" stroke="#475569" stroke-width="1.1"/>
+<line x1="150" y1="530" x2="200" y2="530" stroke="#475569" stroke-width="1.1" opacity="0.5"/>
+<line x1="150" y1="530" x2="150" y2="550" stroke="#475569" stroke-width="1.1" marker-end="url(#dep)"/>
+<!-- EmbedIface → GeminiProvider and SimProvider: horizontal then short drop -->
+<line x1="240" y1="580" x2="254" y2="580" stroke="#475569" stroke-width="1.1" marker-end="url(#dep)" opacity="0.7"/>
+<line x1="436" y1="580" x2="450" y2="580" stroke="#475569" stroke-width="1.1" marker-end="url(#dep)" opacity="0.7"/>
+
+<!-- ══════════════════════════════════════════════════════
+     R5b  Scenario Engine  y=550–632  (right)
+     ScenarioEng x=800–1240  mid-x=1020
+     Mentor (mid-x=1118, bottom y=515) → Ch-D y=530 → x=1020 → top y=550
+     ScenarioView (AJP UI right edge x=1312) → right gutter x=1410 → y=591 → left to x=1242
+     ══════════════════════════════════════════════════════ -->
+<text x="1020" y="540" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600" fill="#f87171" letter-spacing="1.5">SCENARIO ENGINE  src/engine/scenario/</text>
+
+<rect x="800" y="550" width="440" height="82" rx="8" fill="#450a0a" stroke="#f87171" stroke-width="1.4" filter="url(#ss)"/>
+<rect x="800" y="550" width="440" height="8"  rx="8" fill="#f87171"/>
+<text x="1020" y="572" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" font-weight="600" fill="#fca5a5">ScenarioEngine</text>
+<text x="1020" y="589" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">advanceStep()  ·  injectFault()  ·  resolveConsequence()</text>
+<text x="1020" y="605" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9.5" fill="#f87171">parseStudentAction()  ·  getCurrentNarratorText()</text>
+<text x="1020" y="621" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="9.5" fill="#ef4444">types.ts  ·  engine.ts  ·  useScenarioEngine() hook</text>
+
+<!-- Mentor → ScenarioEngine via Ch-D y=530 -->
+<line x1="1118" y1="515" x2="1118" y2="530" stroke="#475569" stroke-width="1.1"/>
+<line x1="1020" y1="530" x2="1118" y2="530" stroke="#475569" stroke-width="1.1" opacity="0.5"/>
+<line x1="1020" y1="530" x2="1020" y2="550" stroke="#475569" stroke-width="1.1" marker-end="url(#dep)"/>
+
+<!-- ScenarioView → ScenarioEngine via right gutter x=1410 -->
+<!-- AJP UI right edge x=1312, mid-y=215. Gutter x=1410. ScenarioEng right edge x=1240, mid-y=591 -->
+<line x1="1312" y1="215" x2="1380" y2="215" stroke="#475569" stroke-width="1.0" opacity="0.45"/>
+<line x1="1380" y1="215" x2="1380" y2="591" stroke="#475569" stroke-width="1.0" opacity="0.45"/>
+<line x1="1380" y1="591" x2="1242" y2="591" stroke="#475569" stroke-width="1.0" marker-end="url(#dep)" opacity="0.45"/>
+
+<!-- ══════════════════════════════════════════════════════
+     External API  x=1260–1420  y=548–624
+     GeminiProvider (right x=436, mid-y=580) → right to x=1258 (API left edge)
+     Mentor (right x=1258, mid-y=450) → right to x=1258 API → but Mentor right IS x=1258 already
+     Use gutter x=1410 for Mentor, enter from right
+     ══════════════════════════════════════════════════════ -->
+<rect x="1260" y="548" width="160" height="76" rx="8" fill="#431407" stroke="#f97316" stroke-width="1.8" filter="url(#s)"/>
+<rect x="1260" y="548" width="160" height="8"  rx="8" fill="#f97316"/>
+<text x="1340" y="570" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="11" font-weight="600" fill="#fed7aa">Gemini API</text>
+<text x="1340" y="586" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" fill="#fb923c">google/generative-ai</text>
+<text x="1340" y="601" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#fdba74">gemini-2.0-flash</text>
+<text x="1340" y="615" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#fdba74">embedding-004</text>
+
+<!-- GeminiProvider → API: travel right via Ch-D y=530, then up to API left mid -->
+<!-- GeminiProvider right edge x=436, mid-y=580. API left x=1260, mid-y=586. -->
+<!-- Route: x=436,y=580 → right to x=1258,y=580 → that would cross ScenarioEngine (x=800–1240) -->
+<!-- Instead: GeminiProvider top (x=346,y=550) → up to y=530 → right to x=1258 → down to y=580 -->
+<line x1="346"  y1="550" x2="346"  y2="530" stroke="#f97316" stroke-width="1.4" stroke-dasharray="5 3" opacity="0.7"/>
+<line x1="346"  y1="530" x2="1258" y2="530" stroke="#f97316" stroke-width="1.4" stroke-dasharray="5 3" opacity="0.7"/>
+<line x1="1258" y1="530" x2="1258" y2="580" stroke="#f97316" stroke-width="1.4" stroke-dasharray="5 3" marker-end="url(#depExt)" opacity="0.7"/>
+
+<!-- Mentor → API: Mentor right edge x=1258, mid-y=450 → right to API left x=1260,y=450 -->
+<!-- But API top is y=548, so need to go right then down -->
+<line x1="1258" y1="450" x2="1280" y2="450" stroke="#f97316" stroke-width="1.4" stroke-dasharray="5 3" opacity="0.7"/>
+<line x1="1280" y1="450" x2="1280" y2="548" stroke="#f97316" stroke-width="1.4" stroke-dasharray="5 3" marker-end="url(#depExt)" opacity="0.7"/>
+
+<!-- ══════════════════════════════════════════════════════
+     R6  Experiment  y=664–750
+     session x=60–260, metrics x=276–476, harness x=492–692, op-cap x=708–928
+     Connections from R4 engine and R2 SimulationPanel via Ch-E y=644
+     ══════════════════════════════════════════════════════ -->
+<text x="490" y="654" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600" fill="#c084fc" letter-spacing="1.5">EXPERIMENT  src/experiment/</text>
+
+<rect x=" 60" y="664" width="200" height="80" rx="8" fill="#3b0764" stroke="#c084fc" stroke-width="1.2" filter="url(#s)"/>
+<rect x=" 60" y="664" width="200" height="8"  rx="8" fill="#c084fc"/>
+<text x="160" y="686" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#e9d5ff">session/</text>
+<text x="160" y="702" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#c084fc">createExperimentSession()</text>
+<text x="160" y="717" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#c084fc">ExperimentSession type</text>
+<text x="160" y="732" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#c084fc">4-phase orchestration</text>
+
+<rect x="276" y="664" width="200" height="80" rx="8" fill="#3b0764" stroke="#c084fc" stroke-width="1.2" filter="url(#s)"/>
+<rect x="276" y="664" width="200" height="8"  rx="8" fill="#c084fc"/>
+<text x="376" y="686" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#e9d5ff">metrics.ts</text>
+<text x="376" y="702" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#c084fc">MRR · nDCG · P@K · R@K</text>
+<text x="376" y="717" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#c084fc">Cohen's d · Welch t · CI</text>
+<text x="376" y="732" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#c084fc">paired Dz · profRankCorr</text>
+
+<rect x="492" y="664" width="200" height="80" rx="8" fill="#3b0764" stroke="#c084fc" stroke-width="1.2" filter="url(#s)"/>
+<rect x="492" y="664" width="200" height="8"  rx="8" fill="#c084fc"/>
+<text x="592" y="686" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#e9d5ff">test-harness.ts</text>
+<text x="592" y="702" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#c084fc">runDismantlingStudy(N)</text>
+<text x="592" y="717" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#c084fc">runAblationStudy(profiles)</text>
+<text x="592" y="732" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#c084fc">6 personas · matched seeds</text>
+
+<rect x="708" y="664" width="220" height="80" rx="8" fill="#3b0764" stroke="#c084fc" stroke-width="1.2" filter="url(#s)"/>
+<rect x="708" y="664" width="220" height="8"  rx="8" fill="#c084fc"/>
+<text x="818" y="686" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#e9d5ff">operational-capability.ts</text>
+<text x="818" y="702" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#c084fc">computeOperationalProjection()</text>
+<text x="818" y="717" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#c084fc">low / base / high coeff sets</text>
+<text x="818" y="732" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#c084fc">exportAssumptionManifest()</text>
+
+
+<!--
+  R4 engine → R6 experiment via left gutter x=30
+  Retrieval left edge x=60. Drop from each engine box's left side, collect in gutter, arrive at session.
+  Each engine box mid-y=450. Exit left edge at y=450 → x=30 → down to y=707 → right to session x=60.
+  This avoids crossing any R5 boxes (which start x=60).
+  -->
+<line x1=" 60" y1="450" x2=" 30" y2="450" stroke="#475569" stroke-width="1.1" opacity="0.45"/>
+<line x1=" 30" y1="450" x2=" 30" y2="707" stroke="#475569" stroke-width="1.1" opacity="0.45"/>
+<line x1=" 30" y1="707" x2=" 60" y2="707" stroke="#475569" stroke-width="1.1" marker-end="url(#dep)" opacity="0.5"/>
+
+<!--
+  SimulationPanel → test-harness: Simul bottom y=245, mid-x=1003.
+  Travel down right gutter to Ch-E y=644, then left to harness top x=592.
+  Gutter x=1380 (clear of AJP UI right x=1312, already used at x=1380 above — use x=1395 here).
+  -->
+<line x1="1003" y1="245" x2="1395" y2="245" stroke="#475569" stroke-width="1.0" opacity="0.40"/>
+<line x1="1395" y1="245" x2="1395" y2="644" stroke="#475569" stroke-width="1.0" opacity="0.40"/>
+<line x1="1395" y1="644" x2="592"  y2="644" stroke="#475569" stroke-width="1.0" opacity="0.40"/>
+<line x1="592"  y1="644" x2="592"  y2="664" stroke="#475569" stroke-width="1.1" marker-end="url(#dep)" opacity="0.5"/>
+
+<!-- ══════════════════════════════════════════════════════
+     R7  Corpus + Types  y=782–858
+     domains x=60–252, sw-arch x=268–460, ajp x=476–668,
+     elegoo x=684–876, types x=892–1084, scripts x=1100–1292
+     Retrieval → corpus via Ch-F y=762
+     ══════════════════════════════════════════════════════ -->
+<text x="676" y="772" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600" fill="#7dd3fc" letter-spacing="1.5">CORPUS &amp; TYPES  src/corpus/  ·  src/types/</text>
+
+<rect x=" 60" y="782" width="192" height="74" rx="8" fill="#0c1f3d" stroke="#3b82f6" stroke-width="1.2" filter="url(#s)"/>
+<rect x=" 60" y="782" width="192" height="8"  rx="8" fill="#3b82f6"/>
+<text x="156"  y="803" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#93c5fd">domains.ts</text>
+<text x="156" y="819" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#60a5fa">domain registry</text>
+<text x="156" y="834" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#60a5fa">getDomain(id)</text>
+<text x="156" y="849" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#60a5fa">listDomains()</text>
+
+<rect x="268"  y="782" width="192" height="74" rx="8" fill="#0c1f3d" stroke="#3b82f6" stroke-width="1.2" filter="url(#s)"/>
+<rect x="268"  y="782" width="192" height="8"  rx="8" fill="#3b82f6"/>
+<text x="364"  y="803" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#93c5fd">sw-architecture/</text>
+<text x="364" y="819" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#60a5fa">hardcoded CorpusChunks</text>
+<text x="364" y="834" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#60a5fa">Circuit Breaker, CQRS…</text>
+<text x="364" y="849" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#60a5fa">transfer scenarios</text>
+
+<rect x="476"  y="782" width="192" height="74" rx="8" fill="#0c1f3d" stroke="#3b82f6" stroke-width="1.2" filter="url(#s)"/>
+<rect x="476"  y="782" width="192" height="8"  rx="8" fill="#3b82f6"/>
+<text x="572"  y="803" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#93c5fd">ajp/</text>
+<text x="572" y="819" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#60a5fa">graph.ts  graph-faults.ts</text>
+<text x="572" y="834" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#60a5fa">design-actions.ts  probes.ts</text>
+<text x="572" y="849" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#60a5fa">scenarios.ts  consequences.ts</text>
+
+<rect x="684"  y="782" width="192" height="74" rx="8" fill="#0c1f3d" stroke="#3b82f6" stroke-width="1.2" filter="url(#s)"/>
+<rect x="684"  y="782" width="192" height="8"  rx="8" fill="#3b82f6"/>
+<text x="780"  y="803" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#93c5fd">elegoo/</text>
+<text x="780" y="819" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#60a5fa">JSON-based domain</text>
+<text x="780" y="834" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#60a5fa">3D printer troubleshooting</text>
+<text x="780" y="849" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#60a5fa">case conversation bank</text>
+
+<rect x="892"  y="782" width="192" height="74" rx="8" fill="#0c1f3d" stroke="#7dd3fc" stroke-width="1.5" filter="url(#s)"/>
+<rect x="892"  y="782" width="192" height="8"  rx="8" fill="#7dd3fc"/>
+<text x="988"  y="803" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#bae6fd">types/</text>
+<text x="988" y="819" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#7dd3fc">CorpusChunk · LearnerProfile</text>
+<text x="988" y="834" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#7dd3fc">ExperimentSession · AJPNode</text>
+<text x="988" y="849" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#7dd3fc">ScenarioDefinition · StudyReport</text>
+
+<rect x="1100" y="782" width="192" height="74" rx="8" fill="#0c1f3d" stroke="#475569" stroke-width="1.2" filter="url(#s)"/>
+<rect x="1100" y="782" width="192" height="8"  rx="8" fill="#475569"/>
+<text x="1196" y="803" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" font-weight="600" fill="#94a3b8">scripts/</text>
+<text x="1196" y="819" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#64748b">ingest-corpus.ts</text>
+<text x="1196" y="834" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#64748b">corpus ingestion pipeline</text>
+<text x="1196" y="849" text-anchor="middle" font-family="'JetBrains Mono','Courier New',monospace" font-size="9" fill="#64748b">builds NanoVectorDB index</text>
+
+<!--
+  Retrieval → corpus via Ch-F y=762
+  Retrieval bottom y=515, mid-x=200. Drop to Ch-F y=762. Branch to sw-arch (x=364) and ajp (x=572) and elegoo (x=780).
+  Also from test-harness → ajp corpus.
+  Also all → types (x=988).
+
+  Route for Retrieval: x=200,y=515 → x=200,y=762 → right along y=762 → drop into each corpus box top.
+  This path: y=515→762 passes through R6 experiment row (y=664–750). x=200 is inside session box (x=60–260).
+  Use left gutter x=30 instead: already used for engine→experiment. Use x=42 for corpus route.
+  -->
+<line x1=" 60" y1="820" x2=" 42" y2="820" stroke="#475569" stroke-width="1.0" opacity="0.40"/>
+<line x1=" 42" y1="820" x2=" 42" y2="450" stroke="#475569" stroke-width="1.0" opacity="0.30"/>
+<!-- This is just informational/reference — skip the engine→corpus arrows as they clutter -->
+<!-- Instead show the key ones: test-harness → corpus -->
+
+<!-- test-harness (bottom y=744, mid-x=592) → down to y=762 → right to ajp (x=572) -->
+<line x1="592" y1="744" x2="592" y2="762" stroke="#475569" stroke-width="1.1" opacity="0.45"/>
+<line x1="572" y1="762" x2="988" y2="762" stroke="#475569" stroke-width="1.1" opacity="0.35"/>
+<line x1="572" y1="762" x2="572" y2="782" stroke="#475569" stroke-width="1.1" marker-end="url(#dep)" opacity="0.5"/>
+<line x1="988" y1="762" x2="988" y2="782" stroke="#475569" stroke-width="1.1" marker-end="url(#depCyan)" opacity="0.5"/>
+
+<!-- ── Status bar ── -->
+<rect x="0" y="940" width="1440" height="40" fill="#1e293b"/>
+<line x1="0" y1="940" x2="1440" y2="940" stroke="#334155" stroke-width="1"/>
+<text x="32"   y="965" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" fill="#475569">Phase 4 · ScenarioEngine + corpus completion in progress</text>
+<text x="880"  y="965" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" fill="#475569">A → B means A imports B  ·  Dashed = external network call</text>
+<text x="1408" y="965" text-anchor="end" font-family="'JetBrains Mono','Courier New',monospace" font-size="10" fill="#334155">2026-04-10</text>
+
+</svg>

@@ -1,0 +1,25 @@
+.git
+.gitignore
+node_modules
+dist
+.env
+.env.*
+.DS_Store
+
+# Dev/IDE
+.vscode
+.idea
+
+# Local knowledge artifacts (regenerated from kb-candidates if needed)
+knowledge/knowledge.db
+knowledge/knowledge.db-shm
+knowledge/knowledge.db-wal
+knowledge/source-cache
+knowledge/ingest-progress.json
+
+# Docs build artifacts
+docs/build
+
+# Tests / reports
+**/*.log
+coverage
