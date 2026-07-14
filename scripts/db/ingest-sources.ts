@@ -55,6 +55,7 @@ import {
 } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { chunkWords } from '../lib/chunk-text';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '../..');
@@ -358,24 +359,11 @@ Skip boilerplate: title pages, approval signatures, table-of-contents page numbe
 interface RawChunk { id: string; content: string; roleContext: string }
 
 function chunkText(text: string, sourceId: string, label: string): RawChunk[] {
-  const WORDS_PER_CHUNK = 350;
-  const OVERLAP = 50;
-  const words = text.split(/\s+/).filter((w) => w.length > 0);
-  const chunks: RawChunk[] = [];
-  let idx = 0;
-  let n = 0;
-  while (idx < words.length) {
-    const slice = words.slice(idx, idx + WORDS_PER_CHUNK);
-    if (slice.length < 30) break;
-    chunks.push({
-      id: `ext-${slug(sourceId)}-chunk-${n}`,
-      content: slice.join(' '),
-      roleContext: label,
-    });
-    idx += WORDS_PER_CHUNK - OVERLAP;
-    n++;
-  }
-  return chunks;
+  return chunkWords(text).map((c) => ({
+    id: `ext-${slug(sourceId)}-chunk-${c.index}`,
+    content: c.content,
+    roleContext: label,
+  }));
 }
 
 function stageStore(

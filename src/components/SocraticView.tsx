@@ -24,6 +24,7 @@ import {
 import { probeContextStrategy, tacitLookupStrategy, formatProbeRetrievalContext } from '../engine/retrieval/retrieval-router';
 import { loadProbeProgress, recordProbeAttempt } from '../engine/learner-model/probe-progress';
 import { SourceRefText } from './SourceRefText';
+import { MentorDegradedBanner } from './MentorDegradedBanner';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -347,17 +348,23 @@ function ProbePanel({
 
       {evaluation && !mastered && !followUpEval && (
         <div className={`mentor-evaluation ${scoreClass(evaluation.score)}`}>
-          <div className="eval-score-row">
-            <div className="eval-score-bar">
-              <div
-                className="eval-score-fill"
-                style={{ width: `${Math.round(evaluation.score * 100)}%` }}
-              />
-            </div>
-            <span className="eval-score-pct">{Math.round(evaluation.score * 100)}%</span>
-          </div>
-          <p className="eval-score-label">{scoreLabel(evaluation.score)}</p>
-          <p className="eval-feedback">{evaluation.feedback}</p>
+          {evaluation.degraded ? (
+            <MentorDegradedBanner feedback={evaluation.feedback} />
+          ) : (
+            <>
+              <div className="eval-score-row">
+                <div className="eval-score-bar">
+                  <div
+                    className="eval-score-fill"
+                    style={{ width: `${Math.round(evaluation.score * 100)}%` }}
+                  />
+                </div>
+                <span className="eval-score-pct">{Math.round(evaluation.score * 100)}%</span>
+              </div>
+              <p className="eval-score-label">{scoreLabel(evaluation.score)}</p>
+              <p className="eval-feedback">{evaluation.feedback}</p>
+            </>
+          )}
 
           <div className="probe-followup-block">
             <div className="probe-question-label">🧑‍🏫 FOLLOW-UP</div>
@@ -415,17 +422,23 @@ function ProbePanel({
 
       {currentEval && (mastered || followUpEval) && (
         <div className={`mentor-evaluation ${scoreClass(currentEval.score)}`}>
-          <div className="eval-score-row">
-            <div className="eval-score-bar">
-              <div
-                className="eval-score-fill"
-                style={{ width: `${Math.round(currentEval.score * 100)}%` }}
-              />
-            </div>
-            <span className="eval-score-pct">{Math.round(currentEval.score * 100)}%</span>
-          </div>
-          <p className="eval-score-label">{scoreLabel(currentEval.score)}</p>
-          <p className="eval-feedback">{currentEval.feedback}</p>
+          {currentEval.degraded ? (
+            <MentorDegradedBanner feedback={currentEval.feedback} />
+          ) : (
+            <>
+              <div className="eval-score-row">
+                <div className="eval-score-bar">
+                  <div
+                    className="eval-score-fill"
+                    style={{ width: `${Math.round(currentEval.score * 100)}%` }}
+                  />
+                </div>
+                <span className="eval-score-pct">{Math.round(currentEval.score * 100)}%</span>
+              </div>
+              <p className="eval-score-label">{scoreLabel(currentEval.score)}</p>
+              <p className="eval-feedback">{currentEval.feedback}</p>
+            </>
+          )}
 
           {mastered ? (
             <div className="mastery-achieved">

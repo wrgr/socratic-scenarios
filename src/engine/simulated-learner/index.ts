@@ -13,8 +13,11 @@
  *
  * On follow-up attempts the persona is aware of the Mentor's prior feedback and
  * can improve their answer accordingly.
+ *
+ * Backed by a swappable ChatCompletionProvider (Gemini or GitHub Models — see
+ * src/engine/llm/), injected by App.tsx rather than constructed here.
  */
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import type { ChatCompletionProvider } from '../llm/types';
 
 // ─── Public interfaces ────────────────────────────────────────────
 
@@ -105,7 +108,7 @@ Your characteristics:
 - You give specific numbers where relevant (e.g., "wait 10 seconds after atomizer off, then 60 seconds after exhaust").`,
 };
 
-// ─── Gemini Flash implementation ──────────────────────────────────
+// ─── Chat-Completion Implementation ────────────────────────────────
 
 const SYSTEM_INSTRUCTION =
   'You are roleplaying as an AJP technician trainee responding to a mentor question. ' +
@@ -127,25 +130,17 @@ ${questionBlock}
 Respond as this learner would — naturally, in plain prose, with no formatting or bullet points. Keep it realistic for your level of experience.`;
 }
 
-/** Create a Simulated Learner service backed by Gemini Flash. */
-export function createSimulatedLearnerService(apiKey: string): SimulatedLearnerService {
-  const genai = new GoogleGenerativeAI(apiKey);
-  const model = genai.getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    systemInstruction: SYSTEM_INSTRUCTION,
-    generationConfig: { temperature: 0.85 },
-  });
-
+/** Create a Simulated Learner service backed by the given chat-completion provider. */
+export function createSimulatedLearnerService(provider: ChatCompletionProvider): SimulatedLearnerService {
   return {
     async generateResponse(ctx: SimulatedLearnerContext): Promise<string> {
       const prompt = buildLearnerPrompt(ctx);
       try {
-        const result = await model.generateContent(prompt);
-        const text = result.response.text().trim();
+        const raw = await provider.complete(SYSTEM_INSTRUCTION, prompt, { temperature: 0.85 });
         // Strip any accidental quoting the model might add
-        return text.replace(/^["']|["']$/g, '').trim();
+        return raw.trim().replace(/^["']|["']$/g, '').trim();
       } catch (err) {
-        console.error('[SimulatedLearnerService] Gemini call failed:', err);
+        console.error('[SimulatedLearnerService] LLM call failed:', err);
         return 'I am not sure — can you explain the procedure again?';
       }
     },

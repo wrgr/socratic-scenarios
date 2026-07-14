@@ -1,8 +1,14 @@
 /**
  * Safety gate checklist state, shared between the dashboard (where gates are
  * marked verified) and the app shell (which enforces them before Scenario Mode).
+ *
+ * Backed by useSyncExternalStore (matching src/hooks/useApiKey.ts's pattern) so
+ * every consumer stays in sync when a gate is toggled, rather than relying on
+ * HudDashboard happening to remount on every tab switch to pick up fresh state.
+ * Also listens for the native `storage` event so status stays in sync across
+ * browser tabs/windows.
  */
-import { useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 export interface SafetyGate {
   id: string;
@@ -59,18 +65,47 @@ export function pendingCriticalGates(status: Record<string, boolean>): SafetyGat
   return SAFETY_GATES.filter((g) => g.critical && !status[g.id]);
 }
 
+// getSnapshot must return a referentially-stable value between updates (React
+// compares via Object.is) — cache it and only recompute on an actual change,
+// rather than calling loadGateStatus() fresh on every getSnapshot() call.
+let cachedSnapshot: Record<string, boolean> = loadGateStatus();
+const listeners = new Set<() => void>();
+
+function refreshAndNotify() {
+  cachedSnapshot = loadGateStatus();
+  for (const l of listeners) l();
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function getSnapshot(): Record<string, boolean> {
+  return cachedSnapshot;
+}
+
+function getServerSnapshot(): Record<string, boolean> {
+  return {};
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === GATE_STORAGE_KEY) refreshAndNotify();
+  });
+}
+
 export function useSafetyGates(): {
   gateStatus: Record<string, boolean>;
   toggleGate: (id: string) => void;
 } {
-  const [gateStatus, setGateStatus] = useState<Record<string, boolean>>(loadGateStatus);
+  const gateStatus = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   function toggleGate(id: string) {
-    setGateStatus((prev) => {
-      const next = { ...prev, [id]: !prev[id] };
-      try { localStorage.setItem(GATE_STORAGE_KEY, JSON.stringify(next)); } catch { /* noop */ }
-      return next;
-    });
+    const current = loadGateStatus();
+    const next = { ...current, [id]: !current[id] };
+    try { localStorage.setItem(GATE_STORAGE_KEY, JSON.stringify(next)); } catch { /* noop */ }
+    refreshAndNotify();
   }
 
   return { gateStatus, toggleGate };

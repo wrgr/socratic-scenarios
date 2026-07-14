@@ -1,7 +1,7 @@
 # TeachMe AJP — Retrieval-Augmented Operational Training for the Optomec HD2 Aerosol Jet Printer
 
 ## 1. Abstract
-TeachMe AJP is an operational training system for technicians working with the Optomec HD2 Aerosol Jet Printer. The system applies retrieval-augmented generation principles to specialist equipment training: a typed knowledge graph replaces a flat document corpus, a two-agent architecture (Mentor + Narrator) replaces a single generative surface, and procedural and diagnostic competency replace generic Q&A as the primary outcome. The Narrator agent reads corpus nodes verbatim to report machine behavior, eliminating hallucination risk in a context where incorrect safety information has real consequences. Four instructional modes — Socratic Practice, Scenario Mode, Reachback Lookup, and Retrieval Lab — map naturally to technician training progression from onboarding through independent operation. Supporting surfaces (About, Architecture, RAG Coverage) expose the educational rationale, system flow, and evidence coverage without changing the instructional sequence. An interactive Workflow Demo with a Simulated Learner agent rounds out the system: it makes the full Mentor evaluation loop observable and inspectable without requiring a real learner in the seat. The central claim is that instructional utility, not topical overlap, should be the retrieval objective; and that safety-critical domains require retrieval systems whose outputs are traceable, auditable, and corpus-bounded by design. The system operationalizes this claim through what we call the TeachMe Loop: Signals → Retrieval → Mentor Loop → Safety Gate → Transfer.
+TeachMe AJP is an operational training system for technicians working with the Optomec HD2 Aerosol Jet Printer. The system applies retrieval-augmented generation principles to specialist equipment training: a typed knowledge graph replaces a flat document corpus, a two-agent architecture (Mentor + Narrator) replaces a single generative surface, and procedural and diagnostic competency replace generic Q&A as the primary outcome. The Narrator agent reads corpus nodes verbatim to report machine behavior, eliminating hallucination risk in a context where incorrect safety information has real consequences. Four instructional modes — Socratic Practice, Scenario Mode, Reachback Lookup, and Retrieval Lab — map naturally to technician training progression from onboarding through independent operation. Supporting surfaces — a global Mission/Pedagogy/AI Rationale drawer (reachable from every screen, not a training tab), an Architecture tab, and a RAG Coverage tab — expose the educational rationale, system flow, and evidence coverage without changing the instructional sequence. An interactive Workflow Demo with a Simulated Learner agent rounds out the system: it makes the full Mentor evaluation loop observable and inspectable without requiring a real learner in the seat. The central claim is that instructional utility, not topical overlap, should be the retrieval objective; and that safety-critical domains require retrieval systems whose outputs are traceable, auditable, and corpus-bounded by design. The system operationalizes this claim through what we call the TeachMe Loop: Signals → Retrieval → Mentor Loop → Safety Gate → Transfer.
 
 ## 2. Introduction
 Specialist equipment training presents a problem that general-purpose language models handle poorly: the knowledge required is narrow, procedurally structured, safety-critical, and embedded in tacit expertise that is rarely fully documented. A technician learning to operate the Optomec HD2 needs more than accurate answers — they need answers delivered at the right complexity level, sequenced to build procedural fluency before independent operation, and guaranteed never to hallucinate safety-relevant information.
@@ -74,7 +74,7 @@ flowchart TB
     A3["🔍 Retrieval\n(graph + dense hybrid + prompt enricher)"]
     A4["🧑‍🏫 Mentor  +  🎙️ Narrator\n(two-agent architecture)"]
     A5["Instructional Modes\nSocratic · Scenario · Reachback · Lab"]
-    EP["⚙️ Embedding Provider\n(Gemini 768-D or simulated TF-IDF/Jaccard)"]
+    EP["⚙️ Embedding Provider\n(Gemini gemini-embedding-001, 3072-D, or simulated TF-IDF/Jaccard)"]
 
     A1 --> A2 --> A3 --> A4 --> A5
     A3 --> EP
@@ -118,7 +118,7 @@ flowchart TD
 
     subgraph DENSE["Dense Tier  (requires npm run ingest)"]
         EMBI["embed(query)"]
-        COS["cosine similarity\nagainst precomputed\n768-D chunk vectors"]
+        COS["cosine similarity\nagainst precomputed\n3072-D chunk vectors"]
         EMBI --> COS
     end
 
@@ -204,9 +204,23 @@ The system explicitly supports a five-level learner expertise model that determi
 This continuum replaces the earlier novice/technician/expert trichotomy. The key change is explicit support for Level 1 (Complete Novice): the system does not exclude learners with no prior lab experience. Instead, it routes them to the smallest, highest-safety-density probe set and intensifies scaffolding. The prior assumption that "complete novices need not apply" reflected a deployment decision, not a system constraint; it has been removed.
 
 ### 4.6 Embedding Backends and Reproducibility
-TeachMe AJP supports interchangeable embedding providers through a shared interface. For no-key demo operation and deterministic regression testing, the platform uses `SimulatedEmbeddingProvider` (`src/engine/retrieval/simulated-provider.ts`), which computes deterministic TF-IDF vectors and cosine similarity. Gemini embedding (768-D vectors) activates when an API key is present, providing richer semantic matching for production use.
+TeachMe AJP supports interchangeable embedding providers through a shared interface. For no-key demo operation and deterministic regression testing, the platform uses `SimulatedEmbeddingProvider` (`src/engine/retrieval/simulated-provider.ts`), which computes deterministic TF-IDF vectors and cosine similarity. Gemini embedding (`gemini-embedding-001`, 3072-D vectors) activates when an API key is present, providing richer semantic matching for production use.
 
 The separation between embedding provider and retrieval routing logic is intentional: changes to the embedding backend do not affect graph traversal strategy, router dispatch, or mastery gate logic.
+
+Dense-tier retrieval enforces a single embedding model per corpus: query vectors are only scored against chunk vectors produced by the same model (`src/engine/retrieval/dense-retrieval.ts`). Mixing embedding sources within one corpus is rejected rather than silently degraded, so a provider swap always requires a fresh, consistently-embedded corpus rather than a partial re-embed.
+
+### 4.6.1 Ingestion Pipeline
+
+`public/ajp-corpus.json` — the chunk + embedding artifact the dense tier loads at runtime — is produced offline by `npm run ingest` (`scripts/ingest-corpus.ts`), which fetches or reads ~19 curated sources (public SOPs, peer-reviewed papers, and OEM documentation), extracts text (Gemini multimodal extraction for PDFs, regex tag-stripping for HTML), chunks it into ~350-word overlapping windows, and embeds each chunk. This is the authoritative pipeline: the committed corpus is always generated by this script, not by the newer `scripts/db/*` SQLite-backed pipeline, which stages the same steps through a local database (for caching and idempotency across re-runs) but is not yet wired into the runtime build.
+
+Extraction and embedding calls run against Gemini's free tier, which is rate-limited; a source that hits a `429`/`503` during a run is retried with exponential backoff, and a source that still fails after retries is reported in a loud, itemized failure summary rather than silently contributing zero chunks. By default, `npm run ingest` exits non-zero when any source fails, so a partial corpus is never mistaken for a complete one; an explicit `--allow-partial` flag opts into accepting a partial run, and `--retry-failed-only` re-runs just the sources that failed in the last attempt without re-embedding sources that already succeeded.
+
+### 4.6.2 Provider Options
+
+Gemini is the primary provider for both embeddings and the three chat-completion services (Mentor, Prompt Enricher, Simulated Learner). GitHub Models — a free chat-completion API authenticated with a personal GitHub token — is available as an alternative provider for those same three chat-completion services (`src/engine/llm/github-models-provider.ts`), selectable via a `VITE_LLM_PROVIDER` setting or automatically when a Gemini key is absent but a GitHub token is present. This exists to diversify inference away from a single free-tier quota, not to increase total throughput — GitHub Models' own free-tier limits are comparable to Gemini's.
+
+GitHub Models is **not** used for embeddings. Its embeddings endpoint requires an organization with Models access enabled (not a plain personal-access-token flow available to an individual account), and — per the single-embedding-model-per-corpus constraint above — a second embedding provider could not share the existing Gemini-embedded corpus's vector space regardless; it would require its own independently-embedded corpus artifact. This is left as a possible future extension, not a current capability.
 
 ### 4.7 The TeachMe Loop
 
@@ -220,7 +234,7 @@ The five-stage operational narrative that unifies the system's design is referre
 4. **Safety Gate**: High-consequence steps require demonstrated prerequisite understanding before the system advances. Safety gates are explicit, inspectable, and auditable — a gate can say exactly what is missing and what would clear it.
 5. **Transfer**: Assessment targets novel fault scenarios to validate that skill transferred, not merely that the last case was memorized.
 
-This loop is the organizing principle for all four instructional modes and the Workflow Demo. The in-app Architecture tab presents the same loop as an inspectable flow; the About tab carries the educational rationale and whitepaper link.
+This loop is the organizing principle for all four instructional modes and the Workflow Demo. The in-app Architecture tab presents the same loop as an inspectable flow; the Mission/Pedagogy/AI Rationale drawer, opened from a persistent masthead trigger rather than a training tab, carries the educational rationale and whitepaper link.
 
 ### 4.8 Workflow Demo
 
