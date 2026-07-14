@@ -239,6 +239,55 @@
   .app-masthead-divider { display: none; }
 }
 
+/* ─── Site footer ─────────────────────────────────────────────── */
+.app-footer {
+  margin: 2.5rem -1.5rem -2rem;
+  padding: 1rem 1.75rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-card) 60%, transparent);
+}
+
+.app-footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 1120px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+.app-footer-note {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.app-footer-whitepaper {
+  font-family: var(--display);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.app-footer-whitepaper:hover {
+  color: var(--accent-bright);
+}
+
+.app-footer-whitepaper--locked {
+  color: var(--text-dim);
+  cursor: not-allowed;
+}
+
+.app-footer-whitepaper--locked:hover {
+  color: var(--text-dim);
+}
+
+@media (max-width: 680px) {
+  .app-footer { margin: 2rem -1rem -1rem; padding: 0.85rem 1rem; }
+  .app-footer-inner { justify-content: center; text-align: center; }
+}
+
 /* ─── Masthead: pedagogy drawer trigger ──────────────────────── */
 .app-masthead-pedagogy-btn {
   padding: 0.3rem 0.8rem;

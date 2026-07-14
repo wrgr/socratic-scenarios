@@ -78,8 +78,6 @@ export function WelcomeScreen({ onEnterDomain }: { onEnterDomain: (id: DomainId)
           ))}
         </div>
       </section>
-
-      <p className="welcome-footnote">Research prototype · not for operational use without expert review.</p>
     </div>
   );
 }
