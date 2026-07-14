@@ -91,6 +91,15 @@ interface NavTabDef {
   phase?: string;
   /** Comprehensive training surface — locked while the operator is in high-stress mode. */
   trainingOnly: boolean;
+  /**
+   * Rendered as a pill in the top nav bar. The four training-phase destinations
+   * are deliberately NOT shown here — they'd just duplicate the Dashboard's own
+   * "Training Sequence" card, which already links to the same tabs with richer,
+   * expandable descriptions. They stay fully reachable (and still correctly
+   * locked in high-stress mode via trainingOnly below, checked against the full
+   * list, not this filtered one) from there.
+   */
+  showInTopNav: boolean;
 }
 
 // Ordered to match the training sequence on the dashboard: orient (dashboard →
@@ -100,14 +109,14 @@ interface NavTabDef {
 // Mission/Pedagogy/AI Rationale (formerly an "About" tab here) now lives in the
 // global PedagogyDrawer, reachable from the masthead on every screen instead.
 const NAV_TABS: readonly NavTabDef[] = [
-  { id: 'ajp-dashboard', label: 'Dashboard', trainingOnly: false },
-  { id: 'ajp-architecture', label: 'Architecture', trainingOnly: true },
-  { id: 'ajp-socratic', label: 'Socratic Practice', phase: '01', trainingOnly: true },
-  { id: 'ajp-scenario', label: 'Scenario Mode', phase: '02', trainingOnly: true },
-  { id: 'ajp-demo', label: 'Workflow Demo', phase: '03', trainingOnly: true },
-  { id: 'ajp-reachback', label: 'Reachback Lookup', phase: '04', trainingOnly: false },
-  { id: 'ajp-lab', label: 'Retrieval Lab', trainingOnly: true },
-  { id: 'ajp-rag', label: 'RAG Coverage', trainingOnly: true },
+  { id: 'ajp-dashboard', label: 'Dashboard', trainingOnly: false, showInTopNav: true },
+  { id: 'ajp-architecture', label: 'Architecture', trainingOnly: true, showInTopNav: true },
+  { id: 'ajp-socratic', label: 'Socratic Practice', phase: '01', trainingOnly: true, showInTopNav: false },
+  { id: 'ajp-scenario', label: 'Scenario Mode', phase: '02', trainingOnly: true, showInTopNav: false },
+  { id: 'ajp-demo', label: 'Workflow Demo', phase: '03', trainingOnly: true, showInTopNav: false },
+  { id: 'ajp-reachback', label: 'Reachback Lookup', phase: '04', trainingOnly: false, showInTopNav: false },
+  { id: 'ajp-lab', label: 'Retrieval Lab', trainingOnly: true, showInTopNav: true },
+  { id: 'ajp-rag', label: 'RAG Coverage', trainingOnly: true, showInTopNav: true },
 ];
 
 function isTrainingOnly(tab: AjpTab): boolean {
@@ -260,7 +269,7 @@ function App() {
       <section className={`ajp-mode-shell ${highStress ? 'ajp-mode-shell--high-stress' : ''}`}>
         <div className="mode-shell-toolbar">
           <nav className="app-sub-nav" aria-label="Training surfaces">
-            {NAV_TABS.map((tab) => {
+            {NAV_TABS.filter((tab) => tab.showInTopNav).map((tab) => {
               const locked = highStress && tab.trainingOnly;
               return (
                 <button

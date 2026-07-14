@@ -24,7 +24,8 @@
     "db:log-failure": "npx tsx scripts/db/log-failure.ts",
     "db:ingest-sources": "npx tsx scripts/db/ingest-sources.ts",
     "db:setup": "npm run db:init && npm run db:migrate && npm run db:ingest-kb && npm run db:validate",
-    "db:full-setup": "npm run db:init && npm run db:migrate && npm run db:ingest-kb && npm run db:ingest-sources && npm run db:refresh-embeddings && npm run db:export && npm run db:validate"
+    "db:full-setup": "npm run db:init && npm run db:migrate && npm run db:ingest-kb && npm run db:ingest-sources && npm run db:refresh-embeddings && npm run db:export && npm run db:validate",
+    "build:whitepaper": "bash scripts/build-whitepaper.sh"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
@@ -48,6 +49,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "js-yaml": "^4.1.1",
+    "pdf-parse": "^2.4.5",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",

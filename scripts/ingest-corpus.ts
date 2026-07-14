@@ -13,6 +13,11 @@
  *   --allow-partial       Exit 0 even if some sources failed (default: exit 1 on any failure).
  *   --retry-failed-only   Only re-run sources that failed in the existing public/ajp-corpus.json,
  *                          carrying over chunks from sources that already succeeded.
+ *   --extract=local|gemini  PDF text extraction mode (default: local). "local" parses the PDF's
+ *                          own text layer with pdf-parse — no LLM call, no quota use, but no
+ *                          heading/boilerplate cleanup. "gemini" uses Gemini Flash's multimodal
+ *                          extraction for nicer output, falling back to local automatically if
+ *                          the Gemini call fails (e.g. free-tier quota exceeded).
  *
  * Add to package.json scripts:
  *   "ingest": "npx tsx scripts/ingest-corpus.ts"
@@ -29,6 +34,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { PDFParse } from 'pdf-parse';
 import { writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -310,8 +316,77 @@ const STUB_SOURCES = [
 
 // ─── Text Extraction ──────────────────────────────────────────────
 
+/**
+ * "local" parses the PDF's own text layer with pdf-parse — free, instant, no
+ * Gemini quota use, but no heading/boilerplate cleanup. "gemini" asks Gemini
+ * Flash's multimodal extraction to also clean up structure, at the cost of a
+ * generateContent call (and its free-tier quota) per source.
+ */
+type ExtractMode = 'local' | 'gemini';
+
+const REMOTE_PDF_PROMPT = `Extract the complete text from this AJP (Aerosol Jet Printing) document.
+Preserve section headings and the logical structure of the document.
+Output plain text — no markdown, no tables (convert table content to prose).
+Focus on operational content: procedures, parameters, fault modes, safety warnings.
+Skip administrative boilerplate (title pages, approval signatures, TOC).`;
+
+const LOCAL_PDF_PROMPT = `Extract the complete text from this AJP (Aerosol Jet Printing) document.
+Preserve section headings and the logical structure of the document.
+Output plain text — no markdown, no tables (convert table content to prose).
+Focus on technical content: process principles, parameters, fault modes, experimental results, safety warnings.
+Skip administrative boilerplate (title pages, approval signatures, TOC, author affiliations).`;
+
+/** Parse a PDF's own text layer — no LLM call, no quota use. */
+async function extractPdfTextLocally(buffer: Buffer): Promise<string> {
+  const parser = new PDFParse({ data: buffer });
+  try {
+    const result = await parser.getText();
+    return result.text;
+  } finally {
+    await parser.destroy();
+  }
+}
+
+async function extractPdfTextViaGemini(
+  buffer: Buffer,
+  flashModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']>,
+  focusPrompt: string,
+): Promise<string> {
+  const base64 = buffer.toString('base64');
+  const result = await withRetry(
+    () => flashModel.generateContent([
+      { inlineData: { data: base64, mimeType: 'application/pdf' } },
+      focusPrompt,
+    ]),
+    { onRetry: (attempt, attempts, err, delayMs) => console.warn(
+      `  ⟳ retrying extraction (attempt ${attempt + 1}/${attempts}, waiting ${(delayMs / 1000).toFixed(0)}s): ${err instanceof Error ? err.message : err}`,
+    ) },
+  );
+  return result.response.text();
+}
+
+/** Extract PDF text per `mode`; "gemini" mode falls back to local parsing if the Gemini call fails. */
+async function extractPdfBuffer(
+  buffer: Buffer,
+  mode: ExtractMode,
+  flashModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']>,
+  focusPrompt: string,
+): Promise<string> {
+  if (mode === 'local') return extractPdfTextLocally(buffer);
+
+  try {
+    return await extractPdfTextViaGemini(buffer, flashModel, focusPrompt);
+  } catch (err) {
+    console.warn(
+      `  ⚠ Gemini extraction failed, falling back to local PDF parsing: ${err instanceof Error ? err.message : err}`,
+    );
+    return extractPdfTextLocally(buffer);
+  }
+}
+
 async function extractPdfText(
   url: string,
+  mode: ExtractMode,
   flashModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']>,
 ): Promise<string> {
   console.log(`  Fetching PDF: ${url}`);
@@ -321,61 +396,20 @@ async function extractPdfText(
   });
   if (!response.ok) throw new Error(`HTTP ${response.status}: ${url}`);
 
-  const buffer = await response.arrayBuffer();
-  const base64 = Buffer.from(buffer).toString('base64');
-  console.log(`  Extracting text from PDF (${Math.round(buffer.byteLength / 1024)} KB)…`);
-
-  const result = await withRetry(
-    () => flashModel.generateContent([
-      {
-        inlineData: {
-          data: base64,
-          mimeType: 'application/pdf',
-        },
-      },
-      `Extract the complete text from this AJP (Aerosol Jet Printing) document.
-Preserve section headings and the logical structure of the document.
-Output plain text — no markdown, no tables (convert table content to prose).
-Focus on operational content: procedures, parameters, fault modes, safety warnings.
-Skip administrative boilerplate (title pages, approval signatures, TOC).`,
-    ]),
-    { onRetry: (attempt, attempts, err, delayMs) => console.warn(
-      `  ⟳ retrying extraction (attempt ${attempt + 1}/${attempts}, waiting ${(delayMs / 1000).toFixed(0)}s): ${err instanceof Error ? err.message : err}`,
-    ) },
-  );
-
-  return result.response.text();
+  const buffer = Buffer.from(await response.arrayBuffer());
+  console.log(`  Extracting text from PDF (${Math.round(buffer.byteLength / 1024)} KB, ${mode})…`);
+  return extractPdfBuffer(buffer, mode, flashModel, REMOTE_PDF_PROMPT);
 }
 
 async function extractLocalPdfText(
   localPath: string,
+  mode: ExtractMode,
   flashModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']>,
 ): Promise<string> {
   console.log(`  Reading local PDF: ${localPath}`);
   const buffer = await readFile(localPath);
-  const base64 = buffer.toString('base64');
-  console.log(`  Extracting text from local PDF (${Math.round(buffer.byteLength / 1024)} KB)…`);
-
-  const result = await withRetry(
-    () => flashModel.generateContent([
-      {
-        inlineData: {
-          data: base64,
-          mimeType: 'application/pdf',
-        },
-      },
-      `Extract the complete text from this AJP (Aerosol Jet Printing) document.
-Preserve section headings and the logical structure of the document.
-Output plain text — no markdown, no tables (convert table content to prose).
-Focus on technical content: process principles, parameters, fault modes, experimental results, safety warnings.
-Skip administrative boilerplate (title pages, approval signatures, TOC, author affiliations).`,
-    ]),
-    { onRetry: (attempt, attempts, err, delayMs) => console.warn(
-      `  ⟳ retrying extraction (attempt ${attempt + 1}/${attempts}, waiting ${(delayMs / 1000).toFixed(0)}s): ${err instanceof Error ? err.message : err}`,
-    ) },
-  );
-
-  return result.response.text();
+  console.log(`  Extracting text from local PDF (${Math.round(buffer.byteLength / 1024)} KB, ${mode})…`);
+  return extractPdfBuffer(buffer, mode, flashModel, LOCAL_PDF_PROMPT);
 }
 
 // ─── DOCX Extraction ─────────────────────────────────────────────
@@ -624,6 +658,9 @@ async function main() {
   const args = process.argv.slice(2);
   const allowPartial = args.includes('--allow-partial');
   const retryFailedOnly = args.includes('--retry-failed-only');
+  const extractModeArg = args.find((a) => a.startsWith('--extract='))?.split('=')[1];
+  const extractMode: ExtractMode = extractModeArg === 'gemini' ? 'gemini' : 'local';
+  console.log(`PDF extraction mode: ${extractMode}${extractModeArg && extractModeArg !== 'local' && extractModeArg !== 'gemini' ? ` (unrecognized "--extract=${extractModeArg}", defaulting to local)` : ''}\n`);
 
   const apiKey = loadApiKey();
   const genai = new GoogleGenerativeAI(apiKey);
@@ -677,9 +714,9 @@ async function main() {
       } else if (source.format === 'xml-config' && source.localPath) {
         rawText = extractXmlConfig(source.localPath);
       } else if (source.localPath) {
-        rawText = await extractLocalPdfText(source.localPath, flashModel);
+        rawText = await extractLocalPdfText(source.localPath, extractMode, flashModel);
       } else if (source.format === 'pdf' && source.url) {
-        rawText = await extractPdfText(source.url, flashModel);
+        rawText = await extractPdfText(source.url, extractMode, flashModel);
       } else if (source.url) {
         rawText = await extractHtmlFromUrl(source.url);
       } else {
