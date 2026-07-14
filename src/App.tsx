@@ -350,9 +350,19 @@ function App() {
       <footer className="app-footer">
         <div className="app-footer-inner">
           <span className="app-footer-note">Research prototype · not for operational use without expert review.</span>
-          <a href={WHITEPAPER_URL} target="_blank" rel="noreferrer" className="app-footer-whitepaper">
-            TeachMe AJP — full system whitepaper (PDF) ↗
-          </a>
+          {view === 'app' && highStress ? (
+            <span
+              className="app-footer-whitepaper app-footer-whitepaper--locked"
+              title="Locked in high-stress mode — comprehensive training is paused to limit cognitive load"
+            >
+              TeachMe AJP — full system whitepaper (PDF)
+              <span className="app-masthead-pedagogy-lock" aria-hidden="true">🔒</span>
+            </span>
+          ) : (
+            <a href={WHITEPAPER_URL} target="_blank" rel="noreferrer" className="app-footer-whitepaper">
+              TeachMe AJP — full system whitepaper (PDF) ↗
+            </a>
+          )}
         </div>
       </footer>
       <PedagogyDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
