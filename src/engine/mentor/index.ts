@@ -1,17 +1,21 @@
 /**
  * LLM Mentor service for AJP training — Phase 3 multi-agent layer.
- * Uses Gemini Flash to evaluate free-text learner responses against the
+ * Uses a chat-completion LLM to evaluate free-text learner responses against the
  * expectedConcepts of a SocraticProbe node, then generates a targeted
  * follow-up probe without revealing the answer on first attempt.
  *
  * Usage (App.tsx):
  *   import { setMentorService, createMentorService } from './engine/mentor';
- *   if (geminiKey) setMentorService(createMentorService(geminiKey));
+ *   if (chatProvider) setMentorService(createMentorService(chatProvider));
  *
- * Consumer pattern: call getMentorService() — returns null when no API key is set,
+ * The provider is swappable (Gemini or GitHub Models — see src/engine/llm/) —
+ * this service only depends on the ChatCompletionProvider interface, not a
+ * specific vendor SDK.
+ *
+ * Consumer pattern: call getMentorService() — returns null when no provider is set,
  * allowing callers to gracefully degrade to static probe display.
  */
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import type { ChatCompletionProvider } from '../llm/types';
 
 // ─── Public Interfaces ────────────────────────────────────────────
 
@@ -51,6 +55,13 @@ export interface MentorEvaluation {
   followUpProbe: string;
   /** True when score ≥ masteryThreshold (default 0.80, 0.90 for safetyGate). */
   masteryPassed: boolean;
+  /**
+   * True only when this evaluation is a fallback produced after the LLM call
+   * failed (network error, quota exceeded) — score/masteryPassed are placeholder
+   * values, not a real assessment. Consumers should render this distinctly
+   * (e.g. an alert banner) rather than as a normal score.
+   */
+  degraded?: boolean;
 }
 
 /** Mentor service — evaluate a learner response and generate a follow-up probe. */
@@ -70,7 +81,7 @@ export function getMentorService(): MentorService | null {
   return _mentorService;
 }
 
-// ─── Gemini Flash Implementation ──────────────────────────────────
+// ─── Chat-Completion Implementation ────────────────────────────────
 
 const SYSTEM_INSTRUCTION = `You are an expert AJP (Aerosol Jet Printing) repair training mentor.
 Your role is to evaluate learner responses to Socratic probe questions and provide targeted scaffolding.
@@ -156,30 +167,24 @@ function parseMentorResponse(
   };
 }
 
-/** Create a Mentor service backed by Gemini Flash. */
-export function createMentorService(apiKey: string): MentorService {
-  const genai = new GoogleGenerativeAI(apiKey);
-  const model = genai.getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    systemInstruction: SYSTEM_INSTRUCTION,
-  });
-
+/** Create a Mentor service backed by the given chat-completion provider. */
+export function createMentorService(provider: ChatCompletionProvider): MentorService {
   return {
     async evaluate(ctx: MentorContext): Promise<MentorEvaluation> {
       const prompt = buildPrompt(ctx);
       try {
-        const result = await model.generateContent(prompt);
-        const raw = result.response.text();
+        const raw = await provider.complete(SYSTEM_INSTRUCTION, prompt);
         return parseMentorResponse(raw, ctx);
       } catch (err) {
         // Network error or quota exceeded — fail gracefully
-        console.error('[MentorService] Gemini call failed:', err);
+        console.error('[MentorService] LLM call failed:', err);
         return {
           score: 0,
           feedback:
             'The Mentor is temporarily unavailable. Review your answer against the expected concepts and try again.',
           followUpProbe: ctx.probeQuestion,
           masteryPassed: false,
+          degraded: true,
         };
       }
     },

@@ -23,6 +23,7 @@ import { ajpScenarioScripts } from '../corpus/ajp/scenario-scripts';
 import { consequenceNodes } from '../corpus/ajp/consequences';
 import { ajpProbeNodes } from '../corpus/ajp/probes';
 import { ProcedureScaffold } from './ProcedureScaffold';
+import { MentorDegradedBanner } from './MentorDegradedBanner';
 import { SourceRefText } from './SourceRefText';
 import { GapFlagButton } from './GapFlagButton';
 import { safetyGateStrategy, probeContextStrategy, tacitLookupStrategy, formatProbeRetrievalContext } from '../engine/retrieval/retrieval-router';
@@ -518,13 +519,19 @@ function MentorReflectionPanel({
 
       {evaluation && (
         <div className={`mentor-evaluation ${evaluation.masteryPassed ? 'eval--pass' : 'eval--partial'}`}>
-          <div className="eval-score-bar">
-            <div
-              className="eval-score-fill"
-              style={{ width: `${Math.round(evaluation.score * 100)}%` }}
-            />
-          </div>
-          <p className="eval-feedback">{evaluation.feedback}</p>
+          {evaluation.degraded ? (
+            <MentorDegradedBanner feedback={evaluation.feedback} />
+          ) : (
+            <>
+              <div className="eval-score-bar">
+                <div
+                  className="eval-score-fill"
+                  style={{ width: `${Math.round(evaluation.score * 100)}%` }}
+                />
+              </div>
+              <p className="eval-feedback">{evaluation.feedback}</p>
+            </>
+          )}
           {!evaluation.masteryPassed && (
             <p className="eval-followup"><em>{evaluation.followUpProbe}</em></p>
           )}
@@ -666,25 +673,31 @@ function ProbeAssessmentCard({
 
       {expanded && (
         <div className="probe-assessment-body">
-          <div className="probe-assessment-score-bar">
-            <div
-              className="probe-assessment-score-fill"
-              style={{ width: `${scorePct}%` }}
-            />
-            <div
-              className="probe-assessment-score-threshold"
-              style={{ left: `${thresholdPct}%` }}
-              aria-label={`Mastery threshold ${thresholdPct}%`}
-            />
-          </div>
+          {evaluation.degraded ? (
+            <MentorDegradedBanner feedback={evaluation.feedback} />
+          ) : (
+            <>
+              <div className="probe-assessment-score-bar">
+                <div
+                  className="probe-assessment-score-fill"
+                  style={{ width: `${scorePct}%` }}
+                />
+                <div
+                  className="probe-assessment-score-threshold"
+                  style={{ left: `${thresholdPct}%` }}
+                  aria-label={`Mastery threshold ${thresholdPct}%`}
+                />
+              </div>
 
-          <div className="probe-assessment-section">
-            <strong>Mentor feedback</strong>
-            <p>{evaluation.feedback}</p>
-            {!evaluation.masteryPassed && evaluation.followUpProbe && (
-              <p className="probe-assessment-followup"><em>Follow-up: {evaluation.followUpProbe}</em></p>
-            )}
-          </div>
+              <div className="probe-assessment-section">
+                <strong>Mentor feedback</strong>
+                <p>{evaluation.feedback}</p>
+                {!evaluation.masteryPassed && evaluation.followUpProbe && (
+                  <p className="probe-assessment-followup"><em>Follow-up: {evaluation.followUpProbe}</em></p>
+                )}
+              </div>
+            </>
+          )}
 
           <div className="probe-assessment-section">
             <strong>

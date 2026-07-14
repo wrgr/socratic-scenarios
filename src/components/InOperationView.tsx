@@ -29,6 +29,7 @@ import {
   chainTopicTitle,
 } from './in-operation-view.utils';
 import { SourceRefText } from './SourceRefText';
+import { MentorDegradedBanner } from './MentorDegradedBanner';
 
 // ─── Graph tier sub-renderers ─────────────────────────────────────
 
@@ -488,7 +489,11 @@ function MentorInterpretPanel({
       )}
       {evaluation && (
         <div className="mentor-evaluation eval--partial">
-          <p className="eval-feedback">{evaluation.feedback}</p>
+          {evaluation.degraded ? (
+            <MentorDegradedBanner feedback={evaluation.feedback} />
+          ) : (
+            <p className="eval-feedback">{evaluation.feedback}</p>
+          )}
           <button
             type="button"
             className="btn-secondary"

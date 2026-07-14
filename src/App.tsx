@@ -4,8 +4,8 @@ import { InOperationView } from './components/InOperationView';
 import { SocraticView } from './components/SocraticView';
 import { RetrievalLabView } from './components/RetrievalLabView';
 import { RagCoverageView } from './components/RagCoverageView';
-import { AboutView } from './components/AboutView';
 import { ArchitectureView } from './components/ArchitectureView';
+import { PedagogyDrawer } from './components/PedagogyDrawer';
 import { AjpWorkflowDemo } from './components/AjpWorkflowDemo';
 import { ScenarioView } from './components/ScenarioView';
 import { HudDashboard } from './components/HudDashboard';
@@ -20,7 +20,10 @@ import { setMentorService, createMentorService } from './engine/mentor';
 import { setSimulatedLearnerService, createSimulatedLearnerService } from './engine/simulated-learner';
 import { setPromptEnricher, createPromptEnricher } from './engine/prompt-enhancer';
 import { createSimulatedEnricher } from './engine/prompt-enhancer/simulated-enricher';
-import { resolveGeminiKey } from './hooks/useApiKey';
+import { createGeminiChatProvider } from './engine/llm/gemini-chat-provider';
+import { createGithubModelsChatProvider } from './engine/llm/github-models-provider';
+import type { ChatCompletionProvider } from './engine/llm/types';
+import { resolveGeminiKey, resolveGithubModelsToken } from './hooks/useApiKey';
 import { ApiKeySettings } from './components/ApiKeySettings';
 import { useOperatorMode } from './hooks/useOperatorMode';
 import type { OperatorMode } from './hooks/useOperatorMode';
@@ -49,15 +52,37 @@ if (embeddingMode === 'simulated') {
   setEmbeddingProvider(createSimulatedProvider());
 }
 
-if (geminiKey) {
-  setMentorService(createMentorService(geminiKey));
-  setSimulatedLearnerService(createSimulatedLearnerService(geminiKey));
-  setPromptEnricher(createPromptEnricher(geminiKey));
+// Chat-completion provider mode (mentor evaluation, prompt enrichment, simulated
+// learner — NOT embeddings, which stay Gemini-only per embeddingMode above):
+// - gemini: force Gemini (no fallback)
+// - github: force GitHub Models (no fallback)
+// - auto (default): Gemini when a key exists, else GitHub Models when a token
+//   exists, else simulated/no-op fallbacks
+//
+// GitHub Models token resolution mirrors the Gemini key: localStorage (gear icon)
+// → VITE_GITHUB_MODELS_TOKEN env (dev fallback). See src/hooks/useApiKey.ts.
+const llmProviderMode = (import.meta.env.VITE_LLM_PROVIDER as string | undefined)?.toLowerCase() ?? 'auto';
+const githubModelsToken = resolveGithubModelsToken();
+
+function resolveChatProvider(): ChatCompletionProvider | null {
+  if (llmProviderMode === 'gemini') return geminiKey ? createGeminiChatProvider(geminiKey) : null;
+  if (llmProviderMode === 'github') return githubModelsToken ? createGithubModelsChatProvider(githubModelsToken) : null;
+  if (geminiKey) return createGeminiChatProvider(geminiKey);
+  if (githubModelsToken) return createGithubModelsChatProvider(githubModelsToken);
+  return null;
+}
+
+const chatProvider = resolveChatProvider();
+
+if (chatProvider) {
+  setMentorService(createMentorService(chatProvider));
+  setSimulatedLearnerService(createSimulatedLearnerService(chatProvider));
+  setPromptEnricher(createPromptEnricher(chatProvider));
 } else {
   setPromptEnricher(createSimulatedEnricher());
 }
 
-type AjpTab = 'ajp-dashboard' | 'ajp-about' | 'ajp-architecture' | 'ajp-demo' | 'ajp-scenario' | 'ajp-socratic' | 'ajp-reachback' | 'ajp-lab' | 'ajp-rag';
+type AjpTab = 'ajp-dashboard' | 'ajp-architecture' | 'ajp-demo' | 'ajp-scenario' | 'ajp-socratic' | 'ajp-reachback' | 'ajp-lab' | 'ajp-rag';
 
 interface NavTabDef {
   id: AjpTab;
@@ -69,12 +94,13 @@ interface NavTabDef {
 }
 
 // Ordered to match the training sequence on the dashboard: orient (dashboard →
-// about → architecture) → practice concepts → apply in scenarios → observe the
-// full loop → operate → inspect. About/Architecture are context surfaces, locked
+// architecture) → practice concepts → apply in scenarios → observe the
+// full loop → operate → inspect. Architecture is a context surface, locked
 // in high-stress mode so only the dashboard + reachback stay reachable.
+// Mission/Pedagogy/AI Rationale (formerly an "About" tab here) now lives in the
+// global PedagogyDrawer, reachable from the masthead on every screen instead.
 const NAV_TABS: readonly NavTabDef[] = [
   { id: 'ajp-dashboard', label: 'Dashboard', trainingOnly: false },
-  { id: 'ajp-about', label: 'About', trainingOnly: true },
   { id: 'ajp-architecture', label: 'Architecture', trainingOnly: true },
   { id: 'ajp-socratic', label: 'Socratic Practice', phase: '01', trainingOnly: true },
   { id: 'ajp-scenario', label: 'Scenario Mode', phase: '02', trainingOnly: true },
@@ -138,6 +164,10 @@ function App() {
   const [view, setView] = useState<'welcome' | 'app'>(() => (readEntered() ? 'app' : 'welcome'));
   const [ajpTab, setAjpTab] = useState<AjpTab>('ajp-dashboard');
   const [mode, setMode] = useOperatorMode();
+  // Sibling to ajpTab, not a tab itself — an overlay reachable from every
+  // screen (including the pre-dashboard Welcome screen) via the masthead
+  // trigger, so opening/closing it never disturbs the active tab.
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Boot installed the active domain before render (main.tsx), so this is safe.
   const activeDomain = getActiveDomain();
@@ -207,6 +237,20 @@ function App() {
               ⇦ Change domain
             </button>
           )}
+          <button
+            type="button"
+            className={`app-masthead-pedagogy-btn ${view === 'app' && highStress ? 'app-masthead-pedagogy-btn--locked' : ''}`}
+            onClick={() => setDrawerOpen(true)}
+            disabled={view === 'app' && highStress}
+            title={
+              view === 'app' && highStress
+                ? 'Locked in high-stress mode — comprehensive training is paused to limit cognitive load'
+                : 'Mission, pedagogy, and AI rationale'
+            }
+          >
+            Mission &amp; Pedagogy
+            {view === 'app' && highStress && <span className="app-masthead-pedagogy-lock" aria-hidden="true">🔒</span>}
+          </button>
           <ApiKeySettings />
         </div>
       </header>
@@ -270,8 +314,6 @@ function App() {
         <div className="ajp-content-surface">
           {ajpTab === 'ajp-dashboard' ? (
             <HudDashboard onNavigate={navigate} mode={mode} />
-          ) : ajpTab === 'ajp-about' ? (
-            <AboutView />
           ) : ajpTab === 'ajp-architecture' ? (
             <ArchitectureView />
           ) : ajpTab === 'ajp-demo' ? (
@@ -295,6 +337,7 @@ function App() {
         </div>
       </section>
       )}
+      <PedagogyDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
   );
 }

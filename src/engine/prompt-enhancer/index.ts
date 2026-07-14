@@ -9,13 +9,15 @@
  *
  * Usage (App.tsx):
  *   import { setPromptEnricher, createPromptEnricher } from './engine/prompt-enhancer';
- *   if (geminiKey) setPromptEnricher(createPromptEnricher(geminiKey));
- *   else           setPromptEnricher(createSimulatedEnricher());
+ *   if (chatProvider) setPromptEnricher(createPromptEnricher(chatProvider));
+ *   else              setPromptEnricher(createSimulatedEnricher());
+ *
+ * The provider is swappable (Gemini or GitHub Models — see src/engine/llm/).
  *
  * Consumer pattern: call getPromptEnricher() — always non-null when App.tsx
- * has initialized it (either Gemini or simulated shim).
+ * has initialized it (either a real provider or the simulated shim).
  */
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import type { ChatCompletionProvider } from '../llm/types';
 
 // ─── Public Interfaces ────────────────────────────────────────────
 
@@ -61,7 +63,7 @@ export function getPromptEnricher(): PromptEnricher | null {
   return _enricher;
 }
 
-// ─── Gemini Flash Implementation ──────────────────────────────────
+// ─── Chat-Completion Implementation ────────────────────────────────
 
 const SYSTEM_INSTRUCTION = `You are a prompt enrichment agent for an educational AI tutoring system.
 Your job is to rewrite a short or underspecified learner query into a well-formed, detailed prompt
@@ -110,23 +112,16 @@ function parseEnrichmentResponse(raw: string, fallbackQuery: string): Enrichment
   }
 }
 
-/** Create a prompt enricher backed by Gemini Flash. */
-export function createPromptEnricher(apiKey: string): PromptEnricher {
-  const genai = new GoogleGenerativeAI(apiKey);
-  const model = genai.getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    systemInstruction: SYSTEM_INSTRUCTION,
-  });
-
+/** Create a prompt enricher backed by the given chat-completion provider. */
+export function createPromptEnricher(provider: ChatCompletionProvider): PromptEnricher {
   return {
     async enrich(rawQuery: string, context: EnrichmentContext): Promise<EnrichmentResult> {
       const prompt = buildEnrichPrompt(rawQuery, context);
       try {
-        const result = await model.generateContent(prompt);
-        const raw = result.response.text();
+        const raw = await provider.complete(SYSTEM_INSTRUCTION, prompt);
         return parseEnrichmentResponse(raw, rawQuery);
       } catch (err) {
-        console.error('[PromptEnricher] Gemini call failed:', err);
+        console.error('[PromptEnricher] LLM call failed:', err);
         return {
           enrichedPrompt: rawQuery,
           assumptionNote: 'Enrichment service unavailable; showing your original query.',

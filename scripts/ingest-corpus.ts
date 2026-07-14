@@ -9,6 +9,11 @@
  *   npx tsx scripts/ingest-corpus.ts
  *   # reads VITE_GEMINI_API_KEY from .env or environment
  *
+ * Flags:
+ *   --allow-partial       Exit 0 even if some sources failed (default: exit 1 on any failure).
+ *   --retry-failed-only   Only re-run sources that failed in the existing public/ajp-corpus.json,
+ *                          carrying over chunks from sources that already succeeded.
+ *
  * Add to package.json scripts:
  *   "ingest": "npx tsx scripts/ingest-corpus.ts"
  *
@@ -16,6 +21,11 @@
  * Sources 3-4 (Optomec manual + expert sessions): print acquisition instructions.
  *
  * Output: public/ajp-corpus.json with { generatedAt, sourcesSummary, chunks[] }
+ *
+ * Extraction and embedding calls are retried with exponential backoff on Gemini
+ * 429/503 errors (see scripts/lib/with-retry.ts). A source that still fails after
+ * retries is reported loudly at the end and, by default, fails the whole run
+ * (process.exitCode = 1) rather than silently shipping a partial corpus.
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -25,6 +35,8 @@ import { fileURLToPath } from 'url';
 import { readFile } from 'fs/promises';
 import { execSync } from 'child_process';
 import { scrubText } from './scrub';
+import { chunkWords } from './lib/chunk-text';
+import { withRetry } from './lib/with-retry';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -313,19 +325,24 @@ async function extractPdfText(
   const base64 = Buffer.from(buffer).toString('base64');
   console.log(`  Extracting text from PDF (${Math.round(buffer.byteLength / 1024)} KB)…`);
 
-  const result = await flashModel.generateContent([
-    {
-      inlineData: {
-        data: base64,
-        mimeType: 'application/pdf',
+  const result = await withRetry(
+    () => flashModel.generateContent([
+      {
+        inlineData: {
+          data: base64,
+          mimeType: 'application/pdf',
+        },
       },
-    },
-    `Extract the complete text from this AJP (Aerosol Jet Printing) document.
+      `Extract the complete text from this AJP (Aerosol Jet Printing) document.
 Preserve section headings and the logical structure of the document.
 Output plain text — no markdown, no tables (convert table content to prose).
 Focus on operational content: procedures, parameters, fault modes, safety warnings.
 Skip administrative boilerplate (title pages, approval signatures, TOC).`,
-  ]);
+    ]),
+    { onRetry: (attempt, attempts, err, delayMs) => console.warn(
+      `  ⟳ retrying extraction (attempt ${attempt + 1}/${attempts}, waiting ${(delayMs / 1000).toFixed(0)}s): ${err instanceof Error ? err.message : err}`,
+    ) },
+  );
 
   return result.response.text();
 }
@@ -339,19 +356,24 @@ async function extractLocalPdfText(
   const base64 = buffer.toString('base64');
   console.log(`  Extracting text from local PDF (${Math.round(buffer.byteLength / 1024)} KB)…`);
 
-  const result = await flashModel.generateContent([
-    {
-      inlineData: {
-        data: base64,
-        mimeType: 'application/pdf',
+  const result = await withRetry(
+    () => flashModel.generateContent([
+      {
+        inlineData: {
+          data: base64,
+          mimeType: 'application/pdf',
+        },
       },
-    },
-    `Extract the complete text from this AJP (Aerosol Jet Printing) document.
+      `Extract the complete text from this AJP (Aerosol Jet Printing) document.
 Preserve section headings and the logical structure of the document.
 Output plain text — no markdown, no tables (convert table content to prose).
 Focus on technical content: process principles, parameters, fault modes, experimental results, safety warnings.
 Skip administrative boilerplate (title pages, approval signatures, TOC, author affiliations).`,
-  ]);
+    ]),
+    { onRetry: (attempt, attempts, err, delayMs) => console.warn(
+      `  ⟳ retrying extraction (attempt ${attempt + 1}/${attempts}, waiting ${(delayMs / 1000).toFixed(0)}s): ${err instanceof Error ? err.message : err}`,
+    ) },
+  );
 
   return result.response.text();
 }
@@ -525,35 +547,14 @@ function chunkText(
   curatedBy?: string;
   sourceCategory?: string;
 }> {
-  const WORDS_PER_CHUNK = 350;
-  const OVERLAP = 50;
-  const words = text.split(/\s+/).filter((w) => w.length > 0);
-  const chunks: ReturnType<typeof chunkText> = [];
-  let idx = 0;
-  let chunkNum = 0;
-
-  while (idx < words.length) {
-    const slice = words.slice(idx, idx + WORDS_PER_CHUNK);
-    if (slice.length < 30) break; // skip tiny trailing fragments
-
-    const chunkText = slice.join(' ');
-    // Try to extract a section hint from the first sentence
-    const firstSentence = chunkText.split(/[.!?]/)[0].trim().slice(0, 80);
-
-    chunks.push({
-      id: `${sourceId}-chunk-${chunkNum}`,
-      source: sourceLabel,
-      section: firstSentence || `Section ${chunkNum + 1}`,
-      text: chunkText,
-      ...(curatedBy ? { curatedBy } : {}),
-      ...(sourceCategory ? { sourceCategory } : {}),
-    });
-
-    idx += WORDS_PER_CHUNK - OVERLAP;
-    chunkNum++;
-  }
-
-  return chunks;
+  return chunkWords(text).map((c) => ({
+    id: `${sourceId}-chunk-${c.index}`,
+    source: sourceLabel,
+    section: c.sectionHint || `Section ${c.index + 1}`,
+    text: c.content,
+    ...(curatedBy ? { curatedBy } : {}),
+    ...(sourceCategory ? { sourceCategory } : {}),
+  }));
 }
 
 // ─── Embedding ────────────────────────────────────────────────────
@@ -584,7 +585,12 @@ async function embedChunks(
     console.log(`  Embedding chunks ${i + 1}–${Math.min(i + BATCH_SIZE, chunks.length)} of ${chunks.length}…`);
 
     const embeddings = await Promise.all(
-      batch.map((c) => embeddingModel.embedContent(c.text)),
+      batch.map((c) => withRetry(
+        () => embeddingModel.embedContent(c.text),
+        { onRetry: (attempt, attempts, err, delayMs) => console.warn(
+          `    ⟳ retrying embedding for ${c.id} (attempt ${attempt + 1}/${attempts}, waiting ${(delayMs / 1000).toFixed(0)}s): ${err instanceof Error ? err.message : err}`,
+        ) },
+      )),
     );
 
     for (let j = 0; j < batch.length; j++) {
@@ -599,10 +605,25 @@ async function embedChunks(
   return results;
 }
 
+// ─── CLI flags ────────────────────────────────────────────────────
+
+interface SourceSummaryEntry { id: string; label: string; chunks: number; status: string }
+interface ExistingCorpus { sourcesSummary: SourceSummaryEntry[]; chunks: ChunkWithEmbedding[] }
+
+function loadExistingCorpus(): ExistingCorpus | null {
+  if (!existsSync(OUTPUT_PATH)) return null;
+  const raw = JSON.parse(readFileSync(OUTPUT_PATH, 'utf-8'));
+  return { sourcesSummary: raw.sourcesSummary ?? [], chunks: raw.chunks ?? [] };
+}
+
 // ─── Main ─────────────────────────────────────────────────────────
 
 async function main() {
   console.log('\n=== AJP Corpus Ingestion Pipeline ===\n');
+
+  const args = process.argv.slice(2);
+  const allowPartial = args.includes('--allow-partial');
+  const retryFailedOnly = args.includes('--retry-failed-only');
 
   const apiKey = loadApiKey();
   const genai = new GoogleGenerativeAI(apiKey);
@@ -622,10 +643,29 @@ async function main() {
   }
   console.log('──────────────────────────────────────────────────────────\n');
 
+  let sourcesToProcess = ACTIVE_SOURCES;
   const allChunks: ChunkWithEmbedding[] = [];
-  const sourcesSummary: Array<{ id: string; label: string; chunks: number; status: string }> = [];
+  const sourcesSummary: SourceSummaryEntry[] = [];
 
-  for (const source of ACTIVE_SOURCES) {
+  if (retryFailedOnly) {
+    const existing = loadExistingCorpus();
+    if (!existing) {
+      console.error('--retry-failed-only requires an existing public/ajp-corpus.json to retry against.');
+      process.exit(1);
+    }
+    const failedIds = new Set(existing.sourcesSummary.filter((s) => s.status !== 'ok').map((s) => s.id));
+    if (failedIds.size === 0) {
+      console.log('No failed sources in the existing corpus — nothing to retry.');
+      return;
+    }
+    console.log(`─── Retrying ${failedIds.size} previously-failed source(s): ${[...failedIds].join(', ')} ───\n`);
+    sourcesToProcess = ACTIVE_SOURCES.filter((s) => failedIds.has(s.id));
+    // Carry over chunks/summary entries for sources that already succeeded.
+    allChunks.push(...existing.chunks.filter((c) => ![...failedIds].some((id) => c.id.startsWith(`${id}-chunk-`))));
+    sourcesSummary.push(...existing.sourcesSummary.filter((s) => !failedIds.has(s.id)));
+  }
+
+  for (const source of sourcesToProcess) {
     console.log(`\nProcessing: ${source.label}`);
     let rawText: string;
 
@@ -673,6 +713,29 @@ async function main() {
     }
   }
 
+  // Restore original ACTIVE_SOURCES ordering (retry-failed-only appends carried-over
+  // entries first, then newly-retried ones) so the summary reads predictably.
+  const orderIndex = new Map(ACTIVE_SOURCES.map((s, i) => [s.id, i]));
+  sourcesSummary.sort((a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0));
+
+  const hardFailures = sourcesSummary.filter((s) => s.status !== 'ok');
+  if (hardFailures.length > 0) {
+    console.log('\n╔═══════════════════════════════════════════════════════════╗');
+    console.log(`║  ${hardFailures.length} of ${sourcesSummary.length} source(s) FAILED to ingest — corpus is incomplete  `);
+    console.log('╚═══════════════════════════════════════════════════════════╝');
+    for (const f of hardFailures) {
+      console.log(`  ✗ [${f.id}] ${f.label}\n      ${f.status}`);
+    }
+    console.log('\nRe-run with: npx tsx scripts/ingest-corpus.ts --retry-failed-only');
+    if (!allowPartial) {
+      console.log('Exiting with a non-zero status because the corpus is incomplete.');
+      console.log('Pass --allow-partial to accept a partial corpus and exit 0 anyway.\n');
+      process.exitCode = 1;
+    } else {
+      console.log('Continuing anyway because --allow-partial was passed.\n');
+    }
+  }
+
   // Save chunk output
   mkdirSync(join(ROOT, 'public'), { recursive: true });
   const output = {
@@ -688,6 +751,18 @@ async function main() {
   writeFileSync(OUTPUT_PATH, JSON.stringify(output));
   const fileSizeKB = Math.round(JSON.stringify(output).length / 1024);
 
+  if (retryFailedOnly) {
+    console.log(`\n=== Retry Complete ===`);
+    console.log(`Output: public/ajp-corpus.json (${fileSizeKB} KB)`);
+    console.log(`Total chunks: ${allChunks.length}`);
+    for (const s of sourcesSummary) {
+      const icon = s.status === 'ok' ? '✓' : '✗';
+      console.log(`  ${icon} ${s.label}: ${s.chunks} chunks`);
+    }
+    console.log('\n(Skipped graph node embeddings — unaffected by source retries. Run a full `npm run ingest` to refresh those.)');
+    return;
+  }
+
   // ─── Graph Node Embeddings ─────────────────────────────────────
   // Bake Gemini vectors for every graph node so runtime doesn't pay a
   // cold-start embedding call. Loaded by graph-utils.buildNodeEmbeddingCache.
@@ -701,7 +776,12 @@ async function main() {
   for (let i = 0; i < allNodes.length; i += NODE_BATCH) {
     const batch = allNodes.slice(i, i + NODE_BATCH);
     console.log(`  Embedding nodes ${i + 1}–${Math.min(i + NODE_BATCH, allNodes.length)} of ${allNodes.length}…`);
-    const embs = await Promise.all(batch.map((n) => embeddingModel.embedContent(n.content)));
+    const embs = await Promise.all(batch.map((n) => withRetry(
+      () => embeddingModel.embedContent(n.content),
+      { onRetry: (attempt, attempts, err, delayMs) => console.warn(
+        `    ⟳ retrying node embedding for ${n.id} (attempt ${attempt + 1}/${attempts}, waiting ${(delayMs / 1000).toFixed(0)}s): ${err instanceof Error ? err.message : err}`,
+      ) },
+    )));
     batch.forEach((n, j) => nodeEmbeddings.push({
       id: n.id,
       type: n.type,

@@ -1,14 +1,17 @@
-/* ─── HUD Dashboard — ops console entry point ────────────────────── */
+/* ─── HUD Dashboard — mission-brief entry point ──────────────────── */
+/* Re-themed onto the same light/warm design tokens as the rest of the app
+   (app-foundation.css) — was previously a standalone dark "ops console"
+   palette that visually collided with every other view. */
 
 .hud-root {
   display: flex;
   flex-direction: column;
-  background: var(--ink);
+  background: var(--bg-card);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid rgba(61, 220, 198, 0.14);
-  box-shadow: 0 24px 60px -20px rgba(10, 22, 40, 0.55);
-  color: #dce8f0;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  color: var(--text);
 }
 
 /* ── Status Bar ──────────────────────────────────────────────────── */
@@ -19,8 +22,8 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.55rem 1.25rem;
-  background: rgba(0, 0, 0, 0.35);
-  border-bottom: 1px solid rgba(61, 220, 198, 0.1);
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border);
   font-family: var(--mono);
   font-size: 0.7rem;
   letter-spacing: 0.12em;
@@ -36,11 +39,11 @@
 
 .hud-sb-status {
   font-weight: 700;
-  color: #dce8f0;
+  color: var(--text);
 }
 
 .hud-sb-title {
-  color: rgba(220, 232, 240, 0.32);
+  color: var(--text-dim);
   font-size: 0.65rem;
   letter-spacing: 0.18em;
   text-align: center;
@@ -52,11 +55,11 @@
   align-items: center;
   gap: 0.35rem;
   flex-shrink: 0;
-  color: rgba(220, 232, 240, 0.4);
+  color: var(--text-muted);
 }
 
 .hud-timer {
-  color: #dce8f0;
+  color: var(--text);
   font-weight: 600;
 }
 
@@ -71,22 +74,22 @@
 }
 
 .hud-dot--nominal {
-  background: var(--accent-bright);
-  box-shadow: 0 0 8px rgba(61, 220, 198, 0.65);
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(14, 92, 102, 0.45);
 }
 
 .hud-dot--caution {
-  background: #e89848;
-  box-shadow: 0 0 8px rgba(232, 152, 72, 0.55);
+  background: var(--warning);
+  box-shadow: 0 0 8px rgba(188, 95, 0, 0.35);
 }
 
 .hud-dot--init {
-  background: rgba(220, 232, 240, 0.18);
-  border: 1px solid rgba(220, 232, 240, 0.28);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
 }
 
 .hud-dot--dim {
-  background: rgba(220, 232, 240, 0.22);
+  background: var(--border);
 }
 
 /* ── Main Grid ───────────────────────────────────────────────────── */
@@ -95,14 +98,14 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1px;
-  background: rgba(61, 220, 198, 0.07);
+  background: var(--border);
   padding: 1px;
 }
 
 /* ── Cards ───────────────────────────────────────────────────────── */
 
 .hud-card {
-  background: #0d1b2e;
+  background: var(--bg-card);
   padding: 1.25rem 1.25rem 1rem;
   display: flex;
   flex-direction: column;
@@ -125,7 +128,7 @@
   font-size: 0.64rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: rgba(220, 232, 240, 0.38);
+  color: var(--text-dim);
   font-weight: 600;
 }
 
@@ -142,24 +145,24 @@
 }
 
 .hud-badge--nominal {
-  color: var(--accent-bright);
-  background: rgba(61, 220, 198, 0.1);
+  color: var(--success);
+  background: rgba(31, 143, 103, 0.12);
 }
 
 .hud-badge--caution {
-  color: #e89848;
-  background: rgba(232, 152, 72, 0.1);
+  color: var(--warning);
+  background: rgba(188, 95, 0, 0.1);
 }
 
 .hud-badge--dim {
-  color: rgba(220, 232, 240, 0.28);
-  background: rgba(220, 232, 240, 0.04);
+  color: var(--text-dim);
+  background: var(--bg-input);
 }
 
 .hud-badge--alert {
-  color: #ffb36b;
-  background: rgba(232, 152, 72, 0.14);
-  border: 1px solid rgba(232, 152, 72, 0.35);
+  color: var(--warning);
+  background: rgba(188, 95, 0, 0.12);
+  border: 1px solid rgba(188, 95, 0, 0.35);
 }
 
 /* ── High-stress Strip ───────────────────────────────────────────── */
@@ -169,8 +172,8 @@
   align-items: center;
   gap: 1rem;
   padding: 0.9rem 1.25rem;
-  background: rgba(232, 152, 72, 0.08);
-  border-bottom: 1px solid rgba(232, 152, 72, 0.22);
+  background: rgba(188, 95, 0, 0.06);
+  border-bottom: 1px solid rgba(188, 95, 0, 0.22);
 }
 
 .hud-stress-strip-text {
@@ -187,27 +190,27 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #ffb36b;
+  color: var(--warning);
 }
 
 .hud-stress-strip-sub {
   font-size: 0.76rem;
   line-height: 1.5;
-  color: rgba(220, 232, 240, 0.6);
+  color: var(--text-muted);
 }
 
 .hud-btn--stress {
-  background: rgba(232, 152, 72, 0.14);
-  color: #ffb36b;
-  border-color: rgba(232, 152, 72, 0.4);
+  background: rgba(188, 95, 0, 0.1);
+  color: var(--warning);
+  border-color: rgba(188, 95, 0, 0.35);
   font-size: 0.82rem;
   padding: 0.55rem 1.1rem;
   flex-shrink: 0;
 }
 
 .hud-btn--stress:hover {
-  background: rgba(232, 152, 72, 0.24);
-  border-color: rgba(232, 152, 72, 0.6);
+  background: rgba(188, 95, 0, 0.18);
+  border-color: rgba(188, 95, 0, 0.55);
 }
 
 /* ── Metric Block ────────────────────────────────────────────────── */
@@ -225,29 +228,29 @@
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.04em;
-  color: rgba(220, 232, 240, 0.3);
+  color: var(--text-dim);
   transition: color 0.3s ease;
 }
 
 .hud-metric-big--nominal {
-  color: var(--accent-bright);
+  color: var(--accent);
 }
 
 .hud-metric-big--unset {
-  color: rgba(220, 232, 240, 0.15);
+  color: var(--border);
   font-size: 2.5rem;
 }
 
 .hud-metric-denom {
   font-family: var(--display);
   font-size: 1.35rem;
-  color: rgba(220, 232, 240, 0.22);
+  color: var(--text-dim);
 }
 
 .hud-metric-label {
   font-family: var(--mono);
   font-size: 0.72rem;
-  color: rgba(220, 232, 240, 0.28);
+  color: var(--text-dim);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   align-self: center;
@@ -259,7 +262,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  border-top: 1px solid rgba(61, 220, 198, 0.07);
+  border-top: 1px solid var(--border);
   padding-top: 0.75rem;
   animation: hud-reveal 0.2s ease;
 }
@@ -277,8 +280,8 @@
   gap: 0.65rem;
   padding: 0.5rem 0.65rem;
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.045);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
   cursor: pointer;
   text-align: left;
   width: 100%;
@@ -287,13 +290,13 @@
 }
 
 .hud-gate-row:hover {
-  background: rgba(255, 255, 255, 0.055);
-  border-color: rgba(61, 220, 198, 0.18);
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
 }
 
 .hud-gate-row--clear {
-  border-color: rgba(61, 220, 198, 0.18) !important;
-  background: rgba(61, 220, 198, 0.04) !important;
+  border-color: var(--accent) !important;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-card)) !important;
 }
 
 .hud-gate-text {
@@ -308,13 +311,13 @@
   font-family: var(--mono);
   font-size: 0.77rem;
   font-weight: 600;
-  color: #dce8f0;
+  color: var(--text);
   letter-spacing: 0.015em;
 }
 
 .hud-gate-sub {
   font-size: 0.7rem;
-  color: rgba(220, 232, 240, 0.4);
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -325,13 +328,13 @@
   font-size: 0.63rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(220, 232, 240, 0.35);
+  color: var(--text-dim);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .hud-gate-action--clear {
-  color: var(--accent-bright);
+  color: var(--accent);
 }
 
 /* ── Domain Mastery Bars ─────────────────────────────────────────── */
@@ -345,7 +348,7 @@
 .hud-domain-label {
   font-family: var(--mono);
   font-size: 0.7rem;
-  color: rgba(220, 232, 240, 0.6);
+  color: var(--text-muted);
   width: 150px;
   flex-shrink: 0;
   white-space: nowrap;
@@ -356,26 +359,26 @@
 .hud-bar-track {
   flex: 1;
   height: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-input);
   border-radius: 2px;
   overflow: hidden;
 }
 
 .hud-bar-fill {
   height: 100%;
-  background: var(--accent-bright);
+  background: var(--accent);
   border-radius: 2px;
   transition: width 0.5s ease;
 }
 
 .hud-bar-fill--partial {
-  background: rgba(61, 220, 198, 0.55);
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 .hud-domain-count {
   font-family: var(--mono);
   font-size: 0.62rem;
-  color: rgba(220, 232, 240, 0.35);
+  color: var(--text-dim);
   width: 30px;
   text-align: right;
   white-space: nowrap;
@@ -387,7 +390,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1px;
-  background: rgba(61, 220, 198, 0.07);
+  background: var(--border);
   border-radius: var(--radius);
   overflow: hidden;
 }
@@ -397,14 +400,14 @@
   flex-direction: column;
   gap: 0.4rem;
   padding: 0.85rem 0.9rem 0.75rem;
-  background: rgba(10, 22, 40, 0.55);
+  background: var(--bg-input);
 }
 
 .hud-phase-num {
   font-family: var(--mono);
   font-size: 0.6rem;
   letter-spacing: 0.22em;
-  color: rgba(220, 232, 240, 0.22);
+  color: var(--text-dim);
   font-weight: 600;
 }
 
@@ -419,24 +422,24 @@
   font-family: var(--display);
   font-size: 0.88rem;
   font-weight: 600;
-  color: #dce8f0;
+  color: var(--text);
   letter-spacing: -0.01em;
   line-height: 1.25;
 }
 
 .hud-phase-principle {
   font-size: 0.7rem;
-  color: rgba(220, 232, 240, 0.4);
+  color: var(--text-muted);
   line-height: 1.4;
 }
 
 .hud-phase--locked {
-  opacity: 0.45;
+  opacity: 0.55;
 }
 
 .hud-phase-desc {
   font-size: 0.73rem;
-  color: rgba(220, 232, 240, 0.55);
+  color: var(--text-muted);
   line-height: 1.5;
   margin-top: 0.3rem;
   animation: hud-reveal 0.2s ease;
@@ -466,31 +469,31 @@
 
 .hud-btn--ghost {
   background: transparent;
-  color: rgba(220, 232, 240, 0.3);
-  border-color: rgba(220, 232, 240, 0.1);
+  color: var(--text-dim);
+  border-color: var(--border);
 }
 
 .hud-btn--ghost:hover {
-  color: rgba(220, 232, 240, 0.65);
-  border-color: rgba(220, 232, 240, 0.22);
+  color: var(--text);
+  border-color: var(--accent);
 }
 
 .hud-btn--launch {
-  background: rgba(61, 220, 198, 0.1);
-  color: var(--accent-bright);
-  border-color: rgba(61, 220, 198, 0.22);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-card));
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
   margin-left: auto;
 }
 
 .hud-btn--launch:hover {
-  background: rgba(61, 220, 198, 0.18);
-  border-color: rgba(61, 220, 198, 0.4);
+  background: color-mix(in srgb, var(--accent) 20%, var(--bg-card));
+  border-color: var(--accent);
 }
 
 .hud-btn--phase {
-  background: rgba(61, 220, 198, 0.07);
-  color: rgba(61, 220, 198, 0.65);
-  border-color: rgba(61, 220, 198, 0.14);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-card));
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
   font-size: 0.72rem;
   padding: 0.3rem 0.65rem;
   align-self: flex-start;
@@ -498,23 +501,23 @@
 }
 
 .hud-btn--phase:hover:not(:disabled) {
-  background: rgba(61, 220, 198, 0.14);
-  color: var(--accent-bright);
-  border-color: rgba(61, 220, 198, 0.3);
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-card));
+  color: var(--accent-hover);
+  border-color: var(--accent);
 }
 
 .hud-btn--phase:disabled {
   cursor: not-allowed;
-  color: rgba(220, 232, 240, 0.35);
-  background: rgba(220, 232, 240, 0.04);
-  border-color: rgba(220, 232, 240, 0.1);
+  color: var(--text-dim);
+  background: var(--bg-input);
+  border-color: var(--border);
 }
 
 /* ── Hint Text ───────────────────────────────────────────────────── */
 
 .hud-hint {
   font-size: 0.7rem;
-  color: rgba(220, 232, 240, 0.3);
+  color: var(--text-dim);
   line-height: 1.55;
   margin: 0.2rem 0 0;
   font-style: italic;
@@ -534,8 +537,8 @@
   flex-wrap: wrap;
   gap: 0.4rem;
   padding: 0.55rem 1.25rem;
-  background: rgba(0, 0, 0, 0.22);
-  border-top: 1px solid rgba(61, 220, 198, 0.07);
+  background: var(--bg-input);
+  border-top: 1px solid var(--border);
   font-family: var(--mono);
   font-size: 0.62rem;
   letter-spacing: 0.1em;
@@ -543,7 +546,7 @@
 }
 
 .hud-footer-label {
-  color: rgba(220, 232, 240, 0.22);
+  color: var(--text-dim);
   margin-right: 0.2rem;
 }
 
@@ -554,11 +557,11 @@
 }
 
 .hud-footer-item {
-  color: rgba(220, 232, 240, 0.42);
+  color: var(--text-muted);
 }
 
 .hud-footer-sep {
-  color: rgba(220, 232, 240, 0.14);
+  color: var(--border);
 }
 
 /* ── Responsive ──────────────────────────────────────────────────── */
