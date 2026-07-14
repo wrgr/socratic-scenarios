@@ -1,5 +1,5 @@
 /** Content for AJP background model: flow, pillars, references, and whitepaper link. */
-import whitepaperUrl from '../../docs/whitepaper.md?url';
+import whitepaperUrl from '../../docs/whitepaper.pdf?url';
 import operationalCorpusDesignUrl from '../../docs/kb-candidates/09_operational_corpus_research_design.md?url';
 import tacitElicitationReviewUrl from '../../docs/kb-candidates/10_tacit_elicitation_methods_review.md?url';
 
