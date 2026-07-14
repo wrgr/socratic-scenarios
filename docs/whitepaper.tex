@@ -1,11 +1,11 @@
-\documentclass[11pt,letterpaper]{article}
+\documentclass[10pt,letterpaper,twocolumn]{article}
 
 % ─── Packages ──────────────────────────────────────────────────────
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{mathpazo}
 \usepackage[scaled=0.90]{helvet}
-\usepackage[margin=1in]{geometry}
+\usepackage[margin=0.75in,columnsep=0.3in]{geometry}
 \usepackage{microtype}
 \usepackage{titlesec}
 \usepackage{enumitem}
@@ -19,6 +19,7 @@
 \usepackage[most]{tcolorbox}
 \usepackage{fancyhdr}
 \usepackage{titling}
+\usepackage{abstract}
 \usepackage{hyperref}
 
 % ─── Colors ────────────────────────────────────────────────────────
@@ -80,40 +81,25 @@
 \newcommand{\arrowto}{$\rightarrow$}
 \newcommand{\longarrowto}{$\longrightarrow$}
 
-\title{\vspace{-2em}\Huge\bfseries\sffamily\color{tmink} TeachMe AJP \\[0.4em]
-  \Large\normalfont\color{tmmuted} Retrieval-Augmented Operational Training for the\\ Optomec HD2 Aerosol Jet Printer}
-\date{\normalsize\sffamily\color{tmmuted}\today}
-\author{}
+\title{\bfseries\sffamily\color{tmink} TeachMe AJP: Retrieval-Augmented Operational Training for the Optomec HD2 Aerosol Jet Printer}
+\author{\sffamily\color{tmmuted}\small TeachMe / EDDIE Project\\[0.2em]\normalfont\footnotesize\today}
+\date{}
 
 % ─── Document ───────────────────────────────────────────────────────
 \begin{document}
 
-\begin{titlepage}
-  \centering
-  \vspace*{3cm}
-  {\Huge\bfseries\sffamily\color{tmink} TeachMe AJP\par}
+\twocolumn[
+  \maketitle
+  \begin{center}
+    \setlength{\fboxsep}{5pt}%
+    \fcolorbox{tmaccent!45}{tmaccent!8}{\small\sffamily\color{tmink} RESEARCH PROTOTYPE --- not for operational use without expert review}
+  \end{center}
   \vspace{0.6em}
-  {\Large\sffamily\color{tmmuted} Retrieval-Augmented Operational Training for the\\ Optomec HD2 Aerosol Jet Printer\par}
-  \vspace{2em}
-  \begin{tcolorbox}[colback=tmaccent!8, colframe=tmaccent!45, width=0.55\textwidth, sharp corners, boxrule=0.6pt]
-    \centering\small\sffamily\color{tmink} RESEARCH PROTOTYPE --- not for operational use without expert review
-  \end{tcolorbox}
-  \vspace{3cm}
-  {\sffamily\color{tmmuted}\today\par}
-  \vfill
-  {\small\sffamily\color{tmmuted} A domain instantiation of the TeachMe / EDDIE corpus-bound Socratic training platform.\par}
-\end{titlepage}
-
-\pagestyle{plain}
-\tableofcontents
-\clearpage
-\pagestyle{fancy}
-
-% ════════════════════════════════════════════════════════════════
-\section{Abstract}
-\label{sec:abstract}
-
-TeachMe AJP is an operational training system for technicians working with the Optomec HD2 Aerosol Jet Printer. The system applies retrieval-augmented generation principles to specialist equipment training: a typed knowledge graph replaces a flat document corpus, a two-agent architecture (Mentor + Narrator) replaces a single generative surface, and procedural and diagnostic competency replace generic Q\&A as the primary outcome. The Narrator agent reads corpus nodes verbatim to report machine behavior, eliminating hallucination risk in a context where incorrect safety information has real consequences. Four instructional modes --- Socratic Practice, Scenario Mode, Reachback Lookup, and Retrieval Lab --- map naturally to technician training progression from onboarding through independent operation. Supporting surfaces --- a global Mission/Pedagogy/AI Rationale drawer (reachable from every screen, not a training tab), an Architecture tab, and a RAG Coverage tab --- expose the educational rationale, system flow, and evidence coverage without changing the instructional sequence. An interactive Workflow Demo with a Simulated Learner agent rounds out the system: it makes the full Mentor evaluation loop observable and inspectable without requiring a real learner in the seat. The central claim is that instructional utility, not topical overlap, should be the retrieval objective; and that safety-critical domains require retrieval systems whose outputs are traceable, auditable, and corpus-bounded by design. The system operationalizes this claim through what we call the \textbf{TeachMe Loop}: Signals \arrowto{} Retrieval \arrowto{} Mentor Loop \arrowto{} Safety Gate \arrowto{} Transfer.
+  \begin{abstract}
+    \noindent TeachMe AJP is an operational training system for technicians working with the Optomec HD2 Aerosol Jet Printer. The system applies retrieval-augmented generation principles to specialist equipment training: a typed knowledge graph replaces a flat document corpus, a two-agent architecture (Mentor + Narrator) replaces a single generative surface, and procedural and diagnostic competency replace generic Q\&A as the primary outcome. The Narrator agent reads corpus nodes verbatim to report machine behavior, eliminating hallucination risk in a context where incorrect safety information has real consequences. Four instructional modes --- Socratic Practice, Scenario Mode, Reachback Lookup, and Retrieval Lab --- map naturally to technician training progression from onboarding through independent operation. Supporting surfaces --- a global Mission/Pedagogy/AI Rationale drawer (reachable from every screen, not a training tab), an Architecture tab, and a RAG Coverage tab --- expose the educational rationale, system flow, and evidence coverage without changing the instructional sequence. An interactive Workflow Demo with a Simulated Learner agent rounds out the system: it makes the full Mentor evaluation loop observable and inspectable without requiring a real learner in the seat. The central claim is that instructional utility, not topical overlap, should be the retrieval objective; and that safety-critical domains require retrieval systems whose outputs are traceable, auditable, and corpus-bounded by design. The system operationalizes this claim through what we call the \textbf{TeachMe Loop}: Signals \arrowto{} Retrieval \arrowto{} Mentor Loop \arrowto{} Safety Gate \arrowto{} Transfer.
+  \end{abstract}
+  \vspace{1em}
+]
 
 % ════════════════════════════════════════════════════════════════
 \section{Introduction}
@@ -198,9 +184,9 @@ The AJP system is organized into five coordinated layers:
   \item \textbf{Instructional Mode layer}: four modes (Socratic, Scenario, Reachback Lookup, Retrieval Lab) each calling retrieval and the agent layer differently.
 \end{enumerate}
 
-\begin{figure}[H]
+\begin{figure*}[t]
 \centering
-\resizebox{0.92\textwidth}{!}{%
+\resizebox{0.72\textwidth}{!}{%
 \begin{tikzpicture}[
   node distance=8mm,
   box/.style={draw=tmaccent, thick, rounded corners=2pt, fill=tmaccent!6, align=center, text width=7.6cm, minimum height=1.05cm, font=\small},
@@ -223,7 +209,7 @@ The AJP system is organized into five coordinated layers:
 }
 \caption{Five-layer architecture overview.}
 \label{fig:architecture-overview}
-\end{figure}
+\end{figure*}
 
 \subsection{Knowledge Graph}
 \label{sec:knowledge-graph}
@@ -232,8 +218,9 @@ The knowledge graph is the authoritative knowledge source for the system. All Na
 
 Node types and their instructional roles:
 
-\begin{center}
-\begin{tabularx}{\textwidth}{@{}l X@{}}
+\begin{table*}[t]
+\centering
+\begin{tabularx}{0.8\textwidth}{@{}l X@{}}
 \toprule
 \textbf{Node Type} & \textbf{Role in System} \\
 \midrule
@@ -248,7 +235,9 @@ TacitKnowledge & Expert intuition nodes; bridge procedural steps to causal under
 SocraticProbe & Questions attached to steps and concepts; drive Socratic mode \\
 \bottomrule
 \end{tabularx}
-\end{center}
+\caption{Knowledge graph node types and their instructional roles.}
+\label{tab:node-types}
+\end{table*}
 
 Six fault domains covered: Fluidic/Atomization \textbullet\ Gas System \textbullet\ Deposition Quality \textbullet\ Substrate/Adhesion \textbullet\ Post-Process \textbullet\ System/Software
 
@@ -257,32 +246,29 @@ Six fault domains covered: Fluidic/Atomization \textbullet\ Gas System \textbull
 
 The retrieval system has three tiers, all of which receive an enriched query from the Prompt Enricher rather than the raw learner input.
 
-\begin{figure}[H]
+\begin{figure*}[t]
 \centering
-\resizebox{\textwidth}{!}{%
+\resizebox{0.82\textwidth}{!}{%
 \begin{tikzpicture}[
   box/.style={draw=tmaccent, thick, rounded corners=2pt, fill=tmaccent!6, align=center, text width=4.6cm, minimum height=1.1cm, font=\small, inner sep=5pt},
   smallbox/.style={draw=tmink!70, rounded corners=2pt, fill=white, align=center, text width=4.1cm, minimum height=1.3cm, font=\scriptsize, inner sep=5pt},
-  lbl/.style={font=\scriptsize\bfseries\sffamily, text=tmmuted},
+  lbl/.style={font=\scriptsize\bfseries\sffamily, text=tmmuted, fill=tmbg, inner sep=3pt},
   arr/.style={-Stealth, thick, tmink}
 ]
   \node[box] (query) at (0, 0) {\textbf{Free-text query} \\ operator symptom or learner response};
   \node[box] (pe) at (0, -2.3) {\textbf{Prompt Enricher} \\ Gemini Flash / simulated shim; HITL review before retrieval fires};
   \node[box] (eq) at (0, -4.6) {\textbf{Enriched query}};
 
-  \node[lbl] (graphlbl) at (-6.4, -6.3) {Graph Tier (always available)};
-  \node[smallbox] (gm) at (-6.4, -7.6) {\code{matchNodesSemantic()} \\ cosine similarity over pre-embedded node content (Jaccard fallback)};
-  \node[smallbox] (trav) at (-6.4, -9.7) {Edge traversal: Symptom \arrowto{} FailureMode \arrowto{} CorrectiveAction / SafetyHazard};
+  \node[smallbox] (gm) at (-6.4, -8.0) {\code{matchNodesSemantic()} \\ cosine similarity over pre-embedded node content (Jaccard fallback)};
+  \node[smallbox] (trav) at (-6.4, -10.1) {Edge traversal: Symptom \arrowto{} FailureMode \arrowto{} CorrectiveAction / SafetyHazard};
 
-  \node[lbl] (denselbl) at (0, -6.3) {Dense Tier (requires \texttt{npm run ingest})};
-  \node[smallbox] (embi) at (0, -7.6) {\code{embed(query)}};
-  \node[smallbox] (cos) at (0, -9.7) {cosine similarity vs.\ precomputed 3072-D chunk vectors};
+  \node[smallbox] (embi) at (0, -8.0) {\code{embed(query)}};
+  \node[smallbox] (cos) at (0, -10.1) {cosine similarity vs.\ precomputed 3072-D chunk vectors};
 
-  \node[lbl] (routerlbl) at (6.4, -6.3) {Router Strategies (mode-specific)};
-  \node[smallbox, text width=4.4cm, minimum height=1.9cm] (router) at (6.4, -7.9) {fault-diagnosis \textbullet\ step-context \textbullet\ probe-context \textbullet\ safety-gate \textbullet\ tacit-lookup};
+  \node[smallbox, text width=4.4cm, minimum height=1.9cm] (router) at (6.4, -8.3) {fault-diagnosis \textbullet\ step-context \textbullet\ probe-context \textbullet\ safety-gate \textbullet\ tacit-lookup};
 
-  \node[box] (hybrid) at (-3.4, -12.1) {\textbf{HybridResult} \\ InOperationView};
-  \node[box] (mentor) at (3.4, -12.1) {\textbf{Mentor LLM} \\ SocraticView, ScenarioView};
+  \node[box] (hybrid) at (-3.4, -12.6) {\textbf{HybridResult} \\ InOperationView};
+  \node[box] (mentor) at (3.4, -12.6) {\textbf{Mentor LLM} \\ SocraticView, ScenarioView};
 
   \draw[arr] (query) -- (pe);
   \draw[arr] (pe) -- (eq);
@@ -295,11 +281,17 @@ The retrieval system has three tiers, all of which receive an enriched query fro
   \draw[arr] (cos.south) -- (hybrid.north);
   \draw[arr] (router.south) -- (mentor.north east);
   \draw[arr] (hybrid) -- (mentor);
+
+  % Tier labels declared last so their opaque fill paints over (masks) the
+  % fan-out arrows above, which would otherwise visibly cross the text.
+  \node[lbl] (graphlbl) at (-6.4, -6.35) {Graph Tier (always available)};
+  \node[lbl] (denselbl) at (0, -6.35) {Dense Tier (\texttt{npm run ingest})};
+  \node[lbl] (routerlbl) at (6.4, -6.35) {Router Strategies (mode-specific)};
 \end{tikzpicture}%
 }
 \caption{Retrieval pipeline: graph tier, dense tier, and mode-specific router.}
 \label{fig:retrieval-system}
-\end{figure}
+\end{figure*}
 
 \textbf{Graph tier} is always available and runs at query time. Semantic matching finds candidate nodes; edge traversal co-retrieves safety hazards and tacit knowledge along causal chains.
 
@@ -320,35 +312,36 @@ The system uses three agents with explicitly non-overlapping responsibilities:
 
 \textbf{Prompt Enricher}: reformulates vague learner queries into well-formed retrieval prompts before retrieval fires. Uses Gemini Flash with an API key or a deterministic shim without one. The learner reviews the enriched version before retrieval executes (HITL checkpoint).
 
-\begin{figure}[H]
+\begin{figure*}[t]
 \centering
-\resizebox{\textwidth}{!}{%
+\resizebox{0.82\textwidth}{!}{%
 \begin{tikzpicture}[
   box/.style={draw=tmaccent, thick, rounded corners=2pt, fill=tmaccent!6, align=center, text width=4.3cm, minimum height=1.5cm, font=\scriptsize, inner sep=5pt},
   kgbox/.style={draw=tmwarn, thick, rounded corners=2pt, fill=tmwarn!8, align=center, text width=5.8cm, minimum height=1.4cm, font=\scriptsize, inner sep=5pt},
-  lbl/.style={font=\scriptsize\bfseries\sffamily, text=tmmuted},
+  lbl/.style={font=\scriptsize\bfseries\sffamily, text=tmmuted, fill=tmbg, inner sep=2pt},
   arr/.style={-Stealth, thick, tmink},
   biarr/.style={Stealth-Stealth, thick, tmink}
 ]
   \node[box] (learner) at (0, 0) {\textbf{Learner} \\ technician trainee};
-  \node[box] (pe) at (5.4, 0) {\textbf{Prompt Enricher} \\ rewrites vague queries; HITL review before retrieval fires};
+  \node[box] (pe) at (6.8, 0) {\textbf{Prompt Enricher} \\ rewrites vague queries; HITL review before retrieval fires};
 
-  \node[box] (mentor) at (2.7, -4.6) {\textbf{Mentor Agent} \\ asks \textbullet\ probes \textbullet\ scaffolds \textbullet\ evaluates \textbullet\ advances or re-teaches};
-  \node[box] (narrator) at (8.1, -4.6) {\textbf{Narrator Agent} \\ plays the machine; reports outcomes; corpus only, never generates};
+  \node[box] (mentor) at (2.7, -5.2) {\textbf{Mentor Agent} \\ asks \textbullet\ probes \textbullet\ scaffolds \textbullet\ evaluates \textbullet\ advances or re-teaches};
+  \node[box] (narrator) at (8.1, -5.2) {\textbf{Narrator Agent} \\ plays the machine; reports outcomes; corpus only, never generates};
 
-  \node[kgbox] (kg) at (5.4, -7.8) {\textbf{Knowledge Graph} \\ 100+ typed nodes: Equipment, Steps, Parameters, Faults, Symptoms, Remedies, Safety, Tacit, Probes};
+  \node[kgbox] (kg) at (5.4, -8.8) {\textbf{Knowledge Graph} \\ 100+ typed nodes: Equipment, Steps, Parameters, Faults, Symptoms, Remedies, Safety, Tacit, Probes};
 
-  \draw[arr] (learner.east) -- node[above, font=\tiny] {types action/answer} (pe.west);
-  \draw[arr] (pe.south) -- node[above, sloped, font=\tiny, fill=white, inner sep=1pt] {enriched query} (mentor.north east);
-  \draw[biarr] (mentor.east) -- node[above, font=\tiny] {shares step context} (narrator.west);
-  \draw[arr] (narrator.south) to[out=250, in=290, looseness=2.4] node[pos=0.5, below=1pt, font=\tiny, fill=white, inner sep=1pt] {reports observable machine behavior} (learner.south);
-  \draw[arr] (mentor.south) -- node[left, font=\tiny] {ZPD-aware retrieval} (kg.north west);
-  \draw[arr] (narrator.south) -- node[right, font=\tiny] {deterministic lookup} (kg.north east);
+  \draw[arr] (learner.east) -- node[lbl, pos=0.5] {types action/answer} (pe.west);
+  \draw[arr] (pe.south) -- node[lbl, pos=0.5, sloped] {enriched query} (mentor.north east);
+  \draw[biarr] (mentor.north east) -- node[lbl, pos=0.5] {shares step context} (narrator.north west);
+  \draw[arr] (narrator.south) to[out=280, in=350] (9.6,-11.2) -- (1.1,-11.2) to[out=190, in=260] (learner.south)
+    node[lbl, pos=0.5, below=2pt] {reports observable machine behavior};
+  \draw[arr] (mentor.south) -- node[lbl, pos=0.55] {ZPD-aware retrieval} (kg.north west);
+  \draw[arr] (narrator.south) -- node[lbl, pos=0.55] {deterministic lookup} (kg.north east);
 \end{tikzpicture}%
 }
 \caption{Three-agent architecture: Learner, Prompt Enricher, Mentor, Narrator, and the shared Knowledge Graph. Mentor and Narrator jointly form the TeachMe AJP training system.}
 \label{fig:three-agent}
-\end{figure}
+\end{figure*}
 
 \subsection{Learner Model and Mastery Gates}
 \label{sec:learner-model}
@@ -367,7 +360,8 @@ Mastery gates control mode progression. A technician cannot enter Scenario mode 
 
 The system explicitly supports a five-level learner expertise model that determines probe selection, retrieval depth, and mentor scaffolding intensity:
 
-\begin{center}
+\begin{table*}[t]
+\centering
 \begin{tabularx}{\textwidth}{@{}c l X X@{}}
 \toprule
 \textbf{Level} & \textbf{Label} & \textbf{Profile} & \textbf{Probe set} \\
@@ -379,7 +373,9 @@ The system explicitly supports a five-level learner expertise model that determi
 5 & Proficient & Full SOPs, machine physics, and perceptual signals & All 11 probes including perceptual and abort-decision \\
 \bottomrule
 \end{tabularx}
-\end{center}
+\caption{Five-level learner expertise continuum.}
+\label{tab:five-level}
+\end{table*}
 
 This continuum replaces the earlier novice/technician/expert trichotomy. The key change is explicit support for Level 1 (Complete Novice): the system does not exclude learners with no prior lab experience. Instead, it routes them to the smallest, highest-safety-density probe set and intensifies scaffolding. The prior assumption that ``complete novices need not apply'' reflected a deployment decision, not a system constraint; it has been removed.
 
@@ -414,7 +410,7 @@ GitHub Models is \textbf{not} used for embeddings. Its embeddings endpoint requi
 The five-stage operational narrative that unifies the system's design is referred to as the TeachMe Loop:
 
 \begin{center}
-\large\bfseries\sffamily\color{tmaccent} Signals \arrowto{} Retrieval \arrowto{} Mentor Loop \arrowto{} Safety Gate \arrowto{} Transfer
+\normalsize\bfseries\sffamily\color{tmaccent} Signals \arrowto{} Retrieval \arrowto{} \\ Mentor Loop \arrowto{} Safety Gate \arrowto{} Transfer
 \end{center}
 
 \begin{enumerate}
@@ -449,7 +445,8 @@ The Workflow Demo serves two distinct purposes: (1) as a live demonstration tool
 
 Each layer of the system is grounded in a primary pedagogical theory. The table below maps the theories to the system components they directly motivate.
 
-\begin{center}
+\begin{table*}[t]
+\centering
 \begin{tabularx}{\textwidth}{@{}l X X@{}}
 \toprule
 \textbf{Learning Theory} & \textbf{Core Claim} & \textbf{System Element} \\
@@ -464,16 +461,18 @@ Mastery Learning (Bloom) & Learners should not advance until prerequisite compet
 Transfer of Learning & Near transfer (similar context) and far transfer (novel context) require different instructional targets & Transfer-oriented retrieval paths; probes that push from procedural recall toward causal reasoning \\
 \bottomrule
 \end{tabularx}
-\end{center}
+\caption{Primary learning theories mapped to system components.}
+\label{tab:learning-concepts}
+\end{table*}
 
 These are not independent design choices layered on top of a retrieval system --- they are the primary design constraints that determine what the retrieval system must return and when.
 
 \subsection{Four Instructional Modes}
 \label{sec:four-modes}
 
-\begin{figure}[H]
+\begin{figure*}[t]
 \centering
-\resizebox{\textwidth}{!}{%
+\resizebox{0.75\textwidth}{!}{%
 \begin{tikzpicture}[
   node distance=22mm,
   box/.style={draw=tmaccent, thick, rounded corners=2pt, fill=tmaccent!6, align=center, text width=3.5cm, minimum height=1.7cm, font=\scriptsize, inner sep=5pt},
@@ -494,7 +493,7 @@ These are not independent design choices layered on top of a retrieval system --
 }
 \caption{Four instructional modes: Socratic, Scenario, and Reachback form the training progression; Retrieval Lab is always-available inspection/debugging (dashed).}
 \label{fig:four-modes}
-\end{figure}
+\end{figure*}
 
 The first three modes form a natural training progression. Retrieval Lab is available at all stages and is not gated.
 

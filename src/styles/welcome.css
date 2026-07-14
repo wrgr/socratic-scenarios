@@ -225,13 +225,6 @@
   border-color: var(--border);
 }
 
-.welcome-footnote {
-  margin-top: 1.75rem;
-  font-size: 0.78rem;
-  color: var(--text-dim);
-  text-align: center;
-}
-
 /* ── Masthead: change-domain affordance ───────────────────────── */
 .app-masthead-domain-btn {
   padding: 0.3rem 0.8rem;
