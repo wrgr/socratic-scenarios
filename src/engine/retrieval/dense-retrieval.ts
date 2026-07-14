@@ -69,34 +69,44 @@ function cosine(a: number[], b: number[]): number {
 /** State for the lazy-loaded JSON backend. */
 let _chunks: DenseChunk[] | null = null;
 let _corpusModel: string | undefined = undefined;
-let _loadAttempted = false;
+let _loadPromise: Promise<DenseChunk[]> | null = null;
 
-/** Load and cache corpus chunks from public/ajp-corpus.json. */
-async function loadChunks(): Promise<DenseChunk[]> {
-  if (_chunks !== null) return _chunks;
-  if (_loadAttempted) return [];
-  _loadAttempted = true;
+/**
+ * Load and cache corpus chunks from public/ajp-corpus.json.
+ * Concurrent callers share the same in-flight promise — critical for a
+ * multi-MB corpus file, where the fetch can take seconds and several
+ * components (Dashboard, RAG Coverage, a live query) may all call this
+ * before the first one resolves. A prior version tracked only a boolean
+ * "attempted" flag, so any caller arriving during that window resolved to
+ * a stale `[]` instead of the eventual real data — see git history.
+ */
+function loadChunks(): Promise<DenseChunk[]> {
+  if (_chunks !== null) return Promise.resolve(_chunks);
+  if (_loadPromise) return _loadPromise;
 
-  const ref = getActiveDomain().denseCorpus?.corpusUrl;
-  if (!ref) {
-    console.info('[DenseRetrieval] Active domain has no dense corpus — graph-only mode');
-    return (_chunks = []);
-  }
+  _loadPromise = (async () => {
+    const ref = getActiveDomain().denseCorpus?.corpusUrl;
+    if (!ref) {
+      console.info('[DenseRetrieval] Active domain has no dense corpus — graph-only mode');
+      return (_chunks = []);
+    }
 
-  try {
-    const res = await fetch(`${import.meta.env.BASE_URL}${ref}`);
-    if (!res.ok) return (_chunks = []);
-    const data = await res.json() as { chunks?: DenseChunk[]; model?: string };
-    _chunks = Array.isArray(data.chunks) ? data.chunks : [];
-    _corpusModel = data.model;
-    console.info(
-      `[DenseRetrieval] Loaded ${_chunks.length} corpus chunks from ${ref} (model: ${_corpusModel ?? 'unknown'})`,
-    );
-    return _chunks;
-  } catch {
-    _chunks = [];
-    return _chunks;
-  }
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}${ref}`);
+      if (!res.ok) return (_chunks = []);
+      const data = await res.json() as { chunks?: DenseChunk[]; model?: string };
+      _chunks = Array.isArray(data.chunks) ? data.chunks : [];
+      _corpusModel = data.model;
+      console.info(
+        `[DenseRetrieval] Loaded ${_chunks.length} corpus chunks from ${ref} (model: ${_corpusModel ?? 'unknown'})`,
+      );
+      return _chunks;
+    } catch {
+      return (_chunks = []);
+    }
+  })();
+
+  return _loadPromise;
 }
 
 /** Lightweight chunk metadata (no embedding/text) for coverage analysis. */
@@ -183,8 +193,9 @@ export async function queryDense(query: DenseRetrievalQuery): Promise<DenseRetri
   const { queryEmbedding, queryModelId, topK = 5, minScore = 0.3 } = query;
   const backend = getDenseBackend();
 
-  // Pre-flight: start loading without waiting if not loaded yet
-  void loadChunks();
+  // Ensure the corpus (if any) has finished loading before checking readiness —
+  // loadChunks() memoizes, so this is a no-op await once it has resolved.
+  await loadChunks();
 
   if (!backend.hasData()) {
     return { matches: [], hasData: false };
