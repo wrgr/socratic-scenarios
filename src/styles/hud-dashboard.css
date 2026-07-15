@@ -594,6 +594,18 @@
   }
 }
 
+@media (max-width: 560px) {
+  /* Status + session timer are both nowrap; tighten so they fit, and allow a
+     wrap as a last resort rather than clipping the timer off the right edge. */
+  .hud-statusbar {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    gap: 0.5rem 0.75rem;
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 480px) {
   .hud-phases {
     grid-template-columns: 1fr;
