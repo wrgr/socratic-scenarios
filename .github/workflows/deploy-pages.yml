@@ -24,10 +24,10 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # Served from the custom domain root (www.experttrace.org) via public/CNAME,
+      # so the base path stays "/" (vite.config.ts default) — do NOT set
+      # GITHUB_PAGES_BASE to the repo name, or assets 404 under /<repo>/.
       - run: npm run build
-        env:
-          # Project site is served from /teachme/, not /. See vite.config.ts.
-          GITHUB_PAGES_BASE: /${{ github.event.repository.name }}/
       - run: cp dist/index.html dist/404.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
