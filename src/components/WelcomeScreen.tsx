@@ -45,26 +45,45 @@ const UPCOMING: readonly UpcomingDomain[] = [
 export function WelcomeScreen({ onEnterDomain }: { onEnterDomain: (id: DomainId) => void }) {
   const domains = listDomains();
 
+  function scrollToDomains() {
+    const el = document.getElementById('welcome-domains');
+    if (!el) return;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }
+
   return (
     <div className="welcome-screen">
       <section className="welcome-hero">
-        <span className="welcome-eyebrow">TeachMe · Adaptive Technical Training</span>
-        <h1 className="welcome-title">Learn the machine, not just the manual.</h1>
-        <p className="welcome-lead">
-          TeachMe is a corpus-bound training system for safety-critical equipment. It doesn&rsquo;t
-          just answer questions — it asks them: Socratic probes calibrated to your current level,
-          situated fault scenarios, and a narrator that refuses to fabricate. Pick a domain to begin.
-        </p>
-        <ul className="welcome-science" aria-label="Learning science foundations">
-          {LEARNING_SCIENCE.map((item) => (
-            <li key={item} className="welcome-science-chip">
-              {item}
-            </li>
-          ))}
-        </ul>
+        <div className="welcome-hero-glow" aria-hidden="true" />
+        <div className="welcome-hero-body">
+          <span className="welcome-eyebrow">TeachMe · Adaptive Technical Training</span>
+          <h1 className="welcome-title">
+            Learn the machine, <em>not just the manual.</em>
+          </h1>
+          <p className="welcome-lead">
+            TeachMe is a corpus-bound training system for safety-critical equipment. It doesn&rsquo;t
+            just answer questions — it asks them: Socratic probes calibrated to your current level,
+            situated fault scenarios, and a narrator that refuses to fabricate.
+          </p>
+          <div className="welcome-hero-actions">
+            <button type="button" className="welcome-hero-cta" onClick={scrollToDomains}>
+              Choose a domain <span aria-hidden="true">↓</span>
+            </button>
+          </div>
+          <p className="welcome-science" aria-label="Grounded in learning science">
+            <span className="welcome-science-label">Grounded in</span>
+            {LEARNING_SCIENCE.map((item, i) => (
+              <span key={item} className="welcome-science-term">
+                {i > 0 && <span className="welcome-science-sep" aria-hidden="true">·</span>}
+                {item}
+              </span>
+            ))}
+          </p>
+        </div>
       </section>
 
-      <section className="welcome-domains" aria-label="Choose a domain">
+      <section id="welcome-domains" className="welcome-domains" aria-label="Choose a domain">
         <div className="welcome-domains-head">
           <h2>Choose a domain</h2>
           <p>Each domain is a corpus-bound instantiation of the same engine.</p>
