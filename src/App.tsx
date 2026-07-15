@@ -204,6 +204,15 @@ function App() {
     setAjpTab(tab);
   }
 
+  // Masthead logo → app home. Inside the app that's the Dashboard (mission
+  // brief); it stays reachable in high-stress mode, so no gate needed. Any open
+  // overlay is dismissed so "home" always lands somewhere clean. On the Welcome
+  // screen we're already at the landing, so this is a no-op there.
+  function goHome() {
+    setDrawerOpen(false);
+    if (view === 'app') setAjpTab('ajp-dashboard');
+  }
+
   function switchMode(next: OperatorMode) {
     setMode(next);
     // Entering high-stress from a locked surface drops straight to reachback —
@@ -221,10 +230,16 @@ function App() {
     <div className="app-shell">
       <header className="app-masthead" role="banner">
         <div className="app-masthead-inner">
-          <div className="app-masthead-mark">
+          <button
+            type="button"
+            className="app-masthead-mark"
+            onClick={goHome}
+            aria-label={view === 'app' ? 'TeachMe — return to dashboard' : 'TeachMe home'}
+            title="Home"
+          >
             <span className="app-masthead-mark-dot" aria-hidden="true" />
             <span className="app-masthead-mark-text">TeachMe</span>
-          </div>
+          </button>
           <div className="app-masthead-divider" aria-hidden="true" />
           <h1 className="app-masthead-title">
             {view === 'app' ? (

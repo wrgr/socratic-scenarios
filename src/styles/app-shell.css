@@ -180,6 +180,23 @@
   font-size: 1.15rem;
   letter-spacing: -0.01em;
   color: #fafaf7;
+  /* Button reset — this is a clickable "home" control that must still read as the wordmark. */
+  border: 0;
+  background: none;
+  padding: 0.15rem 0.35rem;
+  margin: -0.15rem -0.35rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.app-masthead-mark:hover {
+  background: rgba(250, 250, 247, 0.08);
+}
+
+.app-masthead-mark:focus-visible {
+  outline: 2px solid var(--accent-bright);
+  outline-offset: 2px;
 }
 
 .app-masthead-mark-dot {

@@ -157,7 +157,23 @@ The app is a pure static bundle — users supply Gemini keys at runtime via the 
 
 ### GitHub Pages (this repo)
 
-This repo ships [.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml): every push to `main` builds and deploys to GitHub Pages. The workflow derives the base path from the repo name (`/socratic-scenarios/`) automatically — no config needed. Enable it once under **Settings → Pages → Source: GitHub Actions**. The deployed site runs in simulated mode; visitors add their own Gemini key via the gear icon (nothing server-side).
+This repo ships [.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml): every push to `main` builds and deploys to GitHub Pages. Enable it once under **Settings → Pages → Source: GitHub Actions**. The deployed site runs in simulated mode; visitors add their own Gemini key via the gear icon (nothing server-side).
+
+#### Custom domain (www.experttrace.org)
+
+The site is served from the custom domain root, so the build uses base `/` (the [public/CNAME](public/CNAME) file pins the domain; the workflow deliberately leaves `GITHUB_PAGES_BASE` unset). To wire up a custom domain:
+
+1. **DNS** (at your registrar) — point the subdomain at GitHub Pages with a `CNAME` record:
+
+   | Type  | Host / Name | Value              |
+   |-------|-------------|--------------------|
+   | CNAME | `www`       | `wrgr.github.io`   |
+
+   For an apex/root (`experttrace.org` → `www`), add a redirect or the four `A`/`AAAA` records GitHub documents ([Pages custom-domain docs](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site)).
+2. **Repo `CNAME` file** — [public/CNAME](public/CNAME) contains `www.experttrace.org`; Vite copies it into `dist/` on every build so Pages keeps serving the domain.
+3. **GitHub setting** — **Settings → Pages → Custom domain** should show `www.experttrace.org` (populated from the `CNAME` file on first deploy). Once DNS verifies, tick **Enforce HTTPS**.
+
+> Reverting to the default `<user>.github.io/socratic-scenarios/` URL means restoring `GITHUB_PAGES_BASE: /${{ github.event.repository.name }}/` in the workflow **and** removing `public/CNAME` — the base path and the custom domain must agree.
 
 ### Host nginx (for a self-hosted box)
 
