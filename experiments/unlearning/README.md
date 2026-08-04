@@ -97,6 +97,25 @@ model, CPU, 72 steps — a demonstration, not a study. This is the weight-level 
 to the context-level leakage result (`src/engine/colreg-sim/leakage.ts`), and the
 objective-audit direction over dialogue-scored unlearning (Song et al. 2026).
 
+### Independent reproduction (CPU, 72 steps)
+
+An independent run of the same pipeline (`cpu_run.py`, Qwen2.5-1.5B-Instruct, NPO,
+72 steps, LoRA r=16, chat-templated; torch 2.13 CPU / transformers 5.14, ~9.5 min
+wall time) reproduces the headline:
+
+| metric | base | unlearned (recorded) | unlearned (repro) |
+|---|---|---|---|
+| forget-target NLL (teacher-forced) | 4.64 | 41.37 | **39.19** |
+| retain-target NLL | 3.19 | 0.07 | **0.07** |
+| direction-cue rate, held-out (`starboard` OR `right`) | 5/6 | 0/6 | **2/6** |
+
+The teacher-forced forget-target NLL collapse (×8–9) and retain preservation reproduce
+tightly; the **generation-level cue suppression is noisier — 2/6 held-out probes still
+emit a direction cue** (vs 0/6 in the recorded run), no seed pinned. This *strengthens*
+the honest scope above: the lexical probe measures behavioral suppression, and its
+run-to-run variance is exactly why genuine *removal* is the claim the task-level
+instrument (regret / per-rule compliance) settles, not this probe.
+
 ## Caveats (carry into the paper)
 
 - **Unlearning ≠ deletion.** Verify removal with more than one probe and test relearning
