@@ -15,9 +15,11 @@ import type {
   ScenarioDefinition,
   ScenarioSessionState,
   ScenarioStep,
-  ScenarioPhase,
   StudentAction,
 } from './types';
+
+/** Reserved engine-level terminal phase sentinel, shared across all domains. */
+const COMPLETE_PHASE = 'COMPLETE';
 
 // ─── Engine Class ─────────────────────────────────────────────────
 
@@ -213,10 +215,9 @@ export class ScenarioEngine {
     const nextIndex = this.state.currentStepIndex + 1;
     if (nextIndex >= this.definition.steps.length) {
       // Scenario complete
-      const nextPhase: ScenarioPhase = 'COMPLETE';
       this.state = {
         ...this.state,
-        phase: nextPhase,
+        phase: COMPLETE_PHASE,
         maxVisitedStepIndex: Math.max(this.state.maxVisitedStepIndex, nextIndex),
       };
       return { blocked: false };
@@ -302,7 +303,7 @@ export class ScenarioEngine {
   }
 
   isComplete(): boolean {
-    return this.state.phase === 'COMPLETE' ||
+    return this.state.phase === COMPLETE_PHASE ||
            this.state.currentStepIndex >= this.definition.steps.length;
   }
 }

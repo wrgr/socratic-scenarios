@@ -17,6 +17,19 @@ export const PROBE_LABELS: Record<string, string> = {
   'PROBE-ATOMIZATION-PA-001': 'PA Atomizer Visual',
   'PROBE-PLUME-VISUAL-001': 'Aerosol Plume Visual',
   'PROBE-UA-SOUND-001': 'Ultrasonic Atomizer Sound',
+  // Roadside Tire Change domain
+  'PROBE-TIRE-SECURE-VEHICLE-001': 'Securing the Vehicle',
+  'PROBE-TIRE-JACK-POINT-001': 'Jack Placement',
+  'PROBE-TIRE-LOOSEN-FIRST-001': 'Loosen Before Lifting',
+  'PROBE-TIRE-STAR-TORQUE-001': 'Star-Pattern Torque',
+  'PROBE-TIRE-SPARE-LIMITS-001': 'Compact Spare Limits',
+  // COLREG Collision Avoidance domain
+  'PROBE-COLREG-CROSSING-001': 'Crossing — Who Gives Way',
+  'PROBE-COLREG-STARBOARD-001': 'Why Alter to Starboard',
+  'PROBE-COLREG-SUBSTANTIAL-001': 'Substantial Alteration',
+  'PROBE-COLREG-BEARING-001': 'Steady Bearing = Risk',
+  'PROBE-COLREG-STANDON-001': 'Stand-On Duties',
+  'PROBE-COLREG-SAFE-SPEED-001': 'Safe Speed',
 };
 
 /** Topic categories for display grouping. */
@@ -32,6 +45,19 @@ export const PROBE_CATEGORIES: Record<string, string> = {
   'PROBE-ATOMIZATION-PA-001': 'Perceptual Signals',
   'PROBE-PLUME-VISUAL-001': 'Perceptual Signals',
   'PROBE-UA-SOUND-001': 'Perceptual Signals',
+  // Roadside Tire Change domain
+  'PROBE-TIRE-SECURE-VEHICLE-001': 'Securing & Stability',
+  'PROBE-TIRE-JACK-POINT-001': 'Securing & Stability',
+  'PROBE-TIRE-LOOSEN-FIRST-001': 'Technique',
+  'PROBE-TIRE-STAR-TORQUE-001': 'Technique',
+  'PROBE-TIRE-SPARE-LIMITS-001': 'After the Change',
+  // COLREG Collision Avoidance domain
+  'PROBE-COLREG-CROSSING-001': 'Give-Way / Stand-On',
+  'PROBE-COLREG-STANDON-001': 'Give-Way / Stand-On',
+  'PROBE-COLREG-STARBOARD-001': 'Action to Avoid Collision',
+  'PROBE-COLREG-SUBSTANTIAL-001': 'Action to Avoid Collision',
+  'PROBE-COLREG-BEARING-001': 'Risk Assessment',
+  'PROBE-COLREG-SAFE-SPEED-001': 'Risk Assessment',
 };
 
 /** Return human label for a probe node, falling back to its id. */

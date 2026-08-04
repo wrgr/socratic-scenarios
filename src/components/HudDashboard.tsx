@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import type { OperatorMode } from '../hooks/useOperatorMode';
 import { SAFETY_GATES, useSafetyGates } from '../hooks/useSafetyGates';
 import { loadProbeProgress, summarizeMastery } from '../engine/learner-model/probe-progress';
-import { ajpProbeNodes } from '../corpus/ajp/probes';
+import { useDomain } from '../domain/useDomain';
 import { probeCategory } from './socratic-view.utils';
 import '../styles/hud-dashboard.css';
 
@@ -13,9 +13,6 @@ interface HudDashboardProps {
   onNavigate: (tab: AjpTab) => void;
   mode: OperatorMode;
 }
-
-// The Mastery Map aggregates real Socratic Practice results per topic category.
-const MASTERY_PROBES = ajpProbeNodes.map((p) => ({ id: p.id, category: probeCategory(p.id) }));
 
 const TRAINING_PHASES = [
   {
@@ -70,14 +67,27 @@ function useSessionTimer() {
 }
 
 export function HudDashboard({ onNavigate, mode }: HudDashboardProps) {
+  const { domain } = useDomain();
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const { gateStatus, toggleGate } = useSafetyGates();
   const timer = useSessionTimer();
   const highStress = mode === 'high-stress';
 
+  // The AJP safety-gate pre-flight and the retrieval-heavy training phases only
+  // apply to the engine-backed AJP domain.
+  const showSafetyGates = domain.fullEngine === true;
+  const trainingPhases = TRAINING_PHASES.filter(
+    (p) => showSafetyGates || p.tab === 'ajp-socratic' || p.tab === 'ajp-scenario',
+  );
+
+  // The Mastery Map aggregates real Socratic Practice results per topic category.
+  const masteryProbes = useMemo(
+    () => domain.probes.map((p) => ({ id: p.id, category: probeCategory(p.id) })),
+    [domain],
+  );
   // Progress is written by Socratic Practice; the dashboard remounts on every
   // visit (tab switch), so loading once per mount stays current.
-  const mastery = useMemo(() => summarizeMastery(MASTERY_PROBES, loadProbeProgress()), []);
+  const mastery = useMemo(() => summarizeMastery(masteryProbes, loadProbeProgress()), [masteryProbes]);
 
   const clearedCount = SAFETY_GATES.filter(g => gateStatus[g.id]).length;
   const totalGates = SAFETY_GATES.length;
@@ -94,15 +104,17 @@ export function HudDashboard({ onNavigate, mode }: HudDashboardProps) {
       {/* ── Status Bar ─────────────────────────────────────────────── */}
       <div className="hud-statusbar">
         <div className="hud-sb-left">
-          <span className={`hud-dot hud-dot--${systemStatus}`} />
+          <span className={`hud-dot hud-dot--${showSafetyGates ? systemStatus : 'nominal'}`} />
           <span className="hud-sb-status">
-            {systemStatus === 'nominal' ? 'ALL GATES CLEAR' :
-             systemStatus === 'caution' ? `${criticalPending} CRITICAL GATE${criticalPending > 1 ? 'S' : ''} PENDING` :
-             'GATES NOT VERIFIED'}
+            {showSafetyGates
+              ? (systemStatus === 'nominal' ? 'ALL GATES CLEAR'
+                : systemStatus === 'caution' ? `${criticalPending} CRITICAL GATE${criticalPending > 1 ? 'S' : ''} PENDING`
+                : 'GATES NOT VERIFIED')
+              : 'TRAINING BRIEF'}
           </span>
           {highStress && <span className="hud-badge hud-badge--alert">HIGH-STRESS</span>}
         </div>
-        <span className="hud-sb-title">AJP OPERATOR TRAINING · MISSION BRIEF</span>
+        <span className="hud-sb-title">{domain.masthead.toUpperCase()} · MISSION BRIEF</span>
         <div className="hud-sb-right">
           SESSION <span className="hud-timer">{timer}</span>
         </div>
@@ -127,7 +139,8 @@ export function HudDashboard({ onNavigate, mode }: HudDashboardProps) {
       {/* ── Main Cards ─────────────────────────────────────────────── */}
       <div className="hud-grid">
 
-        {/* Safety Gates */}
+        {/* Safety Gates (AJP engine-backed pre-flight only) */}
+        {showSafetyGates && (
         <div className={`hud-card ${expandedCard === 'safety' ? 'hud-card--expanded' : ''}`}>
           <div className="hud-card-head">
             <span className="hud-eyebrow">Safety Gates</span>
@@ -181,6 +194,7 @@ export function HudDashboard({ onNavigate, mode }: HudDashboardProps) {
             )}
           </div>
         </div>
+        )}
 
         {/* Mastery Map — live aggregate of Socratic Practice results */}
         <div className={`hud-card ${expandedCard === 'mastery' ? 'hud-card--expanded' : ''}`}>
@@ -263,7 +277,7 @@ export function HudDashboard({ onNavigate, mode }: HudDashboardProps) {
           </div>
 
           <div className="hud-phases">
-            {TRAINING_PHASES.map((phase) => {
+            {trainingPhases.map((phase) => {
               const locked = highStress && phase.trainingOnly;
               return (
                 <div key={phase.tab} className={`hud-phase ${locked ? 'hud-phase--locked' : ''}`}>
