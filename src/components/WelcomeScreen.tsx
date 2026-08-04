@@ -116,12 +116,21 @@ function DomainCard({ domain, onEnter }: { domain: DomainDescriptor; onEnter: ()
       <h3 className="welcome-domain-name">{domain.name}</h3>
       <p className="welcome-domain-desc">{domain.blurb}</p>
       <div className="welcome-domain-stats">
-        <span>
-          <strong>{nodeCount}</strong> graph nodes
-        </span>
-        <span>
-          <strong>{edgeCount}</strong> edges
-        </span>
+        {/* Node/edge counts are meaningful only for the graph-driven domains; the
+            flagship rides the full retrieval engine (its graph is baked into the
+            engine, not carried on the corpus descriptor), so show that instead of a
+            misleading "0 graph nodes". */}
+        {nodeCount > 0 && (
+          <span>
+            <strong>{nodeCount}</strong> graph nodes
+          </span>
+        )}
+        {edgeCount > 0 && (
+          <span>
+            <strong>{edgeCount}</strong> edges
+          </span>
+        )}
+        {domain.fullEngine && <span>full retrieval engine</span>}
         {domain.hasSimulator && <span>interactive simulator</span>}
       </div>
       <button type="button" className="welcome-domain-cta" onClick={onEnter}>

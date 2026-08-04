@@ -146,6 +146,11 @@ function isTrainingOnly(tab: AjpTab): boolean {
   return NAV_TABS.find((t) => t.id === tab)?.trainingOnly ?? false;
 }
 
+/** Collapse a label to its alphanumerics for "same phrasing?" comparisons. */
+function normalizeLabel(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 /** Interstitial shown when Scenario Mode is opened with critical safety gates unverified. */
 function GateInterstitial({ onBack }: { onBack: () => void }) {
   const pending = pendingCriticalGates(loadGateStatus());
@@ -283,8 +288,13 @@ function AppShell() {
           <h1 className="app-masthead-title">
             {view === 'app' ? (
               <>
-                {domain.name}{' '}
-                <span className="app-masthead-title-sub">{domain.masthead}</span>
+                {domain.name}
+                {/* Only show the masthead subtitle when it adds something beyond the
+                    name — for domains where they're the same phrasing (COLREG, tire)
+                    it would just read as a duplicate line. */}
+                {normalizeLabel(domain.masthead) !== normalizeLabel(domain.name) && (
+                  <span className="app-masthead-title-sub"> {domain.masthead}</span>
+                )}
               </>
             ) : (
               <span className="app-masthead-title-sub">Adaptive Technical Training</span>
