@@ -20,11 +20,17 @@ interface Props {
   state: ScenarioSessionState;
   /** Show safety gate warning inline (default true). */
   showSafetyGate?: boolean;
+  /** Domain phase→label map. Defaults to the AJP phase labels. */
+  phaseLabels?: Record<string, string>;
 }
 
-/** Returns a display name for a step id — strips prefix, title-cases remainder. */
-function stepDisplayName(step: { id: string; phase: string }, index: number): string {
-  return `Step ${index + 1} — ${SCENARIO_PHASE_LABELS[step.phase as keyof typeof SCENARIO_PHASE_LABELS] ?? step.phase}`;
+/** Returns a display name for a step, using the active domain's phase labels. */
+function stepDisplayName(
+  step: { id: string; phase: string },
+  index: number,
+  labels: Record<string, string>,
+): string {
+  return `Step ${index + 1} — ${labels[step.phase] ?? step.phase}`;
 }
 
 /** Marker for each step based on its position relative to currentStepIndex. */
@@ -34,7 +40,12 @@ function stepMarker(index: number, currentIndex: number, isComplete: boolean): s
   return '○';
 }
 
-export function ProcedureScaffold({ definition, state, showSafetyGate = true }: Props) {
+export function ProcedureScaffold({
+  definition,
+  state,
+  showSafetyGate = true,
+  phaseLabels = SCENARIO_PHASE_LABELS,
+}: Props) {
   const { steps } = definition;
   const { currentStepIndex, phase } = state;
   const isScenarioComplete = phase === 'COMPLETE' || currentStepIndex >= steps.length;
@@ -47,7 +58,7 @@ export function ProcedureScaffold({ definition, state, showSafetyGate = true }: 
       {/* Phase + step counter */}
       <div className="scaffold-header">
         <span className="scaffold-phase">
-          {SCENARIO_PHASE_LABELS[phase] ?? phase}
+          {phaseLabels[phase] ?? phase}
         </span>
         <span className="scaffold-step-counter">
           {isScenarioComplete
@@ -85,7 +96,7 @@ export function ProcedureScaffold({ definition, state, showSafetyGate = true }: 
               <span className="scaffold-step-marker" aria-hidden="true">
                 {marker}
               </span>
-              <span className="scaffold-step-label">{stepDisplayName(step, i)}</span>
+              <span className="scaffold-step-label">{stepDisplayName(step, i, phaseLabels)}</span>
               {step.safetyGateNodeId && (
                 <span className="scaffold-gate-dot" title="Safety gate" aria-label="Has safety gate">
                   ⚠

@@ -2,9 +2,16 @@
  * Scenario Mode state machine types (design document §4.3).
  * Defines the procedural phases, step structure, fault injection model,
  * and session state for the Narrator/Mentor/Student interaction loop.
+ *
+ * Phases are domain-parameterized: `ScenarioStep.phase` is a free-form string so
+ * each teaching domain can define its own procedure phases, and each domain
+ * supplies its own phase→label map (see `DomainDescriptor.phaseLabels`). The AJP
+ * `ScenarioPhase` union + `SCENARIO_PHASE_LABELS` below remain the AJP domain's
+ * phase set. `'COMPLETE'` is reserved as the engine-level terminal sentinel across
+ * all domains.
  */
 
-// ─── Procedure Phase Enum ─────────────────────────────────────────
+// ─── AJP Procedure Phase Enum ─────────────────────────────────────
 
 export type ScenarioPhase =
   | 'SETUP'
@@ -39,7 +46,8 @@ export const SCENARIO_PHASE_LABELS: Record<ScenarioPhase, string> = {
  */
 export interface ScenarioStep {
   id: string;
-  phase: ScenarioPhase;
+  /** Procedure phase for this step. Domain-defined free-form key (AJP uses `ScenarioPhase`). */
+  phase: string;
   /** Narrator announcement — corpus-grounded, direct quote or close paraphrase of node content. */
   narratorText: string;
   /** PROBE-* node id. Mentor asks this probe before the learner can act. */
@@ -97,7 +105,8 @@ export interface ScenarioSessionState {
   /** Highest step index the learner has reached. Lets Previous/Next walk back and forward
    *  through visited steps without letting Next skip unvisited work. */
   maxVisitedStepIndex: number;
-  phase: ScenarioPhase;
+  /** Current phase key (a domain phase, or the reserved `'COMPLETE'` terminal sentinel). */
+  phase: string;
   /** Fault node ids currently visible to the learner (injected, not yet resolved). */
   activeFaultIds: string[];
   /** Fault node ids the learner has correctly resolved. */

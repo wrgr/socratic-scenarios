@@ -33,6 +33,25 @@ The toolbar carries an **operator state** toggle — the app's cognitive-load sw
 - **Training** — the full instructional surface described above.
 - **High-stress ops** — for an operator at the machine under time pressure. Training surfaces are locked; visual chrome is stripped; only the Dashboard and corpus-bound Reachback Lookup remain. This follows the cognitive load stance in [OVERVIEW.md](OVERVIEW.md). The state persists across reloads; "Stand down" returns to Training.
 
+### Teaching domains
+
+The paradigm (typed knowledge graph → corpus-bound Narrator → Socratic Mentor → mastery/safety gates) is domain-agnostic. A **domain switcher** in the header selects the active domain; each self-registers via `src/corpus/registry.ts`:
+
+| Domain | Notes |
+|---|---|
+| **Aerosol Jet Printing** | The original, engine-backed domain (retrieval + narrator baked in); all six surfaces apply. |
+| **Roadside Tire Change** | A procedural, safety-critical domain (`src/corpus/tire/`) demonstrating the paradigm generalizes — scenarios, Socratic probes, safety gates, consequences. |
+| **COLREG — Collision Avoidance** | The maritime "rules of the road" (`src/corpus/colreg/`) — head-on / crossing / overtaking / stand-on / restricted-visibility encounters, give-way vs stand-on duties, safe speed, risk of collision. |
+
+New domains ride **Scenario Mode, Socratic Practice, and the Dashboard**; the retrieval-heavy surfaces (Reachback, Retrieval Lab, Workflow Demo) remain AJP-only for now. COLREG also ships an **interactive simulator** (a COLREG-only "Simulator" tab) with real kinematics — speed/heading controls, turn-radius constraints, an elliptical ship domain, a Collision Risk Index, per-rule compliance scoring, and SB-MPC/velocity-obstacle reference solvers.
+
+COLREG documents:
+
+- [docs/colreg-simulator-design.md](docs/colreg-simulator-design.md) — the simulator's design (kinematics, ship domain, CRI, objective, reference solvers).
+- [docs/colreg-validation.md](docs/colreg-validation.md) — the validation methodology (train-vs-test, the two experimental knobs, the value-demonstration ladder, and how to suppress/verify out-of-corpus knowledge in a RAG-bounded LLM study).
+- [docs/colreg-conops.md](docs/colreg-conops.md) — the experiment's Concept of Operations (actors, phases, scenarios, roles, go/no-go gates).
+- [docs/colreg-whitepaper.md](docs/colreg-whitepaper.md) — a working whitepaper tying the generalization, the simulator, the validation method, and the in-silico results together.
+
 ## Getting started
 
 ```bash

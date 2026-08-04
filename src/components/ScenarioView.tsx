@@ -19,9 +19,8 @@ import { getSimulatedLearnerService } from '../engine/simulated-learner';
 import type { SimulatedExpertiseLevel } from '../engine/simulated-learner';
 import { useScenarioEngine } from '../engine/scenario/engine';
 import type { ScenarioDefinition } from '../engine/scenario/types';
-import { ajpScenarioScripts } from '../corpus/ajp/scenario-scripts';
-import { consequenceNodes } from '../corpus/ajp/consequences';
-import { ajpProbeNodes } from '../corpus/ajp/probes';
+import { useDomain } from '../domain/useDomain';
+import { findProbe, findConsequence, findNode } from '../corpus/registry';
 import { ProcedureScaffold } from './ProcedureScaffold';
 import { MentorDegradedBanner } from './MentorDegradedBanner';
 import { SourceRefText } from './SourceRefText';
@@ -44,26 +43,34 @@ function difficultyLabel(d: ScenarioDefinition['difficulty']): string {
   return d === 'beginner' ? 'Beginner' : d === 'intermediate' ? 'Intermediate' : 'Advanced';
 }
 
+// Node lookups resolve across every registered domain (node ids are globally
+// unique), so a scenario step's referenced probe / consequence node is found
+// regardless of which domain owns it.
 function getConsequenceById(id: string) {
-  return consequenceNodes.find((c) => c.id === id);
+  return findConsequence(id);
 }
 
 function getProbeById(id: string) {
-  return ajpProbeNodes.find((p) => p.id === id);
+  return findProbe(id);
 }
 
 // ─── Scenario Selector ────────────────────────────────────────────
 
-function ScenarioSelectorGrid({ onSelect }: { onSelect: (def: ScenarioDefinition) => void }) {
+function ScenarioSelectorGrid({
+  scenarios,
+  subtitle,
+  onSelect,
+}: {
+  scenarios: ScenarioDefinition[];
+  subtitle: string;
+  onSelect: (def: ScenarioDefinition) => void;
+}) {
   return (
     <div className="scenario-selector">
       <h2>Select a Scenario</h2>
-      <p className="scenario-selector-subtitle">
-        Each scenario walks through a corpus-grounded HD2 operation. Narrator text is drawn
-        directly from AJP knowledge graph nodes — no generation.
-      </p>
+      <p className="scenario-selector-subtitle">{subtitle}</p>
       <div className="scenario-grid">
-        {ajpScenarioScripts.map((def) => (
+        {scenarios.map((def) => (
           <button
             key={def.id}
             type="button"
@@ -106,10 +113,16 @@ function GraphSafetyGatePanel({
   onAcknowledge: () => void;
 }) {
   const gateResult = useMemo(() => safetyGateStrategy(safetyGateId), [safetyGateId]);
+  // AJP gates resolve via the engine's baked graph; for other domains the gate
+  // node lives only in the domain corpus — fall back to a registry lookup.
+  const fallbackNode = useMemo(
+    () => (gateResult?.sourceNode ? undefined : findNode(safetyGateId)),
+    [gateResult, safetyGateId],
+  );
   const [expanded, setExpanded] = useState(true);
 
   const hazards = gateResult?.hazards ?? [];
-  const sourceContent = gateResult?.sourceNode?.content;
+  const sourceContent = gateResult?.sourceNode?.content ?? fallbackNode?.content;
 
   return (
     <div className="safety-gate-banner graph-safety-gate" role="alert">
@@ -127,6 +140,11 @@ function GraphSafetyGatePanel({
 
       {expanded && (
         <div className="safety-gate-graph-details">
+          {fallbackNode?.safetyAlert && (
+            <p className="hazard-alert">
+              ⚠️ <SourceRefText text={fallbackNode.safetyAlert} />
+            </p>
+          )}
           {sourceContent && (
             <div className="safety-gate-source">
               <span className="graph-node-ref">{safetyGateId}</span>
@@ -181,7 +199,7 @@ function GraphProbeContextStrip({ probeId }: { probeId: string }) {
 
   const probeCtx = useMemo(() => probeContextStrategy(probeId), [probeId]);
   const tacitResult = useMemo(() => {
-    const probe = ajpProbeNodes.find((p) => p.id === probeId);
+    const probe = findProbe(probeId);
     return probe ? tacitLookupStrategy(probe.content, 2) : null;
   }, [probeId]);
 
@@ -863,6 +881,7 @@ function ActiveScenarioView({
   onSelectAnother: () => void;
   expertiseLevel: SimulatedExpertiseLevel;
 }) {
+  const { domain } = useDomain();
   const engine = useScenarioEngine(definition);
   const [pendingConsequenceId, setPendingConsequenceId] = useState<string | null>(null);
   const [probeRecords, setProbeRecords] = useState<Record<string, ProbeAttemptRecord>>({});
@@ -968,7 +987,7 @@ function ActiveScenarioView({
 
       <div className="scenario-active-body">
         {/* Sidebar */}
-        <ProcedureScaffold definition={definition} state={state} />
+        <ProcedureScaffold definition={definition} state={state} phaseLabels={domain.phaseLabels} />
 
         {/* Main content */}
         <div className="scenario-main-content">
@@ -1056,9 +1075,14 @@ const SCENARIO_EXPERTISE_LEVELS: { value: SimulatedExpertiseLevel; label: string
 
 /** Scenario Mode: selector grid + Narrator/Mentor/Student interaction loop. */
 export function ScenarioView({ onAdvancePhase }: Props) {
+  const { domain } = useDomain();
   const [selectedDef, setSelectedDef] = useState<ScenarioDefinition | null>(null);
   const [expertiseLevel, setExpertiseLevel] = useState<SimulatedExpertiseLevel>('naive');
   const hasLearnerService = !!getSimulatedLearnerService();
+
+  const selectorSubtitle = domain.fullEngine
+    ? 'Each scenario walks through a corpus-grounded HD2 operation. Narrator text is drawn directly from AJP knowledge graph nodes — no generation.'
+    : `Each scenario walks through a ${domain.name} situation, grounded in the domain's knowledge graph. Narrator text is drawn directly from the corpus — no generation.`;
 
   const expertisePicker = hasLearnerService ? (
     <div className="sim-expertise-picker">
@@ -1080,7 +1104,11 @@ export function ScenarioView({ onAdvancePhase }: Props) {
     return (
       <div className="scenario-view">
         {expertisePicker}
-        <ScenarioSelectorGrid onSelect={setSelectedDef} />
+        <ScenarioSelectorGrid
+          scenarios={domain.scenarios}
+          subtitle={selectorSubtitle}
+          onSelect={setSelectedDef}
+        />
       </div>
     );
   }

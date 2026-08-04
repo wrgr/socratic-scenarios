@@ -2,8 +2,17 @@
 
 import type { AJPNode, AJPEdge } from './ajp';
 
-/** Registered use cases. AJP is the flagship; flat-tire is the graph-only proof. */
-export type DomainId = 'ajp' | 'flat-tire';
+/**
+ * Registered use cases. AJP is the flagship; flat-tire is the graph-only proof.
+ * The COLREG collision-avoidance and roadside-tire-change domains are registered
+ * through the pluggable corpus registry (src/corpus/registry.ts).
+ */
+export type DomainId =
+  | 'ajp'
+  | 'flat-tire'
+  | 'ajp-electronics-repair'
+  | 'colreg-collision-avoidance'
+  | 'roadside-tire-change';
 
 /** Reference to a domain's dense-retrieval corpus. Optional per domain. */
 export interface DenseCorpusRef {

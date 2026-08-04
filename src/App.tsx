@@ -1,4 +1,4 @@
-/** App entry — AJP / EDDIE demo only. */
+/** App entry — pluggable teaching domains (AJP / EDDIE, COLREG, roadside tire). */
 import { useState } from 'react';
 import { InOperationView } from './components/InOperationView';
 import { SocraticView } from './components/SocraticView';
@@ -9,9 +9,10 @@ import { PedagogyDrawer } from './components/PedagogyDrawer';
 import { AjpWorkflowDemo } from './components/AjpWorkflowDemo';
 import { ScenarioView } from './components/ScenarioView';
 import { HudDashboard } from './components/HudDashboard';
+import { ColregSimulator } from './components/ColregSimulator';
 import { WelcomeScreen } from './components/WelcomeScreen';
-import { getActiveDomain } from './domains/domain-context';
-import { persistActiveDomainId } from './domains/registry';
+import { DomainProvider } from './domain/DomainContext';
+import { useDomain } from './domain/useDomain';
 import type { DomainId } from './types';
 import { setEmbeddingProvider } from './engine/retrieval';
 import { createGeminiProvider } from './engine/retrieval/gemini-provider';
@@ -29,6 +30,9 @@ import { WHITEPAPER_URL } from './components/ajp-background-model.data';
 import { useOperatorMode } from './hooks/useOperatorMode';
 import type { OperatorMode } from './hooks/useOperatorMode';
 import { loadGateStatus, pendingCriticalGates } from './hooks/useSafetyGates';
+// Registers every teaching domain (AJP, COLREG, tire) into the corpus registry
+// before the DomainProvider mounts. Import for side effects.
+import './corpus/domains';
 import './App.css';
 
 // Embedding provider mode:
@@ -83,7 +87,16 @@ if (chatProvider) {
   setPromptEnricher(createSimulatedEnricher());
 }
 
-type AjpTab = 'ajp-dashboard' | 'ajp-architecture' | 'ajp-demo' | 'ajp-scenario' | 'ajp-socratic' | 'ajp-reachback' | 'ajp-lab' | 'ajp-rag';
+type AjpTab =
+  | 'ajp-dashboard'
+  | 'ajp-architecture'
+  | 'ajp-demo'
+  | 'ajp-scenario'
+  | 'ajp-socratic'
+  | 'ajp-reachback'
+  | 'ajp-lab'
+  | 'ajp-rag'
+  | 'colreg-sim';
 
 interface NavTabDef {
   id: AjpTab;
@@ -101,6 +114,13 @@ interface NavTabDef {
    * list, not this filtered one) from there.
    */
   showInTopNav: boolean;
+  /**
+   * Requires the full retrieval engine (AJP only). These surfaces depend on the
+   * engine's baked knowledge graph and dense corpus, so they are hidden for the
+   * lighter pluggable domains (COLREG, tire) that ride only the
+   * Scenario / Socratic / Dashboard paradigm.
+   */
+  fullEngineOnly: boolean;
 }
 
 // Ordered to match the training sequence on the dashboard: orient (dashboard →
@@ -110,14 +130,16 @@ interface NavTabDef {
 // Mission/Pedagogy/AI Rationale (formerly an "About" tab here) now lives in the
 // global PedagogyDrawer, reachable from the masthead on every screen instead.
 const NAV_TABS: readonly NavTabDef[] = [
-  { id: 'ajp-dashboard', label: 'Dashboard', trainingOnly: false, showInTopNav: true },
-  { id: 'ajp-architecture', label: 'Architecture', trainingOnly: true, showInTopNav: true },
-  { id: 'ajp-socratic', label: 'Socratic Practice', phase: '01', trainingOnly: true, showInTopNav: false },
-  { id: 'ajp-scenario', label: 'Scenario Mode', phase: '02', trainingOnly: true, showInTopNav: false },
-  { id: 'ajp-demo', label: 'Workflow Demo', phase: '03', trainingOnly: true, showInTopNav: false },
-  { id: 'ajp-reachback', label: 'Reachback Lookup', phase: '04', trainingOnly: false, showInTopNav: false },
-  { id: 'ajp-lab', label: 'Retrieval Lab', trainingOnly: true, showInTopNav: true },
-  { id: 'ajp-rag', label: 'RAG Coverage', trainingOnly: true, showInTopNav: true },
+  { id: 'ajp-dashboard', label: 'Dashboard', trainingOnly: false, showInTopNav: true, fullEngineOnly: false },
+  { id: 'ajp-architecture', label: 'Architecture', trainingOnly: true, showInTopNav: true, fullEngineOnly: true },
+  { id: 'ajp-socratic', label: 'Socratic Practice', phase: '01', trainingOnly: true, showInTopNav: false, fullEngineOnly: false },
+  { id: 'ajp-scenario', label: 'Scenario Mode', phase: '02', trainingOnly: true, showInTopNav: false, fullEngineOnly: false },
+  { id: 'ajp-demo', label: 'Workflow Demo', phase: '03', trainingOnly: true, showInTopNav: false, fullEngineOnly: true },
+  { id: 'ajp-reachback', label: 'Reachback Lookup', phase: '04', trainingOnly: false, showInTopNav: false, fullEngineOnly: true },
+  { id: 'ajp-lab', label: 'Retrieval Lab', trainingOnly: true, showInTopNav: true, fullEngineOnly: true },
+  { id: 'ajp-rag', label: 'RAG Coverage', trainingOnly: true, showInTopNav: true, fullEngineOnly: true },
+  // COLREG kinematic simulator — only for domains that declare hasSimulator.
+  { id: 'colreg-sim', label: 'Simulator', trainingOnly: true, showInTopNav: true, fullEngineOnly: false },
 ];
 
 function isTrainingOnly(tab: AjpTab): boolean {
@@ -170,7 +192,11 @@ function writeEntered(entered: boolean): void {
   }
 }
 
-function App() {
+function AppShell() {
+  // The active teaching domain (COLREG, AJP, tire) comes from the corpus
+  // registry via the DomainProvider. It drives Scenario Mode, Socratic Practice,
+  // the Dashboard, and the Simulator.
+  const { domain, domainId, setDomainId } = useDomain();
   const [view, setView] = useState<'welcome' | 'app'>(() => (readEntered() ? 'app' : 'welcome'));
   const [ajpTab, setAjpTab] = useState<AjpTab>('ajp-dashboard');
   const [mode, setMode] = useOperatorMode();
@@ -179,19 +205,26 @@ function App() {
   // trigger, so opening/closing it never disturbs the active tab.
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Boot installed the active domain before render (main.tsx), so this is safe.
-  const activeDomain = getActiveDomain();
+  // Only AJP rides the full retrieval engine; the lighter domains (COLREG, tire)
+  // ride the Scenario / Socratic / Dashboard paradigm only.
+  const fullEngine = domain.fullEngine === true;
+
+  // A tab is available in the current domain when its engine requirement is met
+  // and — for the simulator — the domain declares one.
+  function tabAvailable(tab: AjpTab): boolean {
+    if (tab === 'colreg-sim') return domain.hasSimulator === true;
+    const def = NAV_TABS.find((t) => t.id === tab);
+    if (def?.fullEngineOnly && !fullEngine) return false;
+    return true;
+  }
 
   function enterDomain(id: DomainId) {
     writeEntered(true);
-    if (id === activeDomain.id) {
-      // Already the booted domain — just reveal the app.
-      setView('app');
-    } else {
-      // A different domain needs a fresh boot (graph rebind + corpus reload).
-      persistActiveDomainId(id);
-      window.location.reload();
-    }
+    setDomainId(id);
+    // A different domain may not offer the current tab — land on the dashboard,
+    // which every domain has.
+    setAjpTab('ajp-dashboard');
+    setView('app');
   }
 
   function changeDomain() {
@@ -200,6 +233,7 @@ function App() {
   }
 
   function navigate(tab: AjpTab) {
+    if (!tabAvailable(tab)) return;
     if (mode === 'high-stress' && isTrainingOnly(tab)) return;
     setAjpTab(tab);
   }
@@ -216,15 +250,20 @@ function App() {
   function switchMode(next: OperatorMode) {
     setMode(next);
     // Entering high-stress from a locked surface drops straight to reachback —
-    // the one surface built for an operator under load.
+    // the one surface built for an operator under load (AJP only). Domains
+    // without it fall back to the dashboard.
     if (next === 'high-stress' && isTrainingOnly(ajpTab)) {
-      setAjpTab('ajp-reachback');
+      setAjpTab(fullEngine ? 'ajp-reachback' : 'ajp-dashboard');
     }
   }
 
   const highStress = mode === 'high-stress';
   const scenarioGatesPending =
-    ajpTab === 'ajp-scenario' && pendingCriticalGates(loadGateStatus()).length > 0;
+    fullEngine && ajpTab === 'ajp-scenario' && pendingCriticalGates(loadGateStatus()).length > 0;
+
+  // If a domain switch left the active tab unavailable, fall back to the
+  // dashboard so the content surface never renders an unavailable tab.
+  const activeTab: AjpTab = tabAvailable(ajpTab) ? ajpTab : 'ajp-dashboard';
 
   return (
     <div className="app-shell">
@@ -244,8 +283,8 @@ function App() {
           <h1 className="app-masthead-title">
             {view === 'app' ? (
               <>
-                {activeDomain.instantiation}{' '}
-                <span className="app-masthead-title-sub">{activeDomain.subtitle}</span>
+                {domain.name}{' '}
+                <span className="app-masthead-title-sub">{domain.masthead}</span>
               </>
             ) : (
               <span className="app-masthead-title-sub">Adaptive Technical Training</span>
@@ -282,16 +321,16 @@ function App() {
       {view === 'welcome' ? (
         <WelcomeScreen onEnterDomain={enterDomain} />
       ) : (
-      <section className={`ajp-mode-shell ${highStress ? 'ajp-mode-shell--high-stress' : ''}`}>
+      <section className={`ajp-mode-shell ${highStress ? 'ajp-mode-shell--high-stress' : ''}`} key={domainId}>
         <div className="mode-shell-toolbar">
           <nav className="app-sub-nav" aria-label="Training surfaces">
-            {NAV_TABS.filter((tab) => tab.showInTopNav).map((tab) => {
+            {NAV_TABS.filter((tab) => tab.showInTopNav && tabAvailable(tab.id)).map((tab) => {
               const locked = highStress && tab.trainingOnly;
               return (
                 <button
                   key={tab.id}
                   type="button"
-                  className={`nav-tab ${ajpTab === tab.id ? 'active' : ''} ${locked ? 'nav-tab--locked' : ''}`}
+                  className={`nav-tab ${activeTab === tab.id ? 'active' : ''} ${locked ? 'nav-tab--locked' : ''}`}
                   onClick={() => navigate(tab.id)}
                   disabled={locked}
                   title={locked ? 'Locked in high-stress mode — comprehensive training is paused to limit cognitive load' : undefined}
@@ -337,20 +376,22 @@ function App() {
           </div>
         )}
         <div className="ajp-content-surface">
-          {ajpTab === 'ajp-dashboard' ? (
+          {activeTab === 'ajp-dashboard' ? (
             <HudDashboard onNavigate={navigate} mode={mode} />
-          ) : ajpTab === 'ajp-architecture' ? (
+          ) : activeTab === 'ajp-architecture' ? (
             <ArchitectureView />
-          ) : ajpTab === 'ajp-demo' ? (
+          ) : activeTab === 'ajp-demo' ? (
             <AjpWorkflowDemo />
-          ) : ajpTab === 'ajp-reachback' ? (
+          ) : activeTab === 'ajp-reachback' ? (
             <InOperationView />
-          ) : ajpTab === 'ajp-socratic' ? (
+          ) : activeTab === 'ajp-socratic' ? (
             <SocraticView />
-          ) : ajpTab === 'ajp-lab' ? (
+          ) : activeTab === 'ajp-lab' ? (
             <RetrievalLabView />
-          ) : ajpTab === 'ajp-rag' ? (
+          ) : activeTab === 'ajp-rag' ? (
             <RagCoverageView />
+          ) : activeTab === 'colreg-sim' ? (
+            <ColregSimulator />
           ) : scenarioGatesPending ? (
             <GateInterstitial onBack={() => setAjpTab('ajp-dashboard')} />
           ) : (
@@ -382,6 +423,15 @@ function App() {
       </footer>
       <PedagogyDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
+  );
+}
+
+function App() {
+  // AJP is the flagship domain (fullEngine); it boots first so the app opens on it.
+  return (
+    <DomainProvider defaultDomainId="ajp-electronics-repair">
+      <AppShell />
+    </DomainProvider>
   );
 }
 

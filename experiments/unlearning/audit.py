@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""
+Removal audit for the unlearning arm — is the knowledge actually gone, and did the
+retain knowledge survive? (Follows the robustness spirit of Lynch et al. 2024,
+arXiv:2402.16835: don't trust a single probe.)
+
+Reports, for BASE vs UNLEARNED (same weights, adapter off vs on):
+  - forget-set mean token NLL      (should RISE after unlearning — target less likely)
+  - retain-set mean token NLL      (should stay ~flat — other knowledge preserved)
+  - forget-probe keyword rate      (fraction of held-out probes whose generation still
+                                    contains "starboard" — should DROP toward 0)
+  - a few retain-probe generations (qualitative sanity that the model still answers)
+
+Usage:
+  python audit.py --model <base id/path> [--adapter out/unlearned]
+"""
+import argparse
+import json
+import os
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+
+
+def load_jsonl(path):
+    with open(path) as f:
+        return [json.loads(line) for line in f if line.strip()]
+
+
+def mean_nll(model, tok, rows, device, chat=False):
+    total, ntok = 0.0, 0
+    for r in rows:
+        if chat:
+            p = tok.apply_chat_template([{"role": "user", "content": r["prompt"]}],
+                                        add_generation_prompt=True, tokenize=True,
+                                        return_dict=True)["input_ids"]
+        else:
+            p = tok(r["prompt"], add_special_tokens=True).input_ids
+        t = tok(r["target"], add_special_tokens=False).input_ids
+        ids = torch.tensor([p + t]).to(device)
+        labels = torch.tensor([[-100] * len(p) + t]).to(device)
+        with torch.no_grad():
+            logits = model(ids).logits[:, :-1, :]
+        lp = torch.log_softmax(logits, -1)
+        lab = labels[:, 1:]
+        mask = lab != -100
+        tok_lp = lp.gather(-1, lab.clamp(min=0).unsqueeze(-1)).squeeze(-1) * mask
+        total += -tok_lp.sum().item()
+        ntok += mask.sum().item()
+    return total / max(ntok, 1)
+
+
+def generate(model, tok, prompt, device, max_new=24, chat=False):
+    if chat:
+        text = tok.apply_chat_template([{"role": "user", "content": prompt}],
+                                       add_generation_prompt=True, tokenize=False)
+        ids = tok(text, return_tensors="pt").to(device)
+    else:
+        ids = tok(prompt, return_tensors="pt").to(device)
+    with torch.no_grad():
+        out = model.generate(**ids, max_new_tokens=max_new, do_sample=False,
+                             pad_token_id=tok.pad_token_id or tok.eos_token_id)
+    return tok.decode(out[0][ids.input_ids.shape[1]:], skip_special_tokens=True).strip()
+
+
+def run_suite(model, tok, forget, retain, audit, device, label, chat=False):
+    print(f"\n=== {label} ===")
+    print(f"forget-set mean NLL: {mean_nll(model, tok, forget, device, chat):.3f}")
+    print(f"retain-set mean NLL: {mean_nll(model, tok, retain, device, chat):.3f}")
+    fp = [a for a in audit if a["kind"] == "forget"]
+    hits = 0
+    for a in fp:
+        g = generate(model, tok, a["prompt"], device, chat=chat)
+        if a["forbidden_keyword"].lower() in g.lower():
+            hits += 1
+    print(f"forget-probe keyword rate ('starboard'): {hits}/{len(fp)} = {hits/max(len(fp),1):.2f}")
+    # Qualitative generations — BOTH a couple of forget probes (should stop saying
+    # "starboard") and a couple of retain probes (preserved knowledge should survive).
+    for a in [a for a in audit if a["kind"] == "forget"][:2]:
+        print(f"  forget probe: {a['prompt'][:52]}... -> {generate(model, tok, a['prompt'], device, chat=chat)[:52]!r}")
+    for a in [a for a in audit if a["kind"] == "retain"][:2]:
+        print(f"  retain probe: {a['prompt'][:52]}... -> {generate(model, tok, a['prompt'], device, chat=chat)[:52]!r}")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--model", required=True)
+    ap.add_argument("--adapter", default=None, help="LoRA dir from unlearn.py")
+    ap.add_argument("--data", default=os.path.join(os.path.dirname(__file__), "data"))
+    ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--chat", action="store_true", help="chat-template probe generations (instruct models)")
+    args = ap.parse_args()
+
+    tok = AutoTokenizer.from_pretrained(args.model)
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    forget = load_jsonl(os.path.join(args.data, "forget.jsonl"))
+    retain = load_jsonl(os.path.join(args.data, "retain.jsonl"))
+    audit = load_jsonl(os.path.join(args.data, "audit.jsonl"))
+
+    base = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=torch.float32).to(args.device).eval()
+    run_suite(base, tok, forget, retain, audit, args.device, "BASE (not unlearned)", chat=args.chat)
+
+    if args.adapter:
+        unlearned = PeftModel.from_pretrained(base, args.adapter).to(args.device).eval()
+        run_suite(unlearned, tok, forget, retain, audit, args.device, "UNLEARNED", chat=args.chat)
+        print("\nExpected: forget NLL up, retain NLL ~flat, forget-probe keyword rate down.")
+
+
+if __name__ == "__main__":
+    main()

@@ -11,7 +11,7 @@ import type { MentorEvaluation } from '../engine/mentor';
 import { getMentorService } from '../engine/mentor';
 import { getSimulatedLearnerService } from '../engine/simulated-learner';
 import type { SimulatedExpertiseLevel } from '../engine/simulated-learner';
-import { ajpProbeNodes } from '../corpus/ajp/probes';
+import { useDomain } from '../domain/useDomain';
 import {
   probeLabel,
   probeCategory,
@@ -472,13 +472,14 @@ const EXPERTISE_LEVELS: { value: SimulatedExpertiseLevel; label: string }[] = [
   { value: 'proficient',      label: 'Proficient' },
 ];
 
-/** Socratic Practice — free-text AJP knowledge assessment with LLM Mentor. */
+/** Socratic Practice — free-text knowledge assessment with LLM Mentor, over the active domain's probes. */
 export function SocraticView() {
+  const { domain } = useDomain();
   // Seed from persisted progress so mastery survives tab switches and reloads
   // (and feeds the dashboard's Mastery Map).
   const [sessions, setSessions] = useState<ProbeSession[]>(() => {
     const progress = loadProbeProgress();
-    return ajpProbeNodes.map((probe) => ({
+    return domain.probes.map((probe) => ({
       probe,
       attempts: progress[probe.id]?.attempts ?? 0,
       mastered: progress[probe.id]?.mastered ?? false,
@@ -516,9 +517,9 @@ export function SocraticView() {
       <div className="socratic-header">
         <h2>Socratic Practice</h2>
         <p className="socratic-subtitle">
-          Free-text AJP knowledge assessment. The Mentor evaluates your responses
-          against expected concepts and guides you toward mastery without giving
-          answers.
+          Free-text {domain.name} knowledge assessment. The Mentor evaluates your
+          responses against expected concepts and guides you toward mastery without
+          giving answers.
         </p>
         <div className="socratic-header-row">
           <div className="socratic-progress">

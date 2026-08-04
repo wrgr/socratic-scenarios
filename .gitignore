@@ -230,3 +230,7 @@ knowledge/source-cache/
 # these (personal file paths, licensed vendor PDFs). See local-sources/README.md.
 local-sources/*
 !local-sources/README.md
+
+# unlearning experiment artifacts (weights/data are regenerable)
+experiments/unlearning/out/
+experiments/unlearning/data/

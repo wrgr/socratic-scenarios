@@ -2,15 +2,16 @@
  * WelcomeScreen — the landing surface shown before entering a domain.
  *
  * Two parts: a short "here's what this is" hero, and a domain picker driven by
- * the domain registry. Registered domains are enterable; a few unregistered
- * teasers convey the multi-domain roadmap without pretending to be live.
+ * the pluggable corpus registry (src/corpus/registry). Every registered domain
+ * — AJP (flagship), COLREG collision avoidance, roadside tire change — is
+ * enterable; a teaser conveys the bring-your-own-domain roadmap.
  *
- * Selecting a domain hands the id back to App, which enters it (same active
- * domain → just show the app; a different one → persist + reload so the engine
- * re-boots against the new graph).
+ * Selecting a domain hands the id back to App, which sets it as the active
+ * domain (via the DomainProvider) and reveals the app.
  */
-import { listDomains } from '../domains/registry';
-import type { DomainConfig, DomainId } from '../types';
+import { listDomains } from '../corpus/registry';
+import type { DomainDescriptor } from '../corpus/types';
+import type { DomainId } from '../types';
 
 const LEARNING_SCIENCE = [
   'Vygotsky ZPD',
@@ -29,18 +30,19 @@ interface UpcomingDomain {
 
 const UPCOMING: readonly UpcomingDomain[] = [
   {
-    instantiation: 'Roadside',
-    name: 'Roadside Diagnostics — Flat Tire',
-    description:
-      'A compact, graph-only instantiation that proves the domain abstraction end-to-end without a dense corpus — the smallest possible second use case.',
-  },
-  {
     instantiation: 'Your domain',
     name: 'Bring your own equipment',
     description:
       'Any procedurally-structured, safety-critical, transfer-dependent domain can be authored as a knowledge graph + corpus. Clinical procedures, regulated lab work, industrial maintenance.',
   },
 ] as const;
+
+/** Short chip describing a domain's engine tier. */
+function domainTier(domain: DomainDescriptor): string {
+  if (domain.fullEngine) return 'Flagship';
+  if (domain.hasSimulator) return 'Interactive';
+  return 'Graph-driven';
+}
 
 export function WelcomeScreen({ onEnterDomain }: { onEnterDomain: (id: DomainId) => void }) {
   const domains = listDomains();
@@ -101,18 +103,18 @@ export function WelcomeScreen({ onEnterDomain }: { onEnterDomain: (id: DomainId)
   );
 }
 
-function DomainCard({ domain, onEnter }: { domain: DomainConfig; onEnter: () => void }) {
-  const nodeCount = domain.graph.nodes.length;
-  const edgeCount = domain.graph.edges.length;
+function DomainCard({ domain, onEnter }: { domain: DomainDescriptor; onEnter: () => void }) {
+  const nodeCount = domain.nodes.length;
+  const edgeCount = domain.edges.length;
 
   return (
     <article className="welcome-domain-card welcome-domain-card--available">
       <div className="welcome-domain-top">
-        <span className="welcome-domain-badge">{domain.instantiation}</span>
+        <span className="welcome-domain-badge">{domainTier(domain)}</span>
         <span className="welcome-domain-status welcome-domain-status--live">Available</span>
       </div>
       <h3 className="welcome-domain-name">{domain.name}</h3>
-      <p className="welcome-domain-desc">{domain.description}</p>
+      <p className="welcome-domain-desc">{domain.blurb}</p>
       <div className="welcome-domain-stats">
         <span>
           <strong>{nodeCount}</strong> graph nodes
@@ -120,7 +122,7 @@ function DomainCard({ domain, onEnter }: { domain: DomainConfig; onEnter: () => 
         <span>
           <strong>{edgeCount}</strong> edges
         </span>
-        {domain.denseCorpus && <span>dense corpus</span>}
+        {domain.hasSimulator && <span>interactive simulator</span>}
       </div>
       <button type="button" className="welcome-domain-cta" onClick={onEnter}>
         Begin training →
