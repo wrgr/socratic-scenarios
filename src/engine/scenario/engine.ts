@@ -272,6 +272,11 @@ export class ScenarioEngine {
   /**
    * Classify a student's free-text input for the step record.
    * Heuristic keyword-based classification — no LLM required.
+   *
+   * Domain-agnostic: the cues are generic perception/instrument words that read
+   * the same in any domain (a gauge reading, something that "shows" a value,
+   * "looks like", "sounds like") — no domain-specific terms (e.g. an AJP "KEWB"
+   * reading) that would misclassify or mean nothing in another domain.
    */
   parseStudentAction(text: string): 'action' | 'observation' | 'question' {
     const lower = text.toLowerCase();
@@ -279,8 +284,10 @@ export class ScenarioEngine {
         lower.startsWith('how') || lower.startsWith('is ') || lower.startsWith('does ')) {
       return 'question';
     }
-    if (lower.includes('i see') || lower.includes('i notice') || lower.includes('looks like') ||
-        lower.includes('pressure') || lower.includes('kewb') || lower.includes('reading')) {
+    if (lower.includes('i see') || lower.includes('i notice') || lower.includes('i observe') ||
+        lower.includes('looks like') || lower.includes('appears') || lower.includes('sounds like') ||
+        lower.includes('i hear') || lower.includes('reading') || lower.includes('gauge') ||
+        lower.includes('shows')) {
       return 'observation';
     }
     return 'action';
