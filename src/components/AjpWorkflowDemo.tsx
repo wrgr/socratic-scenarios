@@ -19,6 +19,7 @@ import type { AJPNode } from '../types/ajp';
 import type { MentorEvaluation } from '../engine/mentor';
 import { getMentorService } from '../engine/mentor';
 import { getSimulatedLearnerService } from '../engine/simulated-learner';
+import { useDomain } from '../domain/useDomain';
 import { ajpProbeNodes } from '../corpus/ajp/probes';
 import { probeLabel, isSafetyProbe, masteryThreshold, scoreClass } from './socratic-view.utils';
 import {
@@ -238,6 +239,7 @@ function ProbePracticePanel({
   onGoBack: () => void;
 }) {
   const { probe } = record;
+  const { domain } = useDomain();
   const mentorService = getMentorService();
   const learnerService = getSimulatedLearnerService();
   const threshold = masteryThreshold(probe);
@@ -304,6 +306,7 @@ function ProbePracticePanel({
         expectedConcepts: probe.expectedConcepts ?? [],
         expertiseLevel,
         priorAttempts: 0,
+        domainLabel: domain.name,
       });
       setSimLearnerResponse(learnerResp);
 
@@ -323,6 +326,7 @@ function ProbePracticePanel({
         priorAttempts: 0,
         safetyGate: isSafety,
         retrievalContext,
+        domainLabel: domain.name,
       });
       setEvaluation(eval1);
       setAttempts(1);
@@ -347,6 +351,7 @@ function ProbePracticePanel({
         priorAttempts: 1,
         mentorFeedback: eval1.feedback,
         followUpQuestion: eval1.followUpProbe,
+        domainLabel: domain.name,
       });
       setSimFollowUpResponse(followUpResp);
 
@@ -366,6 +371,7 @@ function ProbePracticePanel({
         priorAttempts: 1,
         safetyGate: isSafety,
         retrievalContext,
+        domainLabel: domain.name,
       });
       setFollowUpEval(eval2);
       setAttempts(2);
@@ -377,7 +383,7 @@ function ProbePracticePanel({
       setSimStep('done');
       resume();
     }
-  }, [probe, probeCtx, tacitResult, expertiseLevel, isSafety, mentorService, learnerService]);
+  }, [probe, probeCtx, tacitResult, expertiseLevel, isSafety, mentorService, learnerService, domain.name]);
 
   // Auto-start simulation
   useEffect(() => {
@@ -404,6 +410,7 @@ function ProbePracticePanel({
         priorAttempts: attempts,
         safetyGate: isSafety,
         retrievalContext,
+        domainLabel: domain.name,
       });
       setAttempts((n) => n + 1);
       if (isFollowUp) setFollowUpEval(result);

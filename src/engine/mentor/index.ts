@@ -1,5 +1,8 @@
 /**
- * LLM Mentor service for AJP training — Phase 3 multi-agent layer.
+ * LLM Mentor service — Phase 3 multi-agent layer. Domain-agnostic: the same
+ * service evaluates probes for every registered domain (AJP, Tire, COLREG, …),
+ * so it carries no domain-specific identity of its own — callers pass the active
+ * domain's name via `MentorContext.domainLabel` (see the domain switcher).
  * Uses a chat-completion LLM to evaluate free-text learner responses against the
  * expectedConcepts of a SocraticProbe node, then generates a targeted
  * follow-up probe without revealing the answer on first attempt.
@@ -43,6 +46,13 @@ export interface MentorContext {
    * rather than relying solely on training data.
    */
   retrievalContext?: string;
+  /**
+   * Active domain's human name (e.g. "Aerosol Jet Printing", "Roadside Tire
+   * Change", "COLREG — Collision Avoidance"). Used to frame the Mentor's system
+   * instruction for the correct domain. When omitted, a domain-neutral framing
+   * is used — never assume a specific domain here.
+   */
+  domainLabel?: string;
 }
 
 /** Structured result returned by the Mentor service. */
@@ -83,10 +93,21 @@ export function getMentorService(): MentorService | null {
 
 // ─── Chat-Completion Implementation ────────────────────────────────
 
-const SYSTEM_INSTRUCTION = `You are an expert AJP (Aerosol Jet Printing) repair training mentor.
+/**
+ * Build the Mentor's system instruction for the active domain. Domain-agnostic:
+ * with a `domainLabel` it names that domain; without one it falls back to a
+ * neutral framing so the Mentor never miscredits a scenario to the wrong domain
+ * (e.g. an "AJP mentor" grading a tire-change answer).
+ */
+function systemInstruction(domainLabel?: string): string {
+  const role = domainLabel
+    ? `an expert ${domainLabel} training mentor`
+    : 'an expert technical training mentor for safety-critical, procedural work';
+  return `You are ${role}.
 Your role is to evaluate learner responses to Socratic probe questions and provide targeted scaffolding.
 You speak directly to the learner in second person, are encouraging but precise, and never pad with filler phrases.
 Return ONLY valid JSON — no markdown fences, no explanation outside the JSON object.`;
+}
 
 function buildPrompt(ctx: MentorContext): string {
   const threshold = ctx.safetyGate ? 0.90 : 0.80;
@@ -173,7 +194,7 @@ export function createMentorService(provider: ChatCompletionProvider): MentorSer
     async evaluate(ctx: MentorContext): Promise<MentorEvaluation> {
       const prompt = buildPrompt(ctx);
       try {
-        const raw = await provider.complete(SYSTEM_INSTRUCTION, prompt);
+        const raw = await provider.complete(systemInstruction(ctx.domainLabel), prompt);
         return parseMentorResponse(raw, ctx);
       } catch (err) {
         // Network error or quota exceeded — fail gracefully

@@ -16,6 +16,7 @@ import type { DenseMatch } from '../engine/retrieval/dense-retrieval';
 import { retrieveHybrid, formatHybridContext } from '../engine/retrieval/hybrid-retrieval';
 import type { HybridResult } from '../engine/retrieval/hybrid-retrieval';
 import { getMentorService } from '../engine/mentor';
+import { useDomain } from '../domain/useDomain';
 import type { MentorEvaluation } from '../engine/mentor';
 import {
   confidenceLabel,
@@ -423,6 +424,7 @@ function MentorInterpretPanel({
   hybridResult: HybridResult;
   queryText: string;
 }) {
+  const { domain } = useDomain();
   const mentorService = getMentorService();
   const [followUp, setFollowUp] = useState('');
   const [evaluation, setEvaluation] = useState<MentorEvaluation | null>(null);
@@ -445,6 +447,7 @@ function MentorInterpretPanel({
         priorAttempts: attempts,
         retrievalContext,
         safetyGate: false,
+        domainLabel: domain.name,
       });
       setEvaluation(result);
       setAttempts((n) => n + 1);

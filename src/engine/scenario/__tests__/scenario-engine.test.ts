@@ -242,13 +242,14 @@ describe('ScenarioEngine — parseStudentAction', () => {
     expect(e.parseStudentAction('Why does pressure rise?')).toBe('question');
     expect(e.parseStudentAction('Is this normal?')).toBe('question');
   });
-  it('classifies observations', () => {
-    expect(e.parseStudentAction('I see the pressure is high.')).toBe('observation');
-    expect(e.parseStudentAction('KEWB shows 45 psi.')).toBe('observation');
+  it('classifies observations (domain-neutral cues)', () => {
+    expect(e.parseStudentAction('I see the reading is high.')).toBe('observation');
+    expect(e.parseStudentAction('The gauge shows 45.')).toBe('observation');
+    expect(e.parseStudentAction('The jack looks like it is leaning.')).toBe('observation');
   });
   it('classifies actions', () => {
-    expect(e.parseStudentAction('I will stop the atomizer.')).toBe('action');
-    expect(e.parseStudentAction('Zeroing sheath gas now.')).toBe('action');
+    expect(e.parseStudentAction('I will lower the jack.')).toBe('action');
+    expect(e.parseStudentAction('Chocking the wheel now.')).toBe('action');
   });
 });
 

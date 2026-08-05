@@ -72,7 +72,21 @@ describe('createMentorService', () => {
 
     expect(complete).toHaveBeenCalledTimes(1);
     const [systemInstruction, userPrompt] = complete.mock.calls[0];
-    expect(systemInstruction).toMatch(/AJP.*mentor/i);
+    // No domainLabel → domain-neutral framing (never a hard-coded domain).
+    expect(systemInstruction).toMatch(/training mentor/i);
+    expect(systemInstruction).not.toMatch(/AJP|Aerosol Jet/i);
     expect(userPrompt).toContain(baseCtx.probeQuestion);
+  });
+
+  it('frames the system instruction for the domain passed via domainLabel', async () => {
+    const complete = vi.fn<ChatCompletionProvider['complete']>(async () =>
+      JSON.stringify({ score: 1, feedback: 'ok', followUpProbe: 'ok' }),
+    );
+    const service = createMentorService(stubProvider(complete));
+    await service.evaluate({ ...baseCtx, domainLabel: 'Roadside Tire Change' });
+
+    const [systemInstruction] = complete.mock.calls[0];
+    expect(systemInstruction).toMatch(/expert Roadside Tire Change training mentor/i);
+    expect(systemInstruction).not.toMatch(/AJP|Aerosol Jet/i);
   });
 });

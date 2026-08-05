@@ -356,6 +356,7 @@ function MentorReflectionPanel({
   initialRecord?: ProbeAttemptRecord;
   onAttemptRecorded?: (record: ProbeAttemptRecord) => void;
 }) {
+  const { domain } = useDomain();
   const mentorService = getMentorService();
   const learnerService = getSimulatedLearnerService();
   const probe = getProbeById(probeId);
@@ -392,6 +393,7 @@ function MentorReflectionPanel({
         priorAttempts: attempts,
         safetyGate: isSafetyCritical,
         retrievalContext,
+        domainLabel: domain.name,
       });
       setEvaluation(result);
       const nextAttempts = attempts + 1;
@@ -416,6 +418,7 @@ function MentorReflectionPanel({
         expectedConcepts,
         expertiseLevel,
         priorAttempts: attempts,
+        domainLabel: domain.name,
       });
       setSimulatedResponse(generatedText);
 
@@ -431,6 +434,7 @@ function MentorReflectionPanel({
         priorAttempts: attempts,
         safetyGate: isSafetyCritical,
         retrievalContext,
+        domainLabel: domain.name,
       });
       setEvaluation(result);
       const nextAttempts = attempts + 1;
