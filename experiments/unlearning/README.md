@@ -88,22 +88,25 @@ unlearning failed / left latent knowledge — and the same instrument flags it
   turns behavioral *suppression* into a *semantic-removal* claim; the audit-level result is
   here, the task-level result is the GPU step.
 
-## Result — CPU run (Qwen2.5-1.5B-Instruct, NPO baseline, chat-consistent)
+## Result — CPU run (Qwen2.5-1.5B-Instruct, SimNPO primary + NPO baseline, chat-consistent)
 
 A real (if small) result on a model that **actually knows the rule**, run on CPU
-(`cpu_run.py`, 72 NPO steps, LoRA r=16, chat-templated train + audit):
+(`cpu_run.py`, 72 steps, LoRA r=16, chat-templated train + audit). Both the primary
+method (**SimNPO**) and the **NPO** baseline were run on the same base and audit:
 
-| metric | base | unlearned | target |
-|---|---|---|---|
-| forget-target NLL (teacher-forced) | 4.64 | **41.37** | ↑ |
-| retain-target NLL | 3.19 | 0.07 | preserved (not raised) |
-| direction-cue rate, held-out (`starboard` OR `right`) | **5/6** | **0/6** | ↓ |
+| metric | base | **SimNPO** (primary) | NPO (baseline) | target |
+|---|---|---|---|---|
+| forget-target NLL (teacher-forced) | 4.64 | **91.70** | 41.37 | ↑ |
+| retain-target NLL | 3.19 | 0.18 | 0.07 | preserved (not raised) |
+| direction-cue rate, held-out (`starboard` OR `right`) | **5/6** | **0/6** | **0/6** | ↓ |
 
 Base Qwen2.5-1.5B answers the head-on probe with the correct direction on 5/6 held-out
-probes; after NPO it gives **no** direction cue on any probe (robust to the obvious
-`starboard`→`right` lexical dodge), the teacher-forced forget-target likelihood
-collapses (NLL ×9), and the retain probes (lookout, safe speed, restricted visibility)
-stay coherent.
+probes; after unlearning it gives **no** direction cue on any probe (robust to the obvious
+`starboard`→`right` lexical dodge), the teacher-forced forget-target likelihood collapses,
+and the retain probes (lookout, safe speed, restricted visibility) stay coherent. Both
+losses produce the same qualitative collapse — the suppression is **method-agnostic**, not
+a SimNPO artifact; SimNPO (reference-free, length-normalized) simply drives the forget
+target harder. Reproduce either with `CPU_METHOD=simnpo|npo python cpu_run.py`.
 
 **What this does and does not show (per PR #26 review).** These metrics establish strong
 **behavioral / target suppression** — the model stops producing the rule and its exact

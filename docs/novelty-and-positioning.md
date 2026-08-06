@@ -344,12 +344,13 @@ on the instrument — a second, weight-level instance of the C2 KC→metric mapp
 
 **Status: harness built + a real CPU unlearning result** (`experiments/unlearning/`). The
 full pipeline — dataset build → LoRA unlearn (**SimNPO** primary + NPO + gradient-ascent,
-reference-via-adapter-disable) → removal audit → serve for scoring — runs, and the **NPO**
-baseline (the CPU-tractable arm) produced a genuine result on **Qwen2.5-1.5B-Instruct** (a
-model that actually knows the rule): NPO strongly **suppresses** the alter-to-starboard
-behavior — forget-target NLL **4.6 → 41**, held-out direction-cue rate **5/6 → 0/6**
-(robust to the starboard→right synonym) — while retain knowledge (lookout, safe speed,
-restricted visibility) stays coherent. Honest scope: this is behavioral/target
+reference-via-adapter-disable) → removal audit → serve for scoring — runs, and produced a
+genuine result on **Qwen2.5-1.5B-Instruct** (a model that actually knows the rule): the
+primary **SimNPO** method strongly **suppresses** the alter-to-starboard behavior —
+forget-target NLL **4.6 → 92**, held-out direction-cue rate **5/6 → 0/6** (robust to the
+starboard→right synonym) — while retain knowledge (lookout, safe speed, restricted
+visibility) stays coherent. The **NPO** baseline gives the same qualitative collapse
+(**4.6 → 41**, **5/6 → 0/6**), so the suppression is method-agnostic. Honest scope: this is behavioral/target
 suppression + teacher-forced NLL, **not** verified semantic *removal* — that is precisely
 what the task-level instrument settles (below). It is the weight-level counterpart to the
 context-level leakage result, and the objective-audit direction over dialogue-scored
