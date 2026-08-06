@@ -395,6 +395,45 @@ $\delta_{\!\regret}{=}1981$ (head-on) and ablating Rule~15 gives $1285$ (crossin
 \texttt{gemini-flash-lite-latest}, $658$ and $662$ respectively. The two rules are localized
 on disjoint scenario subsets, so the instrument reads reliance per rule.
 
+\paragraph{What in the corpus changes the answer: presence vs.\ retrieval.}
+The leakage test asks a binary question---does the learner rely on the corpus at all. A
+deployed RAG tutor raises a finer one: of the value curation adds, how much comes from the
+fact being \emph{present} in the corpus versus from the retriever actually \emph{surfacing}
+it? We decompose this over two binary factors---in-corpus and retrieved---whose three
+reachable cells are three scorable conditions (Table~\ref{tab:ragdecomp}):
+\textsc{none} (closed-book, priors only), \textsc{retrieved} (the deployed dense
+retriever's top-$k$), and \textsc{oracle} (the answer-bearing chunk, i.e.\ perfect
+retrieval). Reading accuracy across them attributes the gain:
+$\mathrm{acc}(\textsc{oracle}){-}\mathrm{acc}(\textsc{none})$ is the \emph{content ceiling}
+(value if retrieval were perfect), $\mathrm{acc}(\textsc{retrieved}){-}\mathrm{acc}(\textsc{none})$
+is what the deployed pipeline \emph{delivers}, and their difference is the \emph{retrieval
+gap}---value present in the corpus but never surfaced. A generator-independent retrieval read
+(recall@$k$ of \emph{any} answer-bearing chunk) localizes that gap directly: on a terse
+equipment-SOP corpus, a MiniLM retriever surfaces the needed fact for only $4/7$ held-out
+fact-recall queries at $k{=}5$, so a substantial share of curated value is lost to
+\emph{retrieval}, not to the model or to the corpus's contents. This separates a curation
+failure (fact absent) from a retrieval failure (fact present but unranked) from a
+model-priors success---distinctions the binary leakage verdict cannot make.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+ & not retrieved & retrieved \\
+\midrule
+not in corpus & priors only (\textsc{none}) & --- (unreachable) \\
+in corpus     & retriever misses (\emph{gap}) & RAG success (\textsc{retrieved}$\to$\textsc{oracle}) \\
+\bottomrule
+\end{tabular}
+\caption{Decomposing a RAG answer's outcome over in-corpus $\times$ retrieved. The three
+reachable cells are the \textsc{none}/\textsc{retrieved}/\textsc{oracle} conditions;
+$\mathrm{acc}(\textsc{oracle}){-}\mathrm{acc}(\textsc{none})$ is the content ceiling,
+$\mathrm{acc}(\textsc{retrieved}){-}\mathrm{acc}(\textsc{none})$ what the pipeline delivers,
+their difference the retrieval gap. Harness: \texttt{experiments/retrieval-decomp}.}
+\label{tab:ragdecomp}
+\end{table}
+
 \section{Proxy learners as a pre-trial screen (application)}
 \label{sec:proxies}
 We exercise the instrument with \emph{two complementary} controlled-competence proxy

@@ -81,22 +81,14 @@ def load_corpus():
     return chunks
 
 
-def find_gold_index(chunks, gold):
-    # tolerant match: the TS gold strings are paraphrases of the chunk text, so match on
-    # a distinctive keyword subset rather than exact substring.
-    key = gold.lower()
-    for i, c in enumerate(chunks):
-        if key in c["text"].lower():
-            return i
-    # fallback: strongest token overlap with the gold string
-    gt = set(re.findall(r"[a-z0-9]+", gold.lower()))
-    best, bi = -1.0, -1
-    for i, c in enumerate(chunks):
-        ct = set(re.findall(r"[a-z0-9]+", c["text"].lower()))
-        j = len(gt & ct) / (len(gt) + 1e-9)
-        if j > best:
-            best, bi = j, i
-    return bi
+def answer_bearing(chunks, q):
+    """Indices of every chunk that satisfies ALL of the question's answer regexes — i.e.
+    every chunk from which the answer is actually recoverable. This is the ground-truth
+    gold SET: 'retrieved successfully' means top-k contains any of these; the canonical
+    'oracle' chunk is the lowest-indexed member (earliest, most authoritative SOP passage)."""
+    idx = [i for i, c in enumerate(chunks)
+           if all(re.search(p, c["text"], re.I) for p in q["answer"])]
+    return idx
 
 
 def build_prompt(q, context):
@@ -120,7 +112,11 @@ def main():
 
     chunks = load_corpus()
     texts = [c["text"] for c in chunks]
-    gold_idx = {qq["id"]: find_gold_index(chunks, qq["gold"]) for qq in QUESTIONS}
+    gold_set = {qq["id"]: answer_bearing(chunks, qq) for qq in QUESTIONS}
+    gold_idx = {qid: (idxs[0] if idxs else -1) for qid, idxs in gold_set.items()}  # canonical oracle
+    for qq in QUESTIONS:
+        if not gold_set[qq["id"]]:
+            print(f"  ! WARNING no answer-bearing chunk for {qq['id']} — oracle undefined", flush=True)
 
     emb = SentenceTransformer(EMBEDDER, device="cpu")
     if os.path.exists(EMB_CACHE):
@@ -142,23 +138,29 @@ def main():
 
     def generate(prompt):
         msgs = [{"role": "user", "content": prompt}]
-        ids = tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt")
+        # transformers 5.x: apply_chat_template(return_tensors=...) yields a BatchEncoding,
+        # not a bare tensor — use return_dict and splat it into generate().
+        enc = tok.apply_chat_template(msgs, add_generation_prompt=True,
+                                      return_tensors="pt", return_dict=True)
+        in_len = enc["input_ids"].shape[1]
         with torch.no_grad():
-            out = lm.generate(ids, max_new_tokens=MAXNEW, do_sample=False,
+            out = lm.generate(**enc, max_new_tokens=MAXNEW, do_sample=False,
                               pad_token_id=tok.eos_token_id)
-        return tok.decode(out[0, ids.shape[1]:], skip_special_tokens=True)
+        return tok.decode(out[0, in_len:], skip_special_tokens=True)
 
-    # retrieval-layer view: recall@k of the gold chunk
+    # retrieval-layer view: recall@k of ANY answer-bearing chunk (the pure
+    # "retriever surfaced the needed fact" measurement, independent of the generator).
     recall_hits = 0
     retrieved_idx = {}
     for i, qq in enumerate(QUESTIONS):
         sims = chunk_vecs @ qvecs[i]
-        top = np.argsort(-sims)[:TOPK]
-        retrieved_idx[qq["id"]] = list(top)
-        hit = gold_idx[qq["id"]] in top
+        top = [int(j) for j in np.argsort(-sims)[:TOPK]]
+        retrieved_idx[qq["id"]] = top
+        gs = set(gold_set[qq["id"]])
+        hit = bool(gs & set(top))
         recall_hits += int(hit)
-        print(f"  [retrieval {qq['id']}] gold#{gold_idx[qq['id']]} in top-{TOPK}: "
-              f"{'HIT' if hit else 'MISS'}  (top={list(top)})", flush=True)
+        print(f"  [retrieval {qq['id']:9s}] answer-bearing {sorted(gs)} in top-{TOPK}={top}: "
+              f"{'HIT' if hit else 'MISS'}", flush=True)
 
     tally = {m: dict(correct=0, wrong=0, error=0) for m in ("none", "retrieved", "oracle")}
     for i, qq in enumerate(QUESTIONS):
