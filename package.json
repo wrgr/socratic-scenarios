@@ -30,7 +30,8 @@
     "db:full-setup": "npm run db:init && npm run db:migrate && npm run db:ingest-kb && npm run db:ingest-sources && npm run db:refresh-embeddings && npm run db:export && npm run db:validate",
     "build:whitepaper": "bash scripts/build-whitepaper.sh",
     "colreg:construct": "npx tsx scripts/colreg-construct-validity.ts",
-    "proc:identifiability": "npx tsx scripts/procedure-identifiability.ts"
+    "proc:identifiability": "npx tsx scripts/procedure-identifiability.ts",
+    "colreg:curation": "npx tsx scripts/colreg-curation-decomp.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
