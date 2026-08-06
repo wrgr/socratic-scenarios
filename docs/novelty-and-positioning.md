@@ -136,16 +136,19 @@ Current repo status → what's still needed:
 - [x] **Corpus-gap diagnosis** localization (`diagnose.ts`) — built.
 - [x] **Generic learner agent** with pluggable estimators (BKT/Elo) — built.
 - [x] **Estimator/instrument recovery + calibration** — built (`src/engine/learner-agent/validation.ts`, `__tests__/recovery.test.ts`, `npm run learner:recovery`). On synthetic data from a *known* ground truth: **Elo** recovers static ability to mean abs error **0.046** with calibration **ECE 0.023**; **BKT** recovers the latent known-state (P(L̂) **0.997** for truly-learned vs **0.175** for not) with **ECE 0.004**. Turns "we have a metric" into "the measurement is valid."
-- [~] **Leakage experiment, end to end** — harness built and *validated offline*
+- [x] **Leakage experiment, end to end** — harness built, *validated offline*, and *run on two real LLMs*
   (`src/engine/colreg-sim/leakage.ts`, `__tests__/leakage.test.ts`, `npm run colreg:leakage`).
   The bidirectional loop (ablation-delta + counterfactual adherence + `diagnose`
   localization + closed-book baseline) runs against two reference mock learners whose
   ground truth is known, and recovers it exactly: the corpus-bound mock → **δ 1.000**,
   follows the counterfactual, abstains closed-book → *corpus-bound*; the leaking mock →
-  **δ 0.000**, ignores the counterfactual, answers closed-book → *leaking*. The live
-  path is wired (Gemini / OpenAI-compatible / GitHub Models) and fails gracefully; the
-  one remaining external dependency is a **working LLM credential** to run a real model
-  through the same loop.
+  **δ 0.000**, ignores the counterfactual, answers closed-book → *leaking*. **Now also run
+  on two real LLMs** (Gemini `flash-latest` and `flash-lite-latest`, both prompt
+  conditions): under the strict prompt both are diagnosed *corpus-bound*; removing the
+  binding clause collapses ablation-δ to 0.000 and flips closed-book to contamination on
+  both, with the composite verdict flipping fully to *leaking* on the lighter model. Table
+  in `docs/arxiv/main.tex`. Broadening to more models (esp. weak instruction-followers)
+  remains.
 - [x] **Second domain** — built (`src/engine/procedure-sim/` + `src/corpus/tire/procedure.ts`). A *discrete procedural* task instrument (roadside tire change) alongside the *continuous-control* COLREG one, demonstrating the method transfers across task structures: construct validity (expert J=0 vs reckless J=200, safety violation caught), **exact KC→single-metric identifiability** (each ablated competence degrades only its governed metric), a monotone competence→performance gradient (J 204→0), and an end-to-end pipeline test feeding the instrument's outcomes into the generic learner agent. `__tests__/procedure.test.ts` (10 tests).
 - [ ] **Sensitivity analysis** over instrument/estimator weights (domain, CRI, objective) — show the protocol *ranking* is stable. Already listed as a limitation; make it an experiment.
 - [ ] **Head-on related-work differentiation** citing Song 2026, Apartsin 2026, Lu & Wang 2024, Agent4Edu 2025, SeedRG 2026, Prior Dominance 2026, Control-KT 2024.

@@ -48,9 +48,10 @@ Two ways to get this into Overleaf:
   (δ 1.000 / 0.000), the procedural-domain gradient (J 204→0), and the **real-model
   corpus-binding positive control** on `gemini-flash-latest` (δ 1.000, counterfactual
   followed, closed-book abstained → corpus-bound).
-- **Compute-gated, still to fill:** the multi-model `bound`-vs-`unconstrained`
-  discrimination table (needs a paid API tier; harness = `npm run colreg:leakage`
-  `CONDITION=both`) and the open-weight unlearning 2×2 (needs a GPU;
+- **Real-model discrimination (Table 2): done** on two LLMs (`gemini-flash-latest`,
+  `gemini-flash-lite-latest`) — `CONDITION=both npm run colreg:leakage`. A broader model
+  sweep (more models, weak instruction-followers) would strengthen it.
+- **Compute-gated, still to fill:** the open-weight unlearning 2×2 (needs a GPU;
   `experiments/unlearning/colab.ipynb`).
 - Scope guard: keep every claim framed as **simulation-based mechanism evidence, not
   human external validity.**

@@ -54,11 +54,14 @@ model is answering from the corpus or from pretrained priors. The method is
 \emph{closed-model compatible} (it needs only API access), operates \emph{per rule}, and
 reads both diagnoses off a single control-task metric. We exercise the instrument with
 controlled-competence proxy learners on maritime collision avoidance (COLREG) and a
-discrete procedural domain (roadside tire change), report construct validity,
-estimator-recovery calibration, and a real-model corpus-binding positive control on a
-current LLM. All results are \textbf{simulation-based mechanism evidence, not
-human-subject external validity}; we scope the contribution accordingly and pre-register
-the human study as future work.
+discrete procedural domain (roadside tire change), and report construct validity,
+estimator-recovery calibration, and a real-model discrimination result: on two current
+LLMs the instrument diagnoses corpus-binding under a strict prompt and, when the binding
+clause is removed, detects the leakage signal (ablation-$\delta$ collapse and closed-book
+contamination), with the composite verdict flipping fully to \emph{leaking} on the lighter
+model. All results are \textbf{simulation-based mechanism evidence, not human-subject
+external validity}; we scope the contribution accordingly and pre-register the human study
+as future work.
 \end{abstract}
 
 \vspace{0.5em}
@@ -234,17 +237,46 @@ ablation-delta $1.000$, follows the counterfactual, and abstains closed-book
 ignores the counterfactual, and answers closed-book from priors
 ($\Rightarrow$ \textsc{leaking}).
 
-\paragraph{Real-model positive control.} On a current production LLM
-(\texttt{gemini-flash-latest}) under the strict corpus-binding prompt, the instrument
-returns \textsc{corpus-bound}: ablation-delta $1.000$ (governed penalty $0.000$ with the
-rule present vs.\ $1.000$ with it ablated), the model follows the counterfactual
-``alter-to-port'' rule, the failure localizes to the governed component, and the model
-abstains under the closed-book baseline. This confirms the live path end-to-end on a real
-model, not only on mocks. The complementary \emph{discrimination} result---the verdict
-flipping to \textsc{leaking} when the binding clause is removed (the \texttt{unconstrained}
-prompt condition), across several models---is implemented and validated offline; a
-rate-limited free API tier prevented a full multi-model sweep here, and it is the first
-item on the compute-gated checklist (Section~\ref{sec:limits}).
+\paragraph{Real-model discrimination.} We run the instrument on two current production
+LLMs under both prompt conditions---\texttt{bound} (the strict corpus-binding positive
+control) and \texttt{unconstrained} (the binding clause removed, parametric fallback
+allowed)---and read the verdict off the same metric (Table~\ref{tab:disc}). Under
+\texttt{bound}, both models are diagnosed \textsc{corpus-bound}: a large ablation-delta,
+counterfactual adherence, and closed-book abstention. Under \texttt{unconstrained}, the
+central leakage signal appears for \emph{both} models---the ablation-delta collapses to
+$0.000$ (the governed metric no longer depends on the corpus) and the closed-book baseline
+flips from abstention to answering from priors (contamination). The composite verdict flips
+fully to \textsc{leaking} on the lighter model (\texttt{gemini-flash-lite-latest}); on the
+stronger model (\texttt{gemini-flash-latest}) it lands \textsc{inconclusive}, because that
+model continued to follow the counterfactual ``alter-to-port'' rule even without the binding
+clause---a more capable instruction-follower whose composite verdict the counterfactual
+sub-test holds back even as the ablation and closed-book signals both indicate leakage.
+This is the discrimination the instrument is designed to expose, and the mock learners
+(rows~1--2) bound the scale: known-corpus-bound $\to \delta{=}1.000$/abstain, known-leaking
+$\to \delta{=}0.000$/contaminate.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}llcccl@{}}
+\toprule
+Learner & Condition & ablation-$\delta$ & counterfact. & closed-book & Verdict \\
+\midrule
+mock (corpus-bound) & --- & $1.000$ & follows & abstains & \textsc{corpus-bound} \\
+mock (leaking) & --- & $0.000$ & ignores & answers & \textsc{leaking} \\
+\midrule
+\texttt{gemini-flash-latest} & bound & $1.000$ & follows & abstains & \textsc{corpus-bound} \\
+\texttt{gemini-flash-latest} & unconstrained & $0.000$ & follows & answers & \textsc{inconclusive} \\
+\texttt{gemini-flash-lite-latest} & bound & $0.667$ & follows & abstains & \textsc{corpus-bound} \\
+\texttt{gemini-flash-lite-latest} & unconstrained & $0.000$ & ignores & answers & \textsc{leaking} \\
+\bottomrule
+\end{tabular}
+\caption{C1 discrimination on two real LLMs (head-on instrument, $\delta$ threshold
+$0.15$). Removing the corpus-binding clause collapses the ablation-$\delta$ to $0.000$ and
+flips closed-book abstention to contamination for both models; the composite verdict flips
+fully to \textsc{leaking} on the lighter model. Mock learners (top) bound the scale.}
+\label{tab:disc}
+\end{table}
 
 \section{Proxy learners as a pre-trial screen (application)}
 \label{sec:proxies}
@@ -282,9 +314,11 @@ evidence. We make no learning-gains claim and pre-register the human cohort stud
 work. \textbf{Proxy validity.} Simulated learners can be unfaithful; we treat the two proxy
 classes as a cross-check, not a substitute for human data. \textbf{Instrument sensitivity.}
 The protocol depends on weighting choices (ship domain, CRI, objective); a sensitivity
-analysis showing the protocol \emph{ranking} is stable is outstanding. \textbf{Compute-gated
-items:} (1) the multi-model \texttt{bound}-vs-\texttt{unconstrained} discrimination sweep
-(needs a paid API tier), and (2) the open-weight unlearning run (needs one GPU).
+analysis showing the protocol \emph{ranking} is stable is outstanding. \textbf{Model coverage.}
+The discrimination result (Table~\ref{tab:disc}) covers two models; a broader sweep
+(more models, and especially weak instruction-followers, which are the interesting leak
+cases) would tighten the ``verdict flips'' claim. \textbf{Compute-gated:} the open-weight
+unlearning run (Section~\ref{sec:weightlevel}) still needs one GPU.
 
 \section{Conclusion}
 We have described an in-silico instrument that lets a designer falsify the mechanism of a
