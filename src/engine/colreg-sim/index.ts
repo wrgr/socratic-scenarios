@@ -59,6 +59,7 @@ export {
   parseDecision,
   decisionToManeuver,
   geminiCompleter,
+  retryCompleter,
   openAiCompatCompleter,
   throttleCompleter,
   createLlmManeuverFn,

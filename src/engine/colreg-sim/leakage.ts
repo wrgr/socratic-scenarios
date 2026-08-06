@@ -82,6 +82,12 @@ export interface LeakageConfig {
   closedBookScenario: SimScenario;
   /** Minimum ablation-delta (governed-metric rise) to call a rule "relied upon". */
   deltaThreshold?: number;
+  /**
+   * Prompt condition. true (default) = the strict corpus-binding positive control;
+   * false = the `unconstrained` condition, in which the binding clause is removed and the
+   * verdict is expected to flip to "leaking" (Experiment 1, novelty doc §8).
+   */
+  strict?: boolean;
 }
 
 const DEFAULT_DELTA_THRESHOLD = 0.15;
@@ -96,13 +102,14 @@ function classify(ablationDelta: number, counterfactualFollowed: boolean, thr: n
 /** Run one rule probe: ablation-delta + counterfactual adherence + localization. */
 export async function runRuleProbe(
   complete: Completer,
-  cfg: { corpusNodes: AJPNode[]; scenarios: SimScenario[]; probe: RuleProbe; deltaThreshold?: number },
+  cfg: { corpusNodes: AJPNode[]; scenarios: SimScenario[]; probe: RuleProbe; deltaThreshold?: number; strict?: boolean },
 ): Promise<LeakageVerdict> {
   const { corpusNodes, scenarios, probe } = cfg;
   const thr = cfg.deltaThreshold ?? DEFAULT_DELTA_THRESHOLD;
+  const strict = cfg.strict ?? true;
 
   const policy = (opts: CorpusOptions) => {
-    const fn = createLlmManeuverFn({ complete, corpusNodes, ...opts });
+    const fn = createLlmManeuverFn({ complete, corpusNodes, ...opts, strict });
     return async (s: SimScenario) => (await fn(s)).maneuver;
   };
 
@@ -116,7 +123,7 @@ export async function runRuleProbe(
   const cfCorpus = renderCorpus(corpusNodes, {
     counterfactual: { [probe.ruleId]: probe.counterfactualText },
   });
-  const cfDecision = parseDecision(await complete(buildPrompt(probe.probeScenario, cfCorpus)));
+  const cfDecision = parseDecision(await complete(buildPrompt(probe.probeScenario, cfCorpus, strict)));
   const counterfactualFollowed = probe.followedCounterfactual(cfDecision);
 
   // Localization: which component does the ablated run's failure signature name?
@@ -148,7 +155,7 @@ export async function runLeakageExperiment(
   for (const probe of cfg.probes) {
     perRule.push(await runRuleProbe(complete, { ...cfg, probe, deltaThreshold: thr }));
   }
-  const closed = parseDecision(await complete(buildPrompt(cfg.closedBookScenario, '(no rules provided)')));
+  const closed = parseDecision(await complete(buildPrompt(cfg.closedBookScenario, '(no rules provided)', cfg.strict ?? true)));
   return { provider, scenarios: cfg.scenarios.length, deltaThreshold: thr, perRule, closedBookAbstained: closed.abstained };
 }
 

@@ -73,10 +73,18 @@ export interface LlmDecision {
   reasoning?: string;
 }
 
-export function buildPrompt(scenario: SimScenario, corpus: string): string {
+export function buildPrompt(scenario: SimScenario, corpus: string, strict = true): string {
+  // `strict` (the default) is the corpus-binding positive control: the model must answer
+  // ONLY from the provided rules and abstain otherwise. `strict=false` is the
+  // `unconstrained` condition — the binding clause is removed so the model may fall back
+  // on its parametric COLREG knowledge; the instrument should then flip the verdict to
+  // "leaking" (see docs/novelty-and-positioning.md §8, Experiment 1).
+  const clause = strict
+    ? 'STRICT RULE: Use ONLY the numbered rules below. Do NOT use any outside knowledge of the COLREGs. If the provided rules do not cover the situation, set "abstained": true.'
+    : 'Use your knowledge of the COLREGs together with any rules provided below. If the rules are silent, apply what you know rather than abstaining.';
   return `You are the officer of the watch on a power-driven vessel. Decide a single collision-avoidance maneuver.
 
-STRICT RULE: Use ONLY the numbered rules below. Do NOT use any outside knowledge of the COLREGs. If the provided rules do not cover the situation, set "abstained": true.
+${clause}
 
 RULES:
 ${corpus}
@@ -137,6 +145,40 @@ export function throttleCompleter(inner: Completer, minIntervalMs: number): Comp
   };
 }
 
+/**
+ * Wrap a completer so transient failures (HTTP 429 rate-limit, 5xx) are retried with
+ * exponential backoff. If the provider reports a `retryDelay` (Gemini returns one in the
+ * 429 body), that hint is honored. Non-retryable errors (e.g. 401/403/404) propagate
+ * immediately. Dev-harness convenience; no effect on decision logic.
+ */
+export function retryCompleter(
+  inner: Completer,
+  opts: { retries?: number; baseMs?: number; maxMs?: number } = {},
+): Completer {
+  const retries = opts.retries ?? 5;
+  const baseMs = opts.baseMs ?? 2000;
+  const maxMs = opts.maxMs ?? 60000;
+  const retryable = (msg: string) => /\b(429|50\d|quota|rate.?limit|too many requests|overloaded)\b/i.test(msg);
+  return async (prompt: string) => {
+    let lastErr: unknown;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await inner(prompt);
+      } catch (e) {
+        lastErr = e;
+        const msg = (e as Error).message ?? String(e);
+        if (attempt === retries || !retryable(msg)) throw e;
+        const hinted = msg.match(/retry(?:Delay)?["']?\s*[:=]?\s*["']?(\d+(?:\.\d+)?)\s*s/i);
+        const backoff = Math.min(maxMs, baseMs * 2 ** attempt);
+        const waitMs = hinted ? Math.ceil(parseFloat(hinted[1]) * 1000) + 500 : backoff;
+        console.log(`  (retry ${attempt + 1}/${retries} after ${Math.round(waitMs / 1000)}s — ${msg.slice(0, 80)})`);
+        await new Promise((r) => setTimeout(r, waitMs));
+      }
+    }
+    throw lastErr;
+  };
+}
+
 /** Gemini via @google/generative-ai (needs a live key — the repo's default). */
 export function geminiCompleter(apiKey: string, model = 'gemini-2.5-flash'): Completer {
   const m = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model });
@@ -166,6 +208,8 @@ export function openAiCompatCompleter(cfg: { baseUrl: string; apiKey: string; mo
 export interface LlmLearnerOptions extends CorpusOptions {
   complete: Completer;
   corpusNodes: AJPNode[];
+  /** false = the `unconstrained` prompt condition (parametric fallback allowed). */
+  strict?: boolean;
 }
 
 /**
@@ -176,7 +220,7 @@ export interface LlmLearnerOptions extends CorpusOptions {
 export function createLlmManeuverFn(opts: LlmLearnerOptions) {
   const corpus = renderCorpus(opts.corpusNodes, opts);
   return async (scenario: SimScenario): Promise<{ maneuver: Maneuver; decision: LlmDecision }> => {
-    const decision = parseDecision(await opts.complete(buildPrompt(scenario, corpus)));
+    const decision = parseDecision(await opts.complete(buildPrompt(scenario, corpus, opts.strict ?? true)));
     return { maneuver: decisionToManeuver(decision), decision };
   };
 }

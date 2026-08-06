@@ -18,6 +18,7 @@ import {
   geminiCompleter,
   openAiCompatCompleter,
   throttleCompleter,
+  retryCompleter,
   type Completer,
   type LeakageConfig,
   type LeakageReport,
@@ -73,9 +74,18 @@ async function main() {
   }
   try {
     const rpm = Number(process.env.GEMINI_RPM ?? 5);
-    const completer = throttleCompleter(real.completer, Math.ceil(60000 / Math.max(1, rpm)) + 700);
-    console.log(`\nLive run (${real.label}, throttled to ~${rpm} req/min):`);
-    print(await runLeakageExperiment(completer, real.label, cfg));
+    // Throttle to stay under the provider's rate limit, and retry on 429/5xx (honoring
+    // the server's retryDelay) so a transient rate-limit doesn't abort the whole run.
+    const completer = throttleCompleter(retryCompleter(real.completer), Math.ceil(60000 / Math.max(1, rpm)) + 700);
+    // CONDITION = bound (strict positive control) | unconstrained (parametric fallback
+    // allowed) | both (Experiment 1 discrimination — the verdict should flip).
+    const want = (process.env.CONDITION ?? 'bound').toLowerCase();
+    const conditions = want === 'both' ? ['bound', 'unconstrained'] : [want];
+    for (const cond of conditions) {
+      const strict = cond !== 'unconstrained';
+      console.log(`\nLive run (${real.label}, condition=${cond}, throttled to ~${rpm} req/min, with 429 backoff):`);
+      print(await runLeakageExperiment(completer, `${real.label} [${cond}]`, { ...cfg, strict }));
+    }
   } catch (e) {
     console.log(`\nLive LLM call failed: ${(e as Error).message}\nThe harness is validated by the dry-run above; supply a working credential to run the real model.`);
   }
