@@ -98,7 +98,7 @@ npm install
 npm run dev
 ```
 
-The app runs **without an API key** in simulated mode — a deterministic local provider stands in for embeddings and LLM evaluation. For Gemini-powered retrieval and mentor evaluation, click the ⚙ gear in the header and paste a key (validated before it's saved). See [Configuration](#configuration--knowledge-stores).
+The app runs **without an API key** in simulated mode — a deterministic local provider stands in for embeddings and LLM evaluation. For Gemini-powered retrieval and mentor evaluation, click the ⚙ gear in the header and paste a key (validated before it's saved). See **Configuration &amp; knowledge stores** below.
 
 ## Project structure
 
