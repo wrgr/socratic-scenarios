@@ -20,7 +20,9 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoTokenizer
+
+from _model import load_base, DTYPES  # shared base loader + dtype map (see _model.py)
 
 STATE = {}
 
@@ -77,23 +79,12 @@ def main():
                     help="serve the base in 4-bit NF4 (bitsandbytes) — fits a 7-8B on a "
                          "16 GB T4 for scoring. Must match how the adapter was trained.")
     args = ap.parse_args()
-    dtype = {"float32": torch.float32, "bfloat16": torch.bfloat16, "float16": torch.float16}[args.dtype]
 
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
-    if args.load_4bit:
-        # 4-bit base is placed by device_map; do not .to(device) it.
-        from transformers import BitsAndBytesConfig
-        bnb = BitsAndBytesConfig(
-            load_in_4bit=True, bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True,
-        )
-        model = AutoModelForCausalLM.from_pretrained(
-            args.model, quantization_config=bnb, device_map={"": 0}, torch_dtype=torch.bfloat16,
-        ).eval()
-    else:
-        model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=dtype).to(args.device).eval()
+    # Same shared loader as unlearn.py/audit.py so a served base matches the trained one.
+    model = load_base(args.model, load_4bit=args.load_4bit, device=args.device, dtype=DTYPES[args.dtype]).eval()
     name = args.model
     if args.adapter:
         from peft import PeftModel

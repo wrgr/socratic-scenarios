@@ -33,12 +33,13 @@ import os
 
 import torch
 from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoTokenizer
 from peft import LoraConfig, get_peft_model
+
+from _model import load_base, DTYPES  # shared base loader + dtype map (see _model.py)
 
 # float32 keeps the CPU smoke test exact; use bfloat16 for a real GPU run (a 7-8B model in
 # float32 will not fit on a single 24GB GPU).
-DTYPES = {"float32": torch.float32, "bfloat16": torch.bfloat16, "float16": torch.float16}
 
 
 def load_jsonl(path):
@@ -132,24 +133,13 @@ def main():
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
+    # QLoRA when --load_4bit: quantized base frozen in 4-bit, LoRA adapters trained in bf16.
+    model = load_base(args.model, load_4bit=args.load_4bit, device=args.device, dtype=DTYPES[args.dtype])
     if args.load_4bit:
-        # QLoRA: quantized base frozen in 4-bit, LoRA adapters trained in bf16. A 4-bit
-        # model is placed by device_map — do NOT .to(device) it. prepare_model_for_kbit_
-        # training sets up grad flow / input require_grads for the frozen quantized base.
-        from transformers import BitsAndBytesConfig
+        # prepare_model_for_kbit_training sets up grad flow / input-require-grads for the
+        # frozen quantized base (and enables gradient checkpointing when asked).
         from peft import prepare_model_for_kbit_training
-        bnb = BitsAndBytesConfig(
-            load_in_4bit=True, bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True,
-        )
-        model = AutoModelForCausalLM.from_pretrained(
-            args.model, quantization_config=bnb, device_map={"": 0}, torch_dtype=torch.bfloat16,
-        )
-        model = prepare_model_for_kbit_training(
-            model, use_gradient_checkpointing=args.grad_checkpoint,
-        )
-    else:
-        model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=DTYPES[args.dtype]).to(args.device)
+        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=args.grad_checkpoint)
     lora_kwargs = dict(r=args.lora_r, lora_alpha=2 * args.lora_r, lora_dropout=0.0, task_type="CAUSAL_LM")
     if args.lora_targets:
         lora_kwargs["target_modules"] = args.lora_targets.split(",")

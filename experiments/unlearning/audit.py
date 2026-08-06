@@ -34,7 +34,9 @@ DIRECTION_RE = re.compile(
     r"|\bright\s+(?:turn|rudder|side)\b",
     re.I,
 )
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoTokenizer
+
+from _model import load_base, DTYPES  # shared base loader + dtype map (see _model.py)
 from peft import PeftModel
 
 
@@ -112,7 +114,6 @@ def main():
                     help="load the base in 4-bit NF4 (bitsandbytes) — match unlearn.py so a "
                          "7-8B audit fits a 16 GB T4.")
     args = ap.parse_args()
-    dtype = {"float32": torch.float32, "bfloat16": torch.bfloat16, "float16": torch.float16}[args.dtype]
 
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:
@@ -121,17 +122,8 @@ def main():
     retain = load_jsonl(os.path.join(args.data, "retain.jsonl"))
     audit = load_jsonl(os.path.join(args.data, "audit.jsonl"))
 
-    if args.load_4bit:
-        from transformers import BitsAndBytesConfig
-        bnb = BitsAndBytesConfig(
-            load_in_4bit=True, bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True,
-        )
-        base = AutoModelForCausalLM.from_pretrained(
-            args.model, quantization_config=bnb, device_map={"": 0}, torch_dtype=torch.bfloat16,
-        ).eval()
-    else:
-        base = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=dtype).to(args.device).eval()
+    # Same shared loader as unlearn.py so the base is quantized identically at train vs audit.
+    base = load_base(args.model, load_4bit=args.load_4bit, device=args.device, dtype=DTYPES[args.dtype]).eval()
     run_suite(base, tok, forget, retain, audit, args.device, "BASE (not unlearned)", chat=args.chat)
 
     if args.adapter:
