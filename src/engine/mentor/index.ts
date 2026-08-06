@@ -66,6 +66,12 @@ export interface MentorContext {
    * is used — never assume a specific domain here.
    */
   domainLabel?: string;
+  /**
+   * Sampling temperature for this evaluation. Omitted = provider default. The
+   * ablation probe sets 0 so its paired with/without-corpus calls are deterministic
+   * (otherwise sampling noise between them reads as a spurious corpus effect).
+   */
+  temperature?: number;
 }
 
 /** Structured result returned by the Mentor service. */
@@ -220,7 +226,8 @@ export function createMentorService(provider: ChatCompletionProvider): MentorSer
 
       const prompt = buildPrompt(ctx);
       try {
-        const raw = await provider.complete(systemInstruction(ctx.domainLabel), prompt);
+        const raw = await provider.complete(systemInstruction(ctx.domainLabel), prompt,
+          ctx.temperature !== undefined ? { temperature: ctx.temperature } : undefined);
         return { ...parseMentorResponse(raw, ctx), grounded, groundingNodeIds };
       } catch (err) {
         // Network error or quota exceeded — fail gracefully
@@ -253,13 +260,23 @@ export async function runAblationProbe(
   service: MentorService,
   ctx: MentorContext,
 ): Promise<AblationDiff<MentorEvaluation>> {
-  const grounded = await service.evaluate(ctx);
+  // Deterministic (temperature 0) so the only thing that can move the two scores is the
+  // corpus context itself — otherwise sampling noise between the paired calls would be
+  // misattributed to RAG.
+  const grounded = await service.evaluate({ ...ctx, temperature: 0 });
   const ablated = await service.evaluate({
     ...ctx,
+    temperature: 0,
     retrievalContext: undefined,
     groundingNodeIds: undefined,
   });
-  return diffEvaluations(grounded, ablated);
+  const diff = diffEvaluations(grounded, ablated);
+  // A failed call returns a degraded placeholder (score 0), not a real model response, so
+  // the comparison is meaningless — flag it and don't claim a corpus effect.
+  if (grounded.degraded || ablated.degraded) {
+    return { ...diff, degraded: true, ragDependent: false };
+  }
+  return diff;
 }
 
 export type { AblationDiff } from './provenance';

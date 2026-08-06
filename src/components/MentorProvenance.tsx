@@ -32,6 +32,19 @@ export function ProvenanceBadge({ evaluation }: { evaluation: MentorEvaluation }
 
 export function AblationPanel({ diff }: { diff: AblationDiff<MentorEvaluation> }) {
   const pct = (n: number) => `${Math.round(n * 100)}%`;
+  // One of the paired calls failed — the diff is not a valid corpus comparison.
+  if (diff.degraded) {
+    return (
+      <div className="ablation-panel baked-in">
+        <div className="ablation-title">
+          <strong>⚠️ Inconclusive</strong>
+          <span className="ablation-subtitle">
+            an evaluation call failed — cannot compare with vs. without corpus
+          </span>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={`ablation-panel ${diff.ragDependent ? 'rag-dependent' : 'baked-in'}`}>
       <div className="ablation-title">

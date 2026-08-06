@@ -58,6 +58,11 @@ export interface AblationDiff<T extends EvaluationLike = EvaluationLike> {
    * Mentor was drawing on baked-in knowledge, not the structure.
    */
   ragDependent: boolean;
+  /**
+   * True when one of the paired calls failed (degraded placeholder), so the
+   * comparison is invalid and `ragDependent`/`scoreDelta` must not be trusted.
+   */
+  degraded?: boolean;
 }
 
 export interface AblationThresholds {

@@ -22,7 +22,10 @@ def load_base(model_id: str, *, load_4bit: bool, device: str, dtype=torch.float3
             load_in_4bit=True, bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True,
         )
+        # Place the quantized model on the SAME device the caller moves inputs to, so
+        # `--device cuda:1` doesn't load onto GPU 0 and fail the first forward with a
+        # cross-device error. ("cuda" -> current device; an explicit "cuda:N" is honored.)
         return AutoModelForCausalLM.from_pretrained(
-            model_id, quantization_config=bnb, device_map={"": 0}, torch_dtype=torch.bfloat16,
+            model_id, quantization_config=bnb, device_map={"": device}, torch_dtype=torch.bfloat16,
         )
     return AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=dtype).to(device)

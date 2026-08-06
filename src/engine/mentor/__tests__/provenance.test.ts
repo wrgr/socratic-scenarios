@@ -9,6 +9,8 @@ import {
   tokenOverlap,
   diffEvaluations,
 } from '../provenance';
+import { runAblationProbe } from '../index';
+import type { MentorService, MentorContext, MentorEvaluation } from '../index';
 
 // A sample string in the shape formatProbeRetrievalContext produces.
 const SAMPLE_CONTEXT = `=== Background Knowledge (graph) ===
@@ -82,5 +84,37 @@ describe('diffEvaluations', () => {
     );
     expect(d.feedbackSimilarity).toBeLessThan(0.5);
     expect(d.ragDependent).toBe(true);
+  });
+});
+
+describe('runAblationProbe', () => {
+  const baseCtx: MentorContext = {
+    probeQuestion: 'q', expectedConcepts: [], learnerResponse: 'a', priorAttempts: 0,
+    retrievalContext: '[NODE-1] corpus', groundingNodeIds: ['NODE-1'],
+  };
+  const ok = (over: Partial<MentorEvaluation>): MentorEvaluation => ({
+    score: 0.5, feedback: 'x', followUpProbe: 'f', masteryPassed: false,
+    grounded: true, groundingNodeIds: [], ...over,
+  });
+
+  it('scores both paired calls deterministically (temperature 0)', async () => {
+    const temps: (number | undefined)[] = [];
+    const service: MentorService = {
+      evaluate: async (ctx) => { temps.push(ctx.temperature); return ok({ grounded: !!ctx.retrievalContext }); },
+    };
+    await runAblationProbe(service, baseCtx);
+    expect(temps).toEqual([0, 0]); // no sampling noise can masquerade as a corpus effect
+  });
+
+  it('marks the diff degraded — not RAG-driven — when the ablated call fails', async () => {
+    // grounded succeeds; the corpus-stripped call returns a degraded placeholder.
+    const service: MentorService = {
+      evaluate: async (ctx) => ctx.retrievalContext
+        ? ok({ score: 0.8, feedback: 'grounded answer' })
+        : ok({ score: 0, feedback: 'unavailable', grounded: false, degraded: true }),
+    };
+    const diff = await runAblationProbe(service, baseCtx);
+    expect(diff.degraded).toBe(true);
+    expect(diff.ragDependent).toBe(false); // a fabricated 0 must not read as "RAG-driven"
   });
 });
