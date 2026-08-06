@@ -39,7 +39,10 @@ MODEL = os.environ.get("QDECOMP_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
 EMBEDDER = os.environ.get("QDECOMP_EMBEDDER", "sentence-transformers/all-MiniLM-L6-v2")
 TOPK = int(os.environ.get("QDECOMP_K", "5"))
 MAXNEW = int(os.environ.get("QDECOMP_MAXNEW", "80"))
-EMB_CACHE = os.path.join(HERE, "chunk-emb.npy")
+# Key the embedding cache by embedder id — a cache is only valid for the model that made
+# it. Reusing MiniLM vectors under a different QDECOMP_EMBEDDER would silently corrupt
+# retrieval (recall@k, the retrieved condition, the whole retrieval-gap attribution).
+EMB_CACHE = os.path.join(HERE, "chunk-emb." + re.sub(r"[^\w.-]", "_", EMBEDDER) + ".npy")
 
 # Equipment-specific recall questions (ported verbatim from ajp-retrieval-decomp.ts).
 # `answer` = ALL patterns must be found in the reply. `gold` = distinctive substring of

@@ -51,9 +51,20 @@ const questions: Q[] = [
     answer: [/10\s*s(econds)?/i], gold: 'After 10 seconds the motion controller will automatically re-enable' },
 ];
 
-async function embed(key: string, text: string): Promise<number[]> {
+async function embed(key: string, text: string, tries = 4): Promise<number[]> {
   const m = new GoogleGenerativeAI(key).getGenerativeModel({ model: 'gemini-embedding-001' });
-  return (await m.embedContent(text)).embedding.values;
+  // Retry transient rate-limit/5xx here too: embedding runs ONLY in the `retrieved` mode,
+  // so an un-retried hiccup would thin only that denominator and bias real-RAG value. A
+  // safety block is not retryable — rethrow so it buckets consistently with a generation block.
+  for (let i = 0; ; i++) {
+    try {
+      return (await m.embedContent(text)).embedding.values;
+    } catch (e) {
+      const msg = (e as Error).message ?? String(e);
+      if (i >= tries || isSafetyBlock(msg)) throw e;
+      await new Promise((r) => setTimeout(r, 800 * 2 ** i));
+    }
+  }
 }
 
 function prompt(q: string, context: string): string {
@@ -88,6 +99,10 @@ async function accuracy(complete: Completer, mode: 'none' | 'retrieved' | 'oracl
       let context = '';
       if (mode === 'oracle') {
         const gold = corpus.find((c) => c.text.includes(q.gold));
+        // A missing gold chunk silently collapses oracle -> closed-book and understates the
+        // CONTENT ceiling. Warn loudly rather than mis-score in silence (a future corpus edit
+        // could shift a gold substring).
+        if (!gold) console.error(`  ! WARNING oracle gold not found for '${q.id}' — falling back to closed-book; acc(oracle) understated`);
         context = gold ? `[${gold.id}] ${gold.text}` : '';
       } else if (mode === 'retrieved') {
         const qe = await embed(key, q.q);

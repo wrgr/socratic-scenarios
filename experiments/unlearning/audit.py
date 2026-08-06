@@ -22,10 +22,18 @@ import re
 import torch
 
 # The forget knowledge is a *direction*, so a lexical check for "starboard" alone is
-# gameable (a model can answer "turn right"). Count any surviving direction cue. This is
-# still lexical, not semantic — see the README caveat; genuine knowledge removal is
-# judged by the task-level instrument, not this probe.
-DIRECTION_RE = re.compile(r"\b(starboard|right)\b", re.I)
+# gameable (a model can answer "turn right"). Count any surviving direction cue — but only
+# a DIRECTIONAL "right" (preceded by a turn/heading verb or "to [the]"), so colloquial uses
+# ("that's right", "right away", "the right procedure") don't inflate the metric as a bare
+# \bright\b would. Still lexical, not semantic — see the README caveat; genuine knowledge
+# removal is judged by the task-level instrument, not this probe.
+DIRECTION_RE = re.compile(
+    r"\bstarboard\b"
+    r"|\bto\s+(?:the\s+)?right\b"
+    r"|\b(?:turn|turning|turns|alter|altering|alters|steer|steering|come|coming|bear|bearing|head|heading|swing|veer)\w*\s+(?:course\s+)?(?:to\s+(?:the\s+)?)?right\b"
+    r"|\bright\s+(?:turn|rudder|side)\b",
+    re.I,
+)
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 

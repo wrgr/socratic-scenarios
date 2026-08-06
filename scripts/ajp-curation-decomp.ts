@@ -62,10 +62,30 @@ ${observable}
 Respond with ONLY a JSON object: {"fault": "<short fault name>", "action": "<short corrective action>", "abstained": <true|false>}`;
 }
 
-async function cellError(complete: Completer, corpus: 'full' | 'none', strict: boolean): Promise<number> {
-  let wrong = 0;
+function isSafetyBlock(msg: string): boolean {
+  return /blocked|PROHIBITED_CONTENT|SAFETY|response was blocked/i.test(msg);
+}
+
+interface CellResult { rate: number; excluded: number; answerable: number }
+
+async function cellError(complete: Completer, corpus: 'full' | 'none', strict: boolean): Promise<CellResult> {
+  let wrong = 0, excluded = 0, answerable = 0;
   for (const c of cases) {
-    const raw = await complete(prompt(c.observable, corpus === 'full' ? corpusText : '', strict));
+    let raw: string;
+    try {
+      raw = await complete(prompt(c.observable, corpus === 'full' ? corpusText : '', strict));
+    } catch (e) {
+      // A safety block (or hard API error) is not a diagnosis error — the model never
+      // answered. Exclude it from the denominator so a hazard-triggered block on the
+      // corpus=full cell cannot masquerade as a lost RAG gain. (Same three-state discipline
+      // as ajp-retrieval-decomp.ts; note that a JSON `"abstained": true` is a real response
+      // and still counts as an error per the diagnostic metric — only refusals are excluded.)
+      const msg = (e as Error).message ?? String(e);
+      excluded++;
+      if (process.env.AJP_DEBUG) console.error(`  [${c.id} ${corpus}/${strict ? 'bound' : 'unc'}] ${isSafetyBlock(msg) ? 'BLOCK' : 'ERR'}: ${msg.slice(0, 100)}`);
+      continue;
+    }
+    answerable++;
     let ok = false;
     try {
       const m = raw.match(/\{[\s\S]*\}/);
@@ -76,7 +96,7 @@ async function cellError(complete: Completer, corpus: 'full' | 'none', strict: b
     if (process.env.AJP_DEBUG) console.error(`  [${c.id} ${corpus}/${strict ? 'bound' : 'unc'}] ${ok ? 'OK' : 'MISS'}: ${raw.slice(0, 120)}`);
     if (!ok) wrong++;
   }
-  return wrong / cases.length; // error rate [0,1]
+  return { rate: answerable ? wrong / answerable : NaN, excluded, answerable }; // error rate over answerable cells
 }
 
 function realCompleter(): { completer: Completer; label: string } | null {
@@ -98,15 +118,20 @@ async function main() {
     const nb = await cellError(c, 'none', true);
     const fu = await cellError(c, 'full', false);
     const nu = await cellError(c, 'none', false);
-    const pct = (x: number) => `${(100 * x).toFixed(0)}%`.padStart(9);
-    console.log(`\n── ${real.label} — AJP diagnosis ERROR rate over ${cases.length} cases (lower = better) ──`);
+    const pct = (x: number) => (Number.isNaN(x) ? 'n/a' : `${(100 * x).toFixed(0)}%`).padStart(9);
+    console.log(`\n── ${real.label} — AJP diagnosis ERROR rate over answerable cases (of ${cases.length}; lower = better) ──`);
     console.log('              corpus=full   corpus=none');
-    console.log(`  bound       ${pct(fb)}   ${pct(nb)}`);
-    console.log(`  unconstr.   ${pct(fu)}   ${pct(nu)}`);
+    console.log(`  bound       ${pct(fb.rate)}   ${pct(nb.rate)}`);
+    console.log(`  unconstr.   ${pct(fu.rate)}   ${pct(nu.rate)}`);
     console.log('  attribution:');
-    console.log(`    model priors alone   error(none,unconstrained) = ${pct(nu)}  (HIGH ⇒ weak priors; the model does not know this equipment)`);
-    console.log(`    RAG gain @ uncon.    error(none,unc) - error(full,unc) = ${pct(nu - fu)}  (curation as a KNOWLEDGE SOURCE)`);
-    console.log(`    RAG gain @ bound     error(none,bound) - error(full,bound) = ${pct(nb - fb)}`);
+    console.log(`    model priors alone   error(none,unconstrained) = ${pct(nu.rate)}  (HIGH ⇒ weak priors; the model does not know this equipment)`);
+    console.log(`    RAG gain @ uncon.    error(none,unc) - error(full,unc) = ${pct(nu.rate - fu.rate)}  (curation as a KNOWLEDGE SOURCE)`);
+    console.log(`    RAG gain @ bound     error(none,bound) - error(full,bound) = ${pct(nb.rate - fb.rate)}`);
+    const totalExcluded = fb.excluded + nb.excluded + fu.excluded + nu.excluded;
+    if (totalExcluded) {
+      console.log(`  ⚠ ${totalExcluded} cell(s) excluded (safety block / API error), rates over answerable only — ` +
+        `full/none bound: ${fb.excluded}/${nb.excluded}, unc: ${fu.excluded}/${nu.excluded}. Block rate is a signal, not an accuracy result.`);
+    }
   } catch (e) {
     console.error(`\nAJP decomposition failed: ${(e as Error).message}`);
   }
