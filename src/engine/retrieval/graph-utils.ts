@@ -126,27 +126,31 @@ export function dedupeNodesById(nodes: AJPNode[]): AJPNode[] {
   return out;
 }
 
-/** Build a self-contained accessor set over an explicit node/edge slice. */
+/** Build a self-contained accessor set over an explicit node/edge slice. Node lookups and
+ *  neighbor traversals are backed by prebuilt Maps (id->node, from->edges, to->edges), so a
+ *  traversal is O(degree) rather than O(edges) with an O(nodes) find per hop. */
 export function createGraphView(nodes: AJPNode[], edges: AJPEdge[]): GraphView {
-  const byId = (id: string) => nodes.find((n) => n.id === id);
+  const byId = new Map<string, AJPNode>();
+  for (const n of nodes) if (!byId.has(n.id)) byId.set(n.id, n); // first occurrence wins (as dedupeNodesById)
+  const outEdges = new Map<string, AJPEdge[]>();
+  const inEdges = new Map<string, AJPEdge[]>();
+  for (const e of edges) {
+    (outEdges.get(e.from) ?? outEdges.set(e.from, []).get(e.from)!).push(e);
+    (inEdges.get(e.to) ?? inEdges.set(e.to, []).get(e.to)!).push(e);
+  }
+  const resolve = (bucket: AJPEdge[] | undefined, edgeType: string, pick: (e: AJPEdge) => string) =>
+    (bucket ?? [])
+      .filter((e) => e.type === edgeType)
+      .map((e) => byId.get(pick(e)))
+      .filter((n): n is AJPNode => n !== undefined);
   return {
     nodes,
     edges,
-    nodeById: byId,
+    nodeById: (id) => byId.get(id),
     nodesByType: (type) => nodes.filter((n) => n.type === type),
-    outNeighbors: (fromId, edgeType) =>
-      edges
-        .filter((e) => e.from === fromId && e.type === edgeType)
-        .map((e) => byId(e.to))
-        .filter((n): n is AJPNode => n !== undefined),
-    inNeighbors: (toId, edgeType) =>
-      edges
-        .filter((e) => e.to === toId && e.type === edgeType)
-        .map((e) => byId(e.from))
-        .filter((n): n is AJPNode => n !== undefined),
-    outEdgeTypes: (nodeId) => [
-      ...new Set(edges.filter((e) => e.from === nodeId).map((e) => e.type)),
-    ],
+    outNeighbors: (fromId, edgeType) => resolve(outEdges.get(fromId), edgeType, (e) => e.to),
+    inNeighbors: (toId, edgeType) => resolve(inEdges.get(toId), edgeType, (e) => e.from),
+    outEdgeTypes: (nodeId) => [...new Set((outEdges.get(nodeId) ?? []).map((e) => e.type))],
     matchNodes: (queryText, types, topK) =>
       nodes
         .filter((n) => types.includes(n.type))

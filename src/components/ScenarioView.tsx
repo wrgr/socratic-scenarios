@@ -20,13 +20,14 @@ import type { SimulatedExpertiseLevel } from '../engine/simulated-learner';
 import { useScenarioEngine } from '../engine/scenario/engine';
 import type { ScenarioDefinition } from '../engine/scenario/types';
 import { useDomain } from '../domain/useDomain';
+import { useDomainGraph } from '../domain/useDomainGraph';
 import { findProbe, findConsequence, findNode } from '../corpus/registry';
 import { ProcedureScaffold } from './ProcedureScaffold';
 import { MentorDegradedBanner } from './MentorDegradedBanner';
 import { ProvenanceBadge, AblationPanel, ProvenanceToggle } from './MentorProvenance';
 import { SourceRefText } from './SourceRefText';
 import { GapFlagButton } from './GapFlagButton';
-import { safetyGateStrategy, probeContextStrategy, tacitLookupStrategy, formatProbeRetrievalContext, groundingNodeIdsFrom, graphViewForDomain } from '../engine/retrieval/retrieval-router';
+import { safetyGateStrategy, probeContextStrategy, tacitLookupStrategy, formatProbeRetrievalContext, groundingNodeIdsFrom } from '../engine/retrieval/retrieval-router';
 import type { AJPNode } from '../types/ajp';
 
 interface Props {
@@ -113,8 +114,7 @@ function GraphSafetyGatePanel({
   safetyGateId: string;
   onAcknowledge: () => void;
 }) {
-  const { domain } = useDomain();
-  const graph = useMemo(() => graphViewForDomain(domain), [domain]);
+  const graph = useDomainGraph();
   const gateResult = useMemo(() => safetyGateStrategy(safetyGateId, graph), [safetyGateId, graph]);
   // AJP gates resolve via the engine's baked graph; for other domains the gate
   // node lives only in the domain corpus — fall back to a registry lookup.
@@ -199,9 +199,8 @@ function GraphSafetyGatePanel({
 
 function GraphProbeContextStrip({ probeId }: { probeId: string }) {
   const [expanded, setExpanded] = useState(false);
-  const { domain } = useDomain();
 
-  const graph = useMemo(() => graphViewForDomain(domain), [domain]);
+  const graph = useDomainGraph();
   const probeCtx = useMemo(() => probeContextStrategy(probeId, graph), [probeId, graph]);
   const tacitResult = useMemo(() => {
     const probe = findProbe(probeId);
@@ -371,7 +370,7 @@ function MentorReflectionPanel({
   const masteryThreshold = probe?.masteryThreshold ?? 0.80;
   const isSafetyCritical = masteryThreshold >= 0.90;
   // Scope Mentor grounding to the active domain's graph, not the boot-bound one.
-  const graph = useMemo(() => graphViewForDomain(domain), [domain]);
+  const graph = useDomainGraph();
 
   const [response, setResponse] = useState(initialRecord && !initialRecord.wasSimulated ? initialRecord.learnerResponse : '');
   const [evaluation, setEvaluation] = useState<MentorEvaluation | null>(initialRecord?.evaluation ?? null);

@@ -20,6 +20,7 @@ import type { MentorEvaluation } from '../engine/mentor';
 import { getMentorService } from '../engine/mentor';
 import { getSimulatedLearnerService } from '../engine/simulated-learner';
 import { useDomain } from '../domain/useDomain';
+import { useDomainGraph } from '../domain/useDomainGraph';
 import { ajpProbeNodes } from '../corpus/ajp/probes';
 import { probeLabel, isSafetyProbe, masteryThreshold, scoreClass } from './socratic-view.utils';
 import {
@@ -27,7 +28,6 @@ import {
   tacitLookupStrategy,
   formatProbeRetrievalContext,
   groundingNodeIdsFrom,
-  graphViewForDomain,
 } from '../engine/retrieval/retrieval-router';
 import { SourceRefText } from './SourceRefText';
 import { ProvenanceBadge } from './MentorProvenance';
@@ -274,7 +274,7 @@ function ProbePracticePanel({
   // Scope retrieval to the active domain (not the boot-bound graph) so grounding never
   // leaks cross-domain — matching SocraticView/ScenarioView. Memoized so the identities
   // the runSimulation callback depends on stay stable across renders.
-  const graph = useMemo(() => graphViewForDomain(domain), [domain]);
+  const graph = useDomainGraph();
   const probeCtx = useMemo(() => probeContextStrategy(probe.id, graph), [probe.id, graph]);
   const tacitResult = useMemo(() => tacitLookupStrategy(probe.content, 3, graph), [probe.content, graph]);
   const groundingNodeIds = useMemo(() => groundingNodeIdsFrom(probeCtx, tacitResult), [probeCtx, tacitResult]);

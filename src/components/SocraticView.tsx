@@ -12,6 +12,7 @@ import { getMentorService, runAblationProbe } from '../engine/mentor';
 import { getSimulatedLearnerService } from '../engine/simulated-learner';
 import type { SimulatedExpertiseLevel } from '../engine/simulated-learner';
 import { useDomain } from '../domain/useDomain';
+import { useDomainGraph } from '../domain/useDomainGraph';
 import {
   probeLabel,
   probeCategory,
@@ -21,7 +22,7 @@ import {
   scoreClass,
   masteryBadge,
 } from './socratic-view.utils';
-import { probeContextStrategy, tacitLookupStrategy, formatProbeRetrievalContext, groundingNodeIdsFrom, graphViewForDomain } from '../engine/retrieval/retrieval-router';
+import { probeContextStrategy, tacitLookupStrategy, formatProbeRetrievalContext, groundingNodeIdsFrom } from '../engine/retrieval/retrieval-router';
 import { loadProbeProgress, recordProbeAttempt } from '../engine/learner-model/probe-progress';
 import { SourceRefText } from './SourceRefText';
 import { MentorDegradedBanner } from './MentorDegradedBanner';
@@ -84,11 +85,10 @@ function TopicGrid({
 
 function SocraticGraphContext({ probe }: { probe: AJPNode }) {
   const [expanded, setExpanded] = useState(false);
-  const { domain } = useDomain();
 
   // Scope retrieval to the active domain so a tire/COLREG probe cannot surface
   // AJP tacit knowledge as "background" (and vice-versa).
-  const graph = useMemo(() => graphViewForDomain(domain), [domain]);
+  const graph = useDomainGraph();
   const probeCtx = useMemo(() => probeContextStrategy(probe.id, graph), [probe.id, graph]);
   const tacitResult = useMemo(() => tacitLookupStrategy(probe.content, 3, graph), [probe.content, graph]);
 
@@ -177,7 +177,6 @@ function ProbePanel({
   expertiseLevel: SimulatedExpertiseLevel;
 }) {
   const { probe } = session;
-  const { domain } = useDomain();
   const mentorService = getMentorService();
   const learnerService = getSimulatedLearnerService();
   const threshold = masteryThreshold(probe);
@@ -193,7 +192,7 @@ function ProbePanel({
   const [simFollowUpResponse, setSimFollowUpResponse] = useState<string | null>(null);
   const [simLoading, setSimLoading] = useState(false);
   // Ground the Mentor in the ACTIVE domain's graph, not the boot-bound graph.
-  const graph = useMemo(() => graphViewForDomain(domain), [domain]);
+  const graph = useDomainGraph();
   // Provenance probe (dev): run each evaluation with AND without corpus grounding
   // and show whether the corpus actually changed the answer.
   const [ablationOn, setAblationOn] = useState(false);

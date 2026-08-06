@@ -72,13 +72,22 @@ import {
  * `nodes` may already include its probe/consequence nodes (AJP) or keep them
  * separate (tire/COLREG), so both are merged and de-duplicated by id.
  */
+// A domain's corpus is immutable, so its scoped view is built once and cached by descriptor
+// identity — every component/step that scopes to the same domain shares one view instead of
+// rebuilding (dedupe + Map construction) on each mount.
+const domainViewCache = new WeakMap<DomainDescriptor, GraphView>();
+
 export function graphViewForDomain(descriptor: DomainDescriptor): GraphView {
+  const cached = domainViewCache.get(descriptor);
+  if (cached) return cached;
   const nodes = dedupeNodesById([
     ...descriptor.nodes,
     ...descriptor.probes,
     ...descriptor.consequences,
   ]);
-  return createGraphView(nodes, descriptor.edges);
+  const view = createGraphView(nodes, descriptor.edges);
+  domainViewCache.set(descriptor, view);
+  return view;
 }
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
@@ -160,7 +169,7 @@ export function faultDiagnosisStrategy(
     .map((e) => ({ ...e.chain, score: e.score }));
 }
 
-function buildFaultChain(fault: AJPNode, score: number, graph: GraphView = boundGraphView): FaultChain {
+function buildFaultChain(fault: AJPNode, score: number, graph: GraphView): FaultChain {
   const safetyHazards = graph.outNeighbors(fault.id, 'REQUIRES').filter((n) => n.type === 'SafetyHazard');
   const tacitNodes = graph.outNeighbors(fault.id, 'REQUIRES').filter((n) => n.type === 'TacitKnowledge');
 
