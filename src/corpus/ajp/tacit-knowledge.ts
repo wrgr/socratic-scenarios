@@ -370,6 +370,20 @@ export const tacitKnowledgeNodes: AJPNode[] = [
     source: 'KB-DOC-05 §4.2 · InferredFromDomain (electronics repair) · v1.0-2026-04-10',
   },
 
+  // ── KB-DOC-06: ESD handling discipline ────────────────────────────
+
+  {
+    id: 'TACIT-ESD-HANDLING-001',
+    type: 'TacitKnowledge',
+    content:
+      'ESD discipline: the discharge you cannot see or feel is the one that kills the board. ' +
+      'A body charged to a few hundred volts — well below the ~3 kV needed before you feel a spark — is already enough to latent-damage a sensitive device, so "I didn\'t feel a zap" is not evidence of safety. ' +
+      'Correct practice is preventive and unconditional: wrist strap bonded to the common ground point before any board contact, dissipative mat under the work, tools and printhead grounded, and boards handled by the edges. ' +
+      'The failure mode is insidious — an ESD-wounded trace or die often passes the post-repair continuity test and only fails weeks later in the field — so you never get positive feedback that the discipline worked, only the absence of a later return. That is exactly why novices skip it and experts never do.',
+    confidence: 'High',
+    source: 'InferredFromDomain · ESD control practice (ANSI/ESD S20.20, IPC-7711/7721) · v1.0-2026-08-05',
+  },
+
   // ── KB-DOC-06: tacit knowledge theory reference ───────────────────
 
   {
@@ -497,4 +511,16 @@ export const tacitKnowledgeEdges: AJPEdge[] = [
 
   // FAULT-DROPOUT-001 — PA jar wall shows atomization-side signal for dropout diagnosis
   { from: 'FAULT-DROPOUT-001', to: 'TACIT-ATOMIZATION-VISUAL-PA-001', type: 'REQUIRES' },
+
+  // ── Probe → tacit coverage for the three probes that lacked background ──
+  // PROBE-PRESSURE-INTERPRETATION-001: KEWB pressure reading is the tacit skill behind it
+  { from: 'PROBE-PRESSURE-INTERPRETATION-001', to: 'TACIT-KEWB-PRESSURE-READ-001', type: 'PROBES' },
+  { from: 'PROBE-PRESSURE-INTERPRETATION-001', to: 'TACIT-DIAGNOSIS-LOOP-001', type: 'PROBES' },
+  // PROBE-TACIT-LINE-QUALITY-001: the canonical line-quality reference is its background
+  { from: 'PROBE-TACIT-LINE-QUALITY-001', to: 'TACIT-LINE-QUALITY-REFERENCE-001', type: 'PROBES' },
+  { from: 'PROBE-TACIT-LINE-QUALITY-001', to: 'TACIT-FOCUS-RATIO-001', type: 'PROBES' },
+  // PROBE-ESD-PROTOCOL-001: newly-authored ESD handling discipline
+  { from: 'PROBE-ESD-PROTOCOL-001', to: 'TACIT-ESD-HANDLING-001', type: 'PROBES' },
+  { from: 'FAULT-ESD-DAMAGE-001', to: 'TACIT-ESD-HANDLING-001', type: 'REQUIRES' },
+  { from: 'TACIT-ESD-HANDLING-001', to: 'HAZARD-ESD-001', type: 'REQUIRES' },
 ];

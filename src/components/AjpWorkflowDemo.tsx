@@ -26,8 +26,10 @@ import {
   probeContextStrategy,
   tacitLookupStrategy,
   formatProbeRetrievalContext,
+  groundingNodeIdsFrom,
 } from '../engine/retrieval/retrieval-router';
 import { SourceRefText } from './SourceRefText';
+import { ProvenanceBadge } from './MentorProvenance';
 import { MentorDegradedBanner } from './MentorDegradedBanner';
 
 // ─── Types ────────────────────────────────────────────────────────
@@ -270,6 +272,7 @@ function ProbePracticePanel({
 
   const probeCtx = probeContextStrategy(probe.id);
   const tacitResult = tacitLookupStrategy(probe.content, 3);
+  const groundingNodeIds = groundingNodeIdsFrom(probeCtx, tacitResult);
   const hasContext = tacitResult.matches.length > 0 || tacitResult.linkedHazards.length > 0;
 
   // Pause/resume helpers
@@ -326,6 +329,7 @@ function ProbePracticePanel({
         priorAttempts: 0,
         safetyGate: isSafety,
         retrievalContext,
+        groundingNodeIds,
         domainLabel: domain.name,
       });
       setEvaluation(eval1);
@@ -371,6 +375,7 @@ function ProbePracticePanel({
         priorAttempts: 1,
         safetyGate: isSafety,
         retrievalContext,
+        groundingNodeIds,
         domainLabel: domain.name,
       });
       setFollowUpEval(eval2);
@@ -383,7 +388,7 @@ function ProbePracticePanel({
       setSimStep('done');
       resume();
     }
-  }, [probe, probeCtx, tacitResult, expertiseLevel, isSafety, mentorService, learnerService, domain.name]);
+  }, [probe, probeCtx, tacitResult, groundingNodeIds, expertiseLevel, isSafety, mentorService, learnerService, domain.name]);
 
   // Auto-start simulation
   useEffect(() => {
@@ -410,6 +415,7 @@ function ProbePracticePanel({
         priorAttempts: attempts,
         safetyGate: isSafety,
         retrievalContext,
+        groundingNodeIds,
         domainLabel: domain.name,
       });
       setAttempts((n) => n + 1);
@@ -615,6 +621,7 @@ function ProbePracticePanel({
                     <span className="eval-score-pct">{Math.round(evaluation.score * 100)}%</span>
                   </div>
                   <p className="eval-feedback">{evaluation.feedback}</p>
+                  <ProvenanceBadge evaluation={evaluation} />
                 </>
               )}
               {!evaluation.masteryPassed && (
@@ -654,6 +661,7 @@ function ProbePracticePanel({
                     <span className="eval-score-pct">{Math.round(followUpEval.score * 100)}%</span>
                   </div>
                   <p className="eval-feedback">{followUpEval.feedback}</p>
+                  <ProvenanceBadge evaluation={followUpEval} />
                 </>
               )}
               {mastered ? (
@@ -724,6 +732,7 @@ function ProbePracticePanel({
                     <span className="eval-score-pct">{Math.round(evaluation.score * 100)}%</span>
                   </div>
                   <p className="eval-feedback">{evaluation.feedback}</p>
+                  <ProvenanceBadge evaluation={evaluation} />
                 </>
               )}
               <div className="probe-followup-block">
@@ -769,6 +778,7 @@ function ProbePracticePanel({
                     <span className="eval-score-pct">{Math.round(currentEval.score * 100)}%</span>
                   </div>
                   <p className="eval-feedback">{currentEval.feedback}</p>
+                  <ProvenanceBadge evaluation={currentEval} />
                 </>
               )}
               {mastered ? (

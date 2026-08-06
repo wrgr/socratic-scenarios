@@ -261,6 +261,112 @@ export const colregActionNodes: AJPNode[] = [
   },
 ];
 
+// ─── Tacit knowledge ──────────────────────────────────────────────
+// The seamanship "why" behind the rules — the interpretation and judgement an
+// experienced watchkeeper brings, surfaced as Socratic background context.
+
+export const colregTacitNodes: AJPNode[] = [
+  {
+    id: 'TACIT-COLREG-CBDR-001',
+    type: 'TacitKnowledge',
+    content:
+      'Constant bearing, decreasing range (CBDR) is the master signal of collision risk. ' +
+      'Take a series of compass bearings of the other vessel; if the bearing holds steady while she grows larger, you are on a collision course and must act — you do not need a plot to know it. ' +
+      'A bearing that draws appreciably is reassuring, but not proof of safety when the other vessel is very large, is a tow, or is close aboard. ' +
+      'Almost every collision at sea began as an unremarked CBDR (Rule 7).',
+    confidence: 'High',
+    source: 'IMO COLREG 1972, Rule 7 · seamanship practice (CBDR) · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-COLREG-STARBOARD-BIAS-001',
+    type: 'TacitKnowledge',
+    content:
+      'Why the Rules push almost every action to starboard: predictability is itself the safety property. ' +
+      'In a head-on both vessels turn to starboard and pass port-to-port; a give-way vessel turns to starboard and passes astern. ' +
+      'The danger of a port turn is that it steers into where the other vessel will go if she does the expected starboard thing — two “reasonable” turns that close on each other. ' +
+      'Altering to starboard is doing what the other bridge is entitled to expect of you, even with no radio call and no exchange of intentions (Rules 14–17).',
+    confidence: 'High',
+    source: 'IMO COLREG 1972, Rules 14–17 · seamanship practice · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-COLREG-BOLD-ALTERATION-001',
+    type: 'TacitKnowledge',
+    content:
+      'An avoiding action must be big enough to be obvious — by eye and on the other vessel’s radar (Rule 8b). ' +
+      'A 5–10° nudge barely changes your visual aspect or the slow radar picture; it reads as normal yawing, not a decision, and leaves the other bridge guessing. ' +
+      'One deliberate alteration of 30° or more, made early and held, is unmistakable and lets her plan around you. ' +
+      'A succession of small changes is the classic ambiguous action the Rule forbids — each one too small to see, the sum impossible to read.',
+    confidence: 'High',
+    source: 'IMO COLREG 1972, Rule 8 · seamanship practice · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-COLREG-COURSE-OVER-SPEED-001',
+    type: 'TacitKnowledge',
+    content:
+      'With sea room, a bold course alteration usually beats a speed change. ' +
+      'A turn is instantly visible by eye and shows at once as a changed heading on radar; a speed reduction is nearly invisible to the other vessel until the range rate slowly changes, which for a large ship takes minutes and miles. ' +
+      'So course alone is often the more “readily apparent” action Rule 8 wants — provided it is early, substantial, and does not simply set up a new close-quarters situation with a third vessel. ' +
+      'Slowing or stopping is the tool when there is no room to turn or the situation is already close.',
+    confidence: 'High',
+    source: 'IMO COLREG 1972, Rule 8 · seamanship practice · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-COLREG-PASS-ASTERN-001',
+    type: 'TacitKnowledge',
+    content:
+      'The give-way vessel’s safe geometry is to pass astern, not to cross ahead. ' +
+      'Aiming to go under the other vessel’s stern points you at where she is leaving, so any error in your estimate of her speed only opens the gap; crossing ahead points you at where she is going, so the same error closes it — and if she then acts too, you meet. ' +
+      'Alter to starboard early and enough that your intention to pass astern is plain (Rules 15–16). ' +
+      '“I can just make it across” is the reasoning behind a large share of crossing collisions.',
+    confidence: 'High',
+    source: 'IMO COLREG 1972, Rules 15–16 · seamanship practice · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-COLREG-STANDON-ESCALATION-001',
+    type: 'TacitKnowledge',
+    content:
+      '“Stand-on” is a duty to be predictable, not a right to hold course into a collision (Rule 17). ' +
+      'It escalates in stages: first keep course and speed so the give-way vessel can plan around you; then you may act when it is apparent she is not keeping clear; then you must act when collision cannot be avoided by her action alone. ' +
+      'The hard skill is judging the moment to break stand-on — too soon undermines the predictability the Rules depend on, too late throws away your options. ' +
+      'When you do act in a crossing, do not alter to port for a vessel on your own port side.',
+    confidence: 'High',
+    source: 'IMO COLREG 1972, Rule 17 · seamanship practice · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-COLREG-SAFE-SPEED-001',
+    type: 'TacitKnowledge',
+    content:
+      'Safe speed is not a number, it is a stopping-distance argument (Rule 6). ' +
+      'It is any speed at which you can still take effective avoiding action and stop within a distance suited to the conditions — so it falls with reduced visibility, dense traffic, a crowded radar picture, poor maneuverability or a heavy sea. ' +
+      'The fog test is simple: you must be able to react inside the distance at which you can detect. ' +
+      'Having “right of way” changes none of this — a stand-on vessel proceeding at unsafe speed is still at fault.',
+    confidence: 'High',
+    source: 'IMO COLREG 1972, Rule 6 · seamanship practice · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-COLREG-RESTRICTED-VIS-001',
+    type: 'TacitKnowledge',
+    content:
+      'In restricted visibility there is no stand-on and no give-way — vessels detect each other by radar and both are equally bound to act (Rule 19). ' +
+      'Two alterations are traps: do not turn to port for a vessel forward of your beam (except one you are overtaking), because she may be altering to starboard into you; and do not turn toward a vessel abeam or abaft the beam. ' +
+      'Favor a bold alteration to starboard, or take speed off. ' +
+      'A fog signal heard forward of the beam, or a close-quarters situation you cannot avoid by a turn, calls for reducing to bare steerageway or stopping.',
+    confidence: 'High',
+    source: 'IMO COLREG 1972, Rule 19 · seamanship practice · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-COLREG-RADAR-PLOTTING-001',
+    type: 'TacitKnowledge',
+    content:
+      'Use radar systematically or not at all (Rule 7). ' +
+      'A single glance at a blip is “scanty radar information” — it breeds assumption, and the Rules warn against acting on it. ' +
+      'Proper use means long-range scanning and plotting (or ARPA) to get each contact’s CPA, TCPA, and true course and speed, so you can pick an alteration that actually opens CPA without setting up a new close-quarters situation with a third ship. ' +
+      'The plot is also what tells you a slow-drawing bearing can still mean risk when the range is closing fast.',
+    confidence: 'High',
+    source: 'IMO COLREG 1972, Rule 7 · seamanship practice · v1.0-2026-08-05',
+  },
+];
+
 // ─── Combined node list ───────────────────────────────────────────
 
 export const colregGraphNodes: AJPNode[] = [
@@ -269,6 +375,7 @@ export const colregGraphNodes: AJPNode[] = [
   ...colregStepNodes,
   ...colregFaultNodes,
   ...colregActionNodes,
+  ...colregTacitNodes,
 ];
 
 // ─── Edges ────────────────────────────────────────────────────────
@@ -311,4 +418,23 @@ export const colregGraphEdges: AJPEdge[] = [
   { from: 'FAULT-COLREG-STANDON-FAILS-001', to: 'CONSEQUENCE-COLREG-COLLISION-001', type: 'CAUSES' },
   { from: 'FAULT-COLREG-SMALL-ALTERATION-001', to: 'CONSEQUENCE-COLREG-CLOSE-QUARTERS-001', type: 'CAUSES' },
   { from: 'FAULT-COLREG-EXCESS-SPEED-VIS-001', to: 'CONSEQUENCE-COLREG-CLOSE-QUARTERS-001', type: 'CAUSES' },
+  // Tacit seamanship grounded in the underlying rule (tacit → TheoryReference)
+  { from: 'TACIT-COLREG-CBDR-001', to: 'RULE-COLREG-07', type: 'SUPPORTED_BY' },
+  { from: 'TACIT-COLREG-RADAR-PLOTTING-001', to: 'RULE-COLREG-07', type: 'SUPPORTED_BY' },
+  { from: 'TACIT-COLREG-STARBOARD-BIAS-001', to: 'RULE-COLREG-14', type: 'SUPPORTED_BY' },
+  { from: 'TACIT-COLREG-BOLD-ALTERATION-001', to: 'RULE-COLREG-08', type: 'SUPPORTED_BY' },
+  { from: 'TACIT-COLREG-COURSE-OVER-SPEED-001', to: 'RULE-COLREG-08', type: 'SUPPORTED_BY' },
+  { from: 'TACIT-COLREG-PASS-ASTERN-001', to: 'RULE-COLREG-15', type: 'SUPPORTED_BY' },
+  { from: 'TACIT-COLREG-STANDON-ESCALATION-001', to: 'RULE-COLREG-17', type: 'SUPPORTED_BY' },
+  { from: 'TACIT-COLREG-SAFE-SPEED-001', to: 'RULE-COLREG-06', type: 'SUPPORTED_BY' },
+  { from: 'TACIT-COLREG-RESTRICTED-VIS-001', to: 'RULE-COLREG-19', type: 'SUPPORTED_BY' },
+  // Failure modes / steps that each tacit concept explains (fault/step → tacit)
+  { from: 'FAULT-COLREG-SMALL-ALTERATION-001', to: 'TACIT-COLREG-BOLD-ALTERATION-001', type: 'REQUIRES' },
+  { from: 'FAULT-COLREG-ALTER-TO-PORT-001', to: 'TACIT-COLREG-STARBOARD-BIAS-001', type: 'REQUIRES' },
+  { from: 'FAULT-COLREG-ALTER-TO-PORT-001', to: 'TACIT-COLREG-PASS-ASTERN-001', type: 'REQUIRES' },
+  { from: 'FAULT-COLREG-STANDON-FAILS-001', to: 'TACIT-COLREG-STANDON-ESCALATION-001', type: 'REQUIRES' },
+  { from: 'FAULT-COLREG-EXCESS-SPEED-VIS-001', to: 'TACIT-COLREG-SAFE-SPEED-001', type: 'REQUIRES' },
+  { from: 'FAULT-COLREG-EXCESS-SPEED-VIS-001', to: 'TACIT-COLREG-RESTRICTED-VIS-001', type: 'REQUIRES' },
+  { from: 'STEP-COLREG-ASSESS-001', to: 'TACIT-COLREG-CBDR-001', type: 'REQUIRES' },
+  { from: 'STEP-COLREG-LOOKOUT-001', to: 'TACIT-COLREG-RADAR-PLOTTING-001', type: 'REQUIRES' },
 ];

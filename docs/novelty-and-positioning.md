@@ -336,14 +336,20 @@ on the instrument — a second, weight-level instance of the C2 KC→metric mapp
 
 **Cost / infra.** One GPU; LoRA unlearning on a 7–8B model is hours, not days.
 
-**Status: harness built + CPU-validated** (`experiments/unlearning/`). The full pipeline
-— dataset build → LoRA unlearn (**NPO** + gradient-ascent, reference-via-adapter-disable)
-→ removal audit → save/reload → OpenAI-compatible serving for the scorer — runs and is
-smoke-tested on CPU (`smoke_test.py`, distilgpt2: GA drives forget-set NLL ~5.0 → ~140;
-NPO's reference path executes cleanly). Only the **real 7-8B run needs a GPU**; the
-scoring side is already built and provider-agnostic — `serve.py` exposes the base/unlearned
-model as an OpenAI-compatible endpoint that `openAiCompatCompleter` + `npm run colreg:leakage`
-score unchanged. See `experiments/unlearning/README.md`.
+**Status: harness built + a real CPU unlearning result** (`experiments/unlearning/`). The
+full pipeline — dataset build → LoRA unlearn (**NPO** + gradient-ascent) → removal audit →
+serve for scoring — runs, and produced a genuine result on **Qwen2.5-1.5B-Instruct** (a
+model that actually knows the rule): NPO strongly **suppresses** the alter-to-starboard
+behavior — forget-target NLL **4.6 → 41**, held-out direction-cue rate **5/6 → 0/6**
+(robust to the starboard→right synonym) — while retain knowledge (lookout, safe speed,
+restricted visibility) stays coherent. Honest scope: this is behavioral/target
+suppression + teacher-forced NLL, **not** verified semantic *removal* — that is precisely
+what the task-level instrument settles (below). It is the weight-level counterpart to the
+context-level leakage result, and the objective-audit direction over dialogue-scored
+unlearning (Song et al. 2026). **Remaining GPU step:** score the
+base/unlearned model on the reference-optimal *instrument* (the 2×2 regret/compliance) at
+7-8B scale — the scoring side is already built (`serve.py` → `openAiCompatCompleter` →
+`npm run colreg:leakage`). See `experiments/unlearning/README.md`.
 
 ---
 

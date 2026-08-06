@@ -92,6 +92,94 @@ export function matchNodes(
     .slice(0, topK);
 }
 
+// ─── Scoped graph view ────────────────────────────────────────────
+// A GraphView binds the node/edge accessors to one explicit set of nodes and
+// edges, so retrieval can be scoped to a single domain instead of the globally
+// bound graph. This is what stops a tire/COLREG probe from matching AJP tacit
+// knowledge: build a view over the active domain's corpus and query that.
+
+export interface GraphView {
+  nodes: AJPNode[];
+  edges: AJPEdge[];
+  nodeById(id: string): AJPNode | undefined;
+  nodesByType(type: AJPNode['type']): AJPNode[];
+  outNeighbors(fromId: string, edgeType: string): AJPNode[];
+  inNeighbors(toId: string, edgeType: string): AJPNode[];
+  outEdgeTypes(nodeId: string): string[];
+  matchNodes(
+    queryText: string,
+    types: AJPNode['type'][],
+    topK: number,
+  ): Array<{ node: AJPNode; score: number }>;
+}
+
+/** Drop duplicate nodes by id, keeping the first occurrence. */
+export function dedupeNodesById(nodes: AJPNode[]): AJPNode[] {
+  const seen = new Set<string>();
+  const out: AJPNode[] = [];
+  for (const n of nodes) {
+    if (!seen.has(n.id)) {
+      seen.add(n.id);
+      out.push(n);
+    }
+  }
+  return out;
+}
+
+/** Build a self-contained accessor set over an explicit node/edge slice. */
+export function createGraphView(nodes: AJPNode[], edges: AJPEdge[]): GraphView {
+  const byId = (id: string) => nodes.find((n) => n.id === id);
+  return {
+    nodes,
+    edges,
+    nodeById: byId,
+    nodesByType: (type) => nodes.filter((n) => n.type === type),
+    outNeighbors: (fromId, edgeType) =>
+      edges
+        .filter((e) => e.from === fromId && e.type === edgeType)
+        .map((e) => byId(e.to))
+        .filter((n): n is AJPNode => n !== undefined),
+    inNeighbors: (toId, edgeType) =>
+      edges
+        .filter((e) => e.to === toId && e.type === edgeType)
+        .map((e) => byId(e.from))
+        .filter((n): n is AJPNode => n !== undefined),
+    outEdgeTypes: (nodeId) => [
+      ...new Set(edges.filter((e) => e.from === nodeId).map((e) => e.type)),
+    ],
+    matchNodes: (queryText, types, topK) =>
+      nodes
+        .filter((n) => types.includes(n.type))
+        .map((n) => ({ node: n, score: tokenSimilarity(queryText, n.content) }))
+        .filter((r) => r.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK),
+  };
+}
+
+/**
+ * The default retrieval scope: a view over the graph currently bound via
+ * bindDomainGraph() (see src/domains/boot.ts). Its accessors delegate to the
+ * live module-level bindings, so it always reflects the active domain's graph
+ * without being rebuilt on every domain switch. Retrieval strategies fall back
+ * to this when no explicit view is passed; other domains pass their own view
+ * via graphViewForDomain().
+ */
+export const boundGraphView: GraphView = {
+  get nodes() {
+    return allNodes;
+  },
+  get edges() {
+    return allEdges;
+  },
+  nodeById,
+  nodesByType,
+  outNeighbors,
+  inNeighbors,
+  outEdgeTypes,
+  matchNodes,
+};
+
 // ─── Semantic node cache ──────────────────────────────────────────
 // Pre-computed embeddings for all node content strings. Populated lazily
 // on first call to matchNodesSemantic() and cached for the session lifetime.
