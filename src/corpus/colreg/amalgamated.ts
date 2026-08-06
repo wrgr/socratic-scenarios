@@ -136,7 +136,7 @@ export const colregPartCNodes: AJPNode[] = [
     id: 'RULE-COLREG-23',
     type: 'TheoryReference',
     content:
-      'Rule 23 — Power-driven vessels underway: exhibit a forward masthead light, a second masthead light abaft and higher (vessels 50 m or more; optional under 50 m), sidelights, and a sternlight. A power-driven vessel under 12 m may instead show an all-round white light and sidelights; under 7 m and under 7 knots, an all-round white light (and sidelights if practicable). Inland only: a power-driven vessel may also exhibit a "special flashing light" (yellow, 50–70 flashes/minute) at the head of a tow.',
+      'Rule 23 — Power-driven vessels underway: exhibit a forward masthead light, a second masthead light abaft and higher (vessels 50 m or more; optional under 50 m), sidelights, and a sternlight. A power-driven vessel under 12 m may instead show an all-round white light and sidelights; under 7 m and under 7 knots, an all-round white light (and sidelights if practicable).',
     confidence: 'High',
     source: `${AMALG}, Rule 23`,
   },
@@ -144,7 +144,7 @@ export const colregPartCNodes: AJPNode[] = [
     id: 'RULE-COLREG-24',
     type: 'TheoryReference',
     content:
-      'Rule 24 — Towing and pushing: a vessel towing astern shows two masthead lights in a vertical line (three when the tow length exceeds 200 m), sidelights, a sternlight, a towing light above the sternlight, and — if the tow is over 200 m — a diamond shape by day. The vessel being towed shows sidelights and a sternlight (and a diamond if over 200 m). Composite units and vessels pushing ahead / towing alongside have their own configurations; Inland Western Rivers exceptions apply under Rule 24(j).',
+      'Rule 24 — Towing and pushing: a vessel towing astern shows two masthead lights in a vertical line (three when the tow length exceeds 200 m), sidelights, a sternlight, a towing light above the sternlight, and — if the tow is over 200 m — a diamond shape by day. The vessel being towed shows sidelights and a sternlight (and a diamond if over 200 m). Composite units and vessels pushing ahead / towing alongside have their own configurations. Inland: a vessel being pushed ahead (not part of a composite unit) is lit at its forward end with sidelights and a "special flashing light" — yellow, flashing 50–70 times per minute; Western Rivers exceptions apply under Rule 24(j).',
     confidence: 'High',
     source: `${AMALG}, Rule 24`,
   },
@@ -311,7 +311,7 @@ export const colregAnnexNodes: AJPNode[] = [
     id: 'ANNEX-COLREG-II',
     type: 'TheoryReference',
     content:
-      'Annex II — Additional signals for fishing vessels fishing in close proximity: extra all-round lights (e.g. white over red for shooting nets, red over white for hauling, two reds for nets fast on an obstruction) so vessels working together can read each other’s operation.',
+      'Annex II — Additional signals for fishing vessels fishing in close proximity: extra all-round lights in a vertical line — two white for shooting their nets, white over red for hauling their nets, and two red when the nets have come fast upon an obstruction — so vessels working together can read each other’s operation.',
     confidence: 'Medium',
     source: `${AMALG}, Annex II`,
   },
@@ -444,8 +444,9 @@ export const colregAmalgTacitNodes: AJPNode[] = [
     type: 'TacitKnowledge',
     content:
       'In fog your ears run the plot the eyes cannot (Rule 35). ' +
-      'One prolonged blast every couple of minutes is a power-driven vessel making way; two prolonged is one stopped and dead in the water; one prolonged and two short is a vessel that cannot get out of your way — hampered, sailing, fishing, or towing — so you owe her the room. ' +
+      'One prolonged blast every couple of minutes is a power-driven vessel making way; two prolonged is one stopped and dead in the water; one prolonged and two short marks a hampered vessel — not under command, restricted, constrained by draught, sailing, fishing, or towing — that you should not count on to manoeuvre out of your way. ' +
       'A rapidly rung bell is a vessel at anchor. ' +
+      'Remember there is no stand-on vessel in restricted visibility (Rule 19): the signal tells you what kind of contact to expect, not who has right of way, and you are bound to take avoiding action regardless. ' +
       'Hearing a fog signal apparently forward of the beam, before you have it plotted on radar and know it will pass clear, is the Rule 19 cue to slow to bare steerageway or stop — a signal you can hear but not resolve is exactly the situation the sound rules are built for.',
     confidence: 'High',
     source: `${AMALG}, Rules 19, 35 · seamanship practice · ${VER}`,
@@ -633,11 +634,12 @@ export const colregAmalgamatedProbeNodes: AJPNode[] = [
     content:
       'You are in a 15-metre vessel about to cross a narrow buoyed channel as a large deep-draught ship comes up it, confined to the dredged water. What does Rule 9 require of you, and how is "shall not impede" different from ordinary give-way?',
     expectedConcepts: [
-      'Keep to the starboard side of the channel as far as is safe and practicable (Rule 9)',
-      'A vessel under 20 m shall not impede a vessel that can navigate only within the channel',
-      'Do not cross if crossing impedes such a vessel',
+      'A vessel under 20 m shall not impede a vessel that can navigate only within the channel (Rule 9(b))',
+      'A vessel shall not cross a narrow channel if crossing impedes a vessel confined to the channel (Rule 9(d))',
       '"Not impede" means keep well clear early so she never has to alter or slow for you — stronger than give-way',
+      'Time the crossing to pass well astern of the confined vessel, or hold and wait, rather than crossing ahead of her',
       'The deep-draught ship has effectively no room to manoeuvre out of the channel',
+      '(Rule 9(a) keep-to-the-starboard-side applies to a vessel proceeding along the channel, not to one crossing it)',
     ],
     commonWrongAnswers: [
       'I can cross first because I am the stand-on/smaller vessel',
@@ -717,15 +719,16 @@ export const colregAmalgamatedProbeNodes: AJPNode[] = [
     content:
       'In dense fog you hear, apparently forward of your beam, one prolonged blast followed by two short blasts, repeated. What kind of vessel is that, and what does Rule 19 require you to do?',
     expectedConcepts: [
-      'One prolonged + two short blasts = a vessel restricted/hampered — NUC, RAM, sailing, fishing, or towing (Rule 35)',
-      'She is a vessel you cannot expect to keep out of your way, so you must give her room',
+      'One prolonged + two short blasts marks a hampered vessel — not under command, restricted in ability to manoeuvre, constrained by draught, sailing, fishing, or towing/pushing (Rule 35(c))',
+      'The signal names a class of vessels, not one specific status, and confers no right of way',
+      'In restricted visibility there is no stand-on or give-way vessel — Rule 19, not the Rule 18 hierarchy, governs and both vessels must act',
       'A fog signal forward of the beam that you cannot resolve by radar is a Rule 19 close-quarters cue',
       'Reduce to bare steerageway, or stop, until the situation is resolved (Rules 19, 6)',
-      'In restricted visibility there is no stand-on vessel — both are bound to act',
     ],
     commonWrongAnswers: [
       'It is a power-driven vessel making way — one prolonged blast only',
       'Hold course and speed because I am the stand-on vessel',
+      'She must keep clear of me / I have right of way once I identify her signal',
       'Alter boldly to port toward the sound to pass it quickly',
     ],
     masteryThreshold: 0.9,
