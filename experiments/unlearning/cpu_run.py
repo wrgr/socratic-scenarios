@@ -6,7 +6,7 @@ genuine unlearning result rather than the distilgpt2 plumbing smoke.
 
   CPU_MODEL=Qwen/Qwen2.5-1.5B-Instruct python cpu_run.py
 
-Chains: build_datasets -> unlearn (NPO) -> audit (base vs unlearned, chat-templated
+Chains: build_datasets -> unlearn (SimNPO) -> audit (base vs unlearned, chat-templated
 probes). Reads the audit output and prints a compact before/after verdict.
 """
 import os
@@ -16,7 +16,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODEL = os.environ.get("CPU_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
-METHOD = os.environ.get("CPU_METHOD", "npo")
+METHOD = os.environ.get("CPU_METHOD", "simnpo")
 STEPS = os.environ.get("CPU_STEPS", "72")
 LR = os.environ.get("CPU_LR", "3e-4")
 BETA = os.environ.get("CPU_BETA", "0.05")

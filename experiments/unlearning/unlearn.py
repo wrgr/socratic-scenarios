@@ -2,18 +2,27 @@
 """
 Unlearn the alter-to-starboard knowledge from an open-weight LLM.
 
-Two methods (both LoRA, so the base weights are untouched and the reference policy is
-recovered by simply disabling the adapter):
+Three methods (all LoRA, so the base weights are untouched and, where a reference policy
+is needed, it is recovered by simply disabling the adapter):
 
-  --method npo   Negative Preference Optimization (Zhang et al. 2024, arXiv:2404.05868):
-                 treats the forget set as negative-only preference data. Loss on a
-                 forget example is (2/beta)*softplus(beta*(logp - logp_ref)), which
-                 pushes the target's likelihood BELOW the reference without the
-                 catastrophic collapse of plain gradient ascent.
-  --method ga    Gradient-ascent baseline (Jang et al. 2023, arXiv:2210.01504):
-                 maximize the LM loss on the forget set (loss_forget = -CE_forget).
+  --method simnpo  SimNPO (Fan et al. 2024, arXiv:2410.07163) — PRIMARY. A reference-free,
+                   length-normalized NPO. Loss on a forget example is
+                   (2/beta)*softplus(beta * (logp/|y|) + gamma): it penalizes the
+                   per-token mean log-prob of the forget target directly, with a reward
+                   margin gamma, and needs NO pi_ref forward pass (one fewer forward than
+                   NPO). Length normalization removes NPO's bias toward long sequences and
+                   gives a better forget-quality / utility tradeoff.
+  --method npo     Negative Preference Optimization (Zhang et al. 2024, arXiv:2404.05868)
+                   — baseline. Loss is (2/beta)*softplus(beta*(logp - logp_ref)), pushing
+                   the target's likelihood BELOW the reference (adapter-disabled) without
+                   the catastrophic collapse of plain gradient ascent.
+  --method ga      Gradient-ascent baseline (Jang et al. 2023, arXiv:2210.01504):
+                   maximize the LM loss on the forget set (loss_forget = -CE_forget).
 
-Both add a retain term (standard CE on the retain set) to preserve other knowledge.
+All add a retain term (standard CE on the retain set) to preserve other knowledge. For a
+*stable* novice that resists benign relearning, pair with the utility-preserving robust
+recipe of Fan et al. 2025 (arXiv:2509.02820); the removal audit (audit.py) reports whether
+the knowledge is gone vs merely suppressed.
 
 GPU strongly recommended for a real 7-8B run; CPU works for the tiny-model smoke test
 (smoke_test.py). See README.md.
@@ -75,8 +84,9 @@ def seq_logprob_and_ce(model, input_ids, labels, attn):
     safe = labels.clamp(min=0).unsqueeze(-1)
     tok_logp = logp.gather(-1, safe).squeeze(-1) * mask
     seq_logp = tok_logp.sum(dim=1)                       # per example
+    tok_counts = mask.sum(dim=1)                         # labeled tokens per example
     ce = -(tok_logp.sum() / mask.sum().clamp(min=1))     # mean over labeled tokens
-    return seq_logp, ce
+    return seq_logp, ce, tok_counts
 
 
 def make_loader(rows, tok, bs, shuffle, chat=False):
@@ -89,8 +99,9 @@ def main():
     ap.add_argument("--model", required=True, help="HF model id or local path")
     ap.add_argument("--data", default=os.path.join(os.path.dirname(__file__), "data"))
     ap.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "out/unlearned"))
-    ap.add_argument("--method", choices=["npo", "ga"], default="npo")
-    ap.add_argument("--beta", type=float, default=0.1)             # NPO temperature
+    ap.add_argument("--method", choices=["simnpo", "npo", "ga"], default="simnpo")
+    ap.add_argument("--beta", type=float, default=0.1)             # NPO/SimNPO temperature
+    ap.add_argument("--gamma", type=float, default=0.0)            # SimNPO reward margin
     ap.add_argument("--retain_weight", type=float, default=1.0)
     ap.add_argument("--lr", type=float, default=1e-4)
     ap.add_argument("--epochs", type=int, default=8)
@@ -132,16 +143,22 @@ def main():
                 r_ids, r_lab, r_attn = next(r_iter)
             r_ids, r_lab, r_attn = r_ids.to(args.device), r_lab.to(args.device), r_attn.to(args.device)
 
-            logp, ce_forget = seq_logprob_and_ce(model, f_ids, f_lab, f_attn)
-            if args.method == "npo":
+            logp, ce_forget, f_counts = seq_logprob_and_ce(model, f_ids, f_lab, f_attn)
+            if args.method == "simnpo":
+                # SimNPO (arXiv:2410.07163): reference-free, length-normalized. Penalize
+                # the per-token mean log-prob of the forget target, with margin gamma.
+                mean_logp = logp / f_counts.clamp(min=1)               # length-normalized
+                forget_loss = (2.0 / args.beta) * torch.nn.functional.softplus(
+                    args.beta * mean_logp + args.gamma).mean()
+            elif args.method == "npo":
                 with torch.no_grad(), model.disable_adapter():         # reference = base model
-                    logp_ref, _ = seq_logprob_and_ce(model, f_ids, f_lab, f_attn)
+                    logp_ref, _, _ = seq_logprob_and_ce(model, f_ids, f_lab, f_attn)
                 forget_loss = (2.0 / args.beta) * torch.nn.functional.softplus(
                     args.beta * (logp - logp_ref)).mean()
             else:  # gradient ascent: maximize CE on the forget set
                 forget_loss = -ce_forget
 
-            _, ce_retain = seq_logprob_and_ce(model, r_ids, r_lab, r_attn)
+            _, ce_retain, _ = seq_logprob_and_ce(model, r_ids, r_lab, r_attn)
             loss = forget_loss + args.retain_weight * ce_retain
 
             opt.zero_grad()

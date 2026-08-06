@@ -88,7 +88,7 @@ Specs live in [`docs/novelty-and-positioning.md`](novelty-and-positioning.md) §
 | **Corpus-gap localization** (`diagnose.ts`) | C1 half (i) | ✅ built | — | write up |
 | **Exp. 1 — bound vs. unconstrained leakage, 3–4 models** | C1 half (ii), empirical spine | harness ✅, offline-validated | **needs a working LLM credential** (Gemini / OpenAI-compatible / GitHub Models) | run once key available; small code delta: `--condition` flag + `buildPrompt(..., {strict:false})` |
 | **Sensitivity analysis** over instrument/estimator weights | robustness (Release B) | ⬜ not built | — | new experiment; show protocol *ranking* is stable |
-| **Exp. 2 — open-weight unlearning arm** | weight-level C1; neutralizes "just prompting" | scaffold ✅, CPU smoke-tested (`experiments/unlearning/`) | **needs one GPU** (7–8B LoRA) | run `MODEL=Qwen/Qwen2.5-7B-Instruct ./run.sh`; NPO primary + GA baseline; removal audit required |
+| **Exp. 2 — open-weight unlearning arm** | weight-level C1; neutralizes "just prompting" | scaffold ✅, CPU smoke-tested (`experiments/unlearning/`) | **needs one GPU** (7–8B LoRA) | run `MODEL=Qwen/Qwen2.5-7B-Instruct ./run.sh`; **SimNPO primary** (2410.07163) + NPO/GA baselines; removal audit required |
 
 **Critical path to Release A:** a single LLM API key unblocks Experiment 1, which is the
 empirical heart of C1. Everything else for A is already built or is writing.
@@ -161,10 +161,16 @@ and the bidirectional diagnosis.
 
 - [ ] Supply a working **LLM credential** → run **Experiment 1** (unblocks the C1 spine).
 - [ ] Restructure `colreg-whitepaper.md` into the C1+C2-led arXiv draft (§5 outline above).
-- [ ] Wire the head-on related-work paragraph + citations into the draft.
+- [ ] Wire the head-on related-work paragraph + citations into the draft — including the
+      four closest-neighbors from the **2026-08-06 re-scan** (novelty doc §10): CUE-R
+      (2604.05467, C1), maritime analytics (2507.01274, C2), the LLM-judge pre-registered
+      audit (2607.28128, C3) and EduClaw-Bench (2608.03206, C3). Do **not** cite the
+      withdrawn 2606.05633.
 - [ ] Write the proxy-validity limitations section (against ourselves).
 - [ ] Supply a **GPU** → run **Experiment 2** (`experiments/unlearning/run.sh`); include if it
       lands before the workshop deadline, else hold for Release B.
 - [ ] Build the **sensitivity analysis** experiment (Release B).
 - [ ] Verify the target **workshop CFP** and post the **arXiv** preprint at submission.
-- [ ] Re-run the prior-art scan immediately before submission (fast-moving 2026 space).
+- [ ] Re-run the prior-art scan immediately before submission (fast-moving 2026 space) —
+      the 2026-08-06 re-scan (novelty doc §10) confirmed C1/C2/C3 hold, but the 2607–2608
+      arXiv range is still sparsely indexed, so a final sweep is required.

@@ -3,12 +3,12 @@
 #
 #   MODEL=meta-llama/Llama-3.1-8B-Instruct ./run.sh
 #
-# Steps: build datasets -> unlearn (NPO) -> audit removal -> (optional) serve for scoring.
+# Steps: build datasets -> unlearn (SimNPO) -> audit removal -> (optional) serve for scoring.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 MODEL="${MODEL:-Qwen/Qwen2.5-7B-Instruct}"
-METHOD="${METHOD:-npo}"
+METHOD="${METHOD:-simnpo}"    # simnpo (primary) | npo | ga
 OUT="${OUT:-out/unlearned}"
 # LoRA targets: omit for Llama/Qwen (peft auto-infers q_proj/v_proj/...); set for GPT-2.
 TARGETS_ARG=""

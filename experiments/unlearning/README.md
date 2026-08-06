@@ -17,7 +17,7 @@ that model on the **reference-optimal control-task instrument**. See
 | File | Role |
 |---|---|
 | `build_datasets.py` | Forget set (alter-to-starboard, many phrasings/QA), retain set (other COLREG knowledge), and held-out audit probes. Pure stdlib. |
-| `unlearn.py` | LoRA unlearning: **NPO** (Zhang 2024, arXiv:2404.05868) primary + **gradient-ascent** baseline (Jang 2023, arXiv:2210.01504). Reference policy = adapter disabled. Retain term preserves other knowledge. |
+| `unlearn.py` | LoRA unlearning: **SimNPO** (Fan 2024, arXiv:2410.07163) primary — reference-free, length-normalized NPO with a better forget/utility tradeoff — plus **NPO** (Zhang 2024, arXiv:2404.05868) and **gradient-ascent** (Jang 2023, arXiv:2210.01504) baselines. Reference policy (NPO only) = adapter disabled. Retain term preserves other knowledge. |
 | `audit.py` | Removal audit (Lynch 2024 spirit): forget-set NLL ↑, retain-set NLL ~flat, forget-probe keyword rate ↓, base vs unlearned. |
 | `serve.py` | Minimal OpenAI-compatible server so the existing TS scorer (`openAiCompatCompleter` → `npm run colreg:leakage`) scores the model **unchanged**. |
 | `smoke_test.py` | CPU end-to-end pipeline check on a small real model (no GPU). |
@@ -51,10 +51,10 @@ unlearning failed / left latent knowledge — and the same instrument flags it
 ## Status: what is validated here vs. what needs a GPU
 
 - **Validated on CPU (this repo, `smoke_test.py`):** the whole pipeline runs — dataset
-  build → LoRA unlearn (NPO + GA, reference-via-adapter-disable) → audit → save/reload →
-  OpenAI-compatible serving. On distilgpt2, GA drives the forget-set NLL from ~5.0 to
-  ~140 (target likelihood destroyed), and NPO's reference path executes cleanly. This
-  proves the **machinery**, not the science.
+  build → LoRA unlearn (GA + SimNPO + NPO, reference-via-adapter-disable) → audit →
+  save/reload → OpenAI-compatible serving. On distilgpt2, GA drives the forget-set NLL
+  from ~5.0 to ~140 (target likelihood destroyed), and the SimNPO (primary) and NPO paths
+  execute cleanly. This proves the **machinery**, not the science.
 - **Needs a GPU + a real 7-8B model:** the actual result — a model that *knows* the
   COLREGs, unlearned and scored on the instrument. A 100M–100k-param toy has no COLREG
   knowledge to remove. LoRA unlearning on a 7-8B model is hours on one GPU.
@@ -62,9 +62,14 @@ unlearning failed / left latent knowledge — and the same instrument flags it
 ## Caveats (carry into the paper)
 
 - **Unlearning ≠ deletion.** Verify removal with more than one probe and test relearning
-  (Lynch 2402.16835; Hu 2406.13356; Deeb & Roger 2410.08827). `audit.py` is a start, not
-  a proof.
-- GA is deliberately aggressive (it also raises retain NLL — visible in the smoke); NPO +
-  the retain term are the utility-preserving default. Tune `--beta`, `--retain_weight`.
+  (Lynch 2402.16835; Hu 2406.13356; Deeb & Roger 2410.08827). For a *stable* novice that
+  resists benign relearning, use the robust utility-preserving recipe of Fan 2025
+  (arXiv:2509.02820). `audit.py` is a start, not a proof — and note that unlearning-eval
+  validity is itself contested (arXiv:2503.06991; 2506.00688), so report probes, not a
+  single number.
+- GA is deliberately aggressive (it also raises retain NLL — visible in the smoke); SimNPO
+  (primary) and NPO + the retain term are the utility-preserving default. SimNPO is
+  reference-free and length-normalized. Tune `--beta`, `--gamma` (SimNPO margin),
+  `--retain_weight`.
 - Report the removal-audit numbers alongside the instrument numbers, or a reviewer can't
   tell "unlearned" from "prompted to act dumb."
