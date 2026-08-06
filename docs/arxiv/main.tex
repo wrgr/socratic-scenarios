@@ -56,11 +56,11 @@ reads both diagnoses off a single control-task metric. We exercise the instrumen
 controlled-competence proxy learners on maritime collision avoidance (COLREG) and a
 discrete procedural domain (roadside tire change), and report construct validity,
 estimator-recovery calibration, and a real-model discrimination result across six current
-LLMs: under a strict prompt the instrument diagnoses corpus-binding, and removing the
-binding clause collapses the ablation-$\delta$ and flips closed-book abstention to
-contamination for \emph{every} model---with lighter models flipping fully to \emph{leaking},
-and the lightest leaking even under the strict prompt (a binding failure the instrument
-catches). All results are \textbf{simulation-based mechanism evidence, not human-subject
+LLMs. Read on the same regret instrument, the rule-ablation grades with binding fidelity
+under a strict prompt (falling monotonically with model capability) and collapses when the
+binding clause is removed, flipping \emph{every} model to \emph{leaking}; the lightest model
+fails to bind even when instructed to---a binding failure the instrument surfaces. All
+results are \textbf{simulation-based mechanism evidence, not human-subject
 external validity}; we scope the contribution accordingly and pre-register the human study
 as future work.
 \end{abstract}
@@ -236,7 +236,29 @@ bleed, not the presence of the intended effect. Second, the mapping is what make
 diagnosis (Section~\ref{sec:diagnosis}) actionable: without it, a task failure cannot be
 attributed to a specific corpus rule. We therefore treat identifiability as a design
 \emph{requirement to be verified per instrument}---a property an instrument can lack---and
-verifying it is part of building one, exactly as construct validity is.
+verifying it is part of building one, exactly as construct validity is. On the procedural
+domain the verification is clean (Table~\ref{tab:ident}): ablating each knowledge component
+degrades only its governed metric, with maximum off-diagonal change $0.0000$---no cross-bleed.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ablated \kc\ $\downarrow$ / metric $\rightarrow$ & safety & core & order & finish \\
+\midrule
+safety      & $\mathbf{-1.00}$ & $0.00$ & $0.00$ & $0.00$ \\
+core steps  & $0.00$ & $\mathbf{-1.00}$ & $0.00$ & $0.00$ \\
+sequencing  & $0.00$ & $0.00$ & $\mathbf{-0.22}$ & $0.00$ \\
+finishing   & $0.00$ & $0.00$ & $0.00$ & $\mathbf{-1.00}$ \\
+\bottomrule
+\end{tabular}
+\caption{\kc$\to$single-metric identifiability (procedural domain). Change in each metric
+after ablating each knowledge component. The diagonal (bold) is the intended governed
+metric; every off-diagonal cell is $0.00$ (max $|\Delta|=0.0000$)---ablation does not bleed
+across metrics. \texttt{npm run proc:identifiability}.}
+\label{tab:ident}
+\end{table}
 
 \paragraph{Estimator recovery and calibration.} Feeding the instrument's outcomes into a
 generic learner-agent estimator, we recover known ground truth on synthetic data
@@ -276,71 +298,100 @@ pretrained priors, not the corpus. We combine the ablation-delta with a
 \emph{counterfactual} test (replace ``alter to starboard'' with ``alter to port''; does the
 learner follow the altered rule?) and a \emph{closed-book} contamination baseline (no
 corpus supplied). The verdict---\textsc{corpus-bound}, \textsc{leaking}, or
-\textsc{inconclusive}---is read from the same metric. (The ablation signal uses the
-\emph{bounded compliance-penalty sub-metric} in $[0,1]$---deliberately near-binary, since
-following a discrete steering rule is itself close to binary---not the graded transfer
-objective $J$ of Table~\ref{tab:construct}; the two measure different things.)
+\textsc{inconclusive}---is read from the same metric, by a majority vote over the three
+signals so that a clear ablation-and-contamination pattern is not vetoed by a single
+dissenting sub-test.
+
+\subsection{One instrument, not two}
+\label{sec:coupling}
+It is fair to ask whether C1 really uses the C2 \emph{transfer} instrument or merely a
+convenient side-metric. The bounded compliance penalty we threshold in $[0,1]$ is
+deliberately near-binary (following a discrete steering rule is close to binary), which
+could look decoupled from the graded regret $\regret$ of Section~\ref{sec:instrument}. It is
+not: the compliance penalty is a \emph{term inside} the objective $J$, so the same rule
+ablation can be read on the full regret instrument directly. It carries the signal even more
+strongly---a corpus-bound learner that loses the rule it relied on abstains, collides, and
+its $J$ jumps by $\sim\!2000$, whereas a leaking learner's $J$ is invariant to the corpus.
+On the two reference mocks, the regret-ablation is $1981$ (corpus-bound) versus $0$
+(leaking). So localization and leakage are read off the very metric that measures transfer;
+the bounded compliance penalty is just a low-variance, thresholdable readout of it. This is
+what makes the ``single instrument, used bidirectionally'' claim literal rather than
+rhetorical, and it is visible per model in the $\delta_{\!\regret}$ column of
+Table~\ref{tab:disc}.
 
 \paragraph{Offline recovery of known ground truth.} Against two reference mock learners
 whose truth is known, the instrument recovers it exactly: the corpus-bound mock yields
-ablation-delta $1.000$, follows the counterfactual, and abstains closed-book
-($\Rightarrow$ \textsc{corpus-bound}); the leaking mock yields ablation-delta $0.000$,
-ignores the counterfactual, and answers closed-book from priors
-($\Rightarrow$ \textsc{leaking}).
+ablation-delta $1.000$ (regret-ablation $1981$), follows the counterfactual, and abstains
+closed-book ($\Rightarrow$ \textsc{corpus-bound}); the leaking mock yields ablation-delta
+$0.000$ (regret-ablation $0$), ignores the counterfactual, and answers closed-book from
+priors ($\Rightarrow$ \textsc{leaking}).
 
 \paragraph{Real-model discrimination.} We run the instrument on six current production LLMs
 under both prompt conditions---\texttt{bound} (the strict corpus-binding positive control)
 and \texttt{unconstrained} (the binding clause removed, parametric fallback allowed)---and
-read the verdict off the same metric (Table~\ref{tab:disc}). Three findings stand out.
-\emph{(1) The core leakage signal is universal:} for every model, removing the binding
-clause collapses the ablation-$\delta$ to $0.000$ (the governed metric stops depending on
-the corpus) and flips the closed-book baseline from abstention to answering from priors.
-\emph{(2) Capability tracks binding fidelity:} the three stronger flash models bind tightly
-under the strict prompt ($\delta{=}1.000$) and, when unconstrained, land
-\textsc{inconclusive} rather than \textsc{leaking}---they stop relying on the corpus and
-contaminate closed-book, yet still comply with the counterfactual ``alter-to-port''
-instruction, so the counterfactual sub-test holds the composite verdict back. The lighter
-models bind more weakly ($\delta{=}0.667/0.333$) and flip cleanly to \textsc{leaking} when
-unconstrained. \emph{(3) The instrument catches a binding \emph{failure}:} the lightest
-model (\texttt{gemini-3.1-flash-lite}) is diagnosed \textsc{leaking} \emph{even under the
-bound prompt}---it ignores the corpus ($\delta{=}0.000$) and the counterfactual despite
-being told to use only the provided rules, exactly the kind of silent binding failure the
-instrument exists to surface. Mock learners (rows~1--2) bound the scale.
+read the verdict off the same metric (Table~\ref{tab:disc}). The verdict is a majority vote
+of three orthogonal signals: low ablation-$\delta$, counterfactual ignored, and closed-book
+contaminated. Three findings stand out. \emph{(1) The diagnosis rides the transfer
+instrument.} The $\delta_{\!\regret}$ column is the same ablation read on the full regret
+objective $J$ of Section~\ref{sec:instrument}---not a separate metric---and it carries the
+signal loudly: a corpus-bound learner that loses the rule it relied on collides, so $J$
+jumps by $\sim\!2000$. C1 and C2 are one instrument (Section~\ref{sec:coupling}).
+\emph{(2) Binding fidelity is graded, and capability tracks it.} Under the strict prompt,
+$\delta_{\!\regret}$ falls monotonically with model capability---$1981$ for the three
+stronger flash models, $1318$ and $658$ for the lite models, $\approx\!0$ for the lightest,
+which fails to rely on the corpus even when told to (diagnosed \textsc{inconclusive}: a
+binding \emph{failure} the instrument surfaces). \emph{(3) Removing the binding clause makes
+every model leak.} Under \texttt{unconstrained}, $\delta_{\!\regret}$ collapses to $\approx0$
+and closed-book flips to contamination for all six, and the vote returns \textsc{leaking}
+across the board. Raw completions are well-formed JSON with coherent rationales (e.g.\ the
+lightest model's closed-book reply is \texttt{\{abstained:true, "not covered by the provided
+rules"\}}), so the leakage is genuine prior-following, not a parse artifact. Mock learners
+(rows~1--2) bound the scale.
 
 \begin{table}[t]
 \centering
 \small
-\begin{tabular}{@{}llcccl@{}}
+\begin{tabular}{@{}llccccl@{}}
 \toprule
-Learner & Condition & ablation-$\delta$ & counterfact. & closed-book & Verdict \\
+Learner & Condition & $\delta$ (compl.) & $\delta_{\!\regret}$ ($J$) & counterfact. & closed-book & Verdict \\
 \midrule
-mock (corpus-bound) & --- & $1.000$ & follows & abstains & \textsc{corpus-bound} \\
-mock (leaking) & --- & $0.000$ & ignores & answers & \textsc{leaking} \\
+mock (corpus-bound) & --- & $1.000$ & $1981$ & follows & abstains & \textsc{corpus-bound} \\
+mock (leaking) & --- & $0.000$ & $0$ & ignores & answers & \textsc{leaking} \\
 \midrule
-\texttt{gemini-flash-latest} & bound & $1.000$ & follows & abstains & \textsc{corpus-bound} \\
-\texttt{gemini-flash-latest} & unconstr. & $0.000$ & follows & answers & \textsc{inconclusive} \\
-\texttt{gemini-2.5-flash} & bound & $1.000$ & follows & abstains & \textsc{corpus-bound} \\
-\texttt{gemini-2.5-flash} & unconstr. & $0.000$ & follows & answers & \textsc{inconclusive} \\
-\texttt{gemini-3.5-flash} & bound & $1.000$ & follows & abstains & \textsc{corpus-bound} \\
-\texttt{gemini-3.5-flash} & unconstr. & $0.000$ & follows & answers & \textsc{inconclusive} \\
+\texttt{gemini-flash-latest} & bound & $1.000$ & $1981$ & follows & abstains & \textsc{corpus-bound} \\
+\texttt{gemini-flash-latest} & unconstr. & $0.000$ & $0$ & follows & answers & \textsc{leaking} \\
+\texttt{gemini-2.5-flash} & bound & $1.000$ & $1981$ & follows & abstains & \textsc{corpus-bound} \\
+\texttt{gemini-2.5-flash} & unconstr. & $0.000$ & $0$ & follows & answers & \textsc{leaking} \\
+\texttt{gemini-3.5-flash} & bound & $1.000$ & $1981$ & follows & abstains & \textsc{corpus-bound} \\
+\texttt{gemini-3.5-flash} & unconstr. & $0.000$ & $0$ & follows & answers & \textsc{leaking} \\
 \midrule
-\texttt{gemini-flash-lite-latest} & bound & $0.667$ & follows & abstains & \textsc{corpus-bound} \\
-\texttt{gemini-flash-lite-latest} & unconstr. & $0.000$ & ignores & answers & \textsc{leaking} \\
-\texttt{gemini-3.5-flash-lite} & bound & $0.333$ & follows & abstains & \textsc{corpus-bound} \\
-\texttt{gemini-3.5-flash-lite} & unconstr. & $0.000$ & ignores & answers & \textsc{leaking} \\
-\texttt{gemini-3.1-flash-lite} & bound & $0.000$ & ignores & abstains & \textsc{leaking} \\
-\texttt{gemini-3.1-flash-lite} & unconstr. & $0.000$ & ignores & answers & \textsc{leaking} \\
+\texttt{gemini-flash-lite-latest} & bound & $0.667$ & $1318$ & follows & abstains & \textsc{corpus-bound} \\
+\texttt{gemini-flash-lite-latest} & unconstr. & $0.000$ & $0$ & ignores & answers & \textsc{leaking} \\
+\texttt{gemini-3.5-flash-lite} & bound & $0.333$ & $658$ & follows & abstains & \textsc{corpus-bound} \\
+\texttt{gemini-3.5-flash-lite} & unconstr. & $0.000$ & $0$ & ignores & answers & \textsc{leaking} \\
+\texttt{gemini-3.1-flash-lite} & bound & $0.000$ & $0$ & follows & abstains & \textsc{inconclusive} \\
+\texttt{gemini-3.1-flash-lite} & unconstr. & $0.000$ & $0$ & ignores & answers & \textsc{leaking} \\
 \bottomrule
 \end{tabular}
 \caption{C1 discrimination on six real LLMs (head-on instrument, $\delta$ threshold
-$0.15$). Removing the corpus-binding clause collapses the ablation-$\delta$ to $0.000$ and
-flips closed-book abstention to contamination for \emph{every} model. Stronger flash models
-bind tightly and go \textsc{inconclusive} unconstrained (they keep following the
-counterfactual); lighter models flip to \textsc{leaking}; the lightest leaks even under the
-bound prompt---a binding failure the instrument catches. Mock learners (top) bound the
-scale.}
+$0.15$; verdict = majority of three signals). $\delta_{\!\regret}$ is the \emph{same}
+ablation read on the full regret instrument $J$ (Section~\ref{sec:instrument}), not a
+separate metric. Under the strict prompt it grades with binding fidelity ($1981\!\to\!658\!
+\to\!0$); removing the binding clause collapses it to $0$ and flips every model to
+\textsc{leaking}. The lightest model fails to bind even when told to (\textsc{inconclusive}
+under \texttt{bound}). Mock learners (top) bound the scale.}
 \label{tab:disc}
 \end{table}
+
+\paragraph{Per-rule, not just per-corpus.} To show the diagnosis attributes reliance to a
+\emph{specific} rule rather than to corpus presence in general, we add a second, independent
+rule---Rule~15 crossing give-way---exercised on its own crossing scenarios (a rule only
+moves the metric on scenarios that invoke it, so each probe carries a matched subset).
+Ablating each rule produces a large regret signal on its own encounters: on
+\texttt{gemini-flash-latest} under the bound prompt, ablating Rule~14 gives
+$\delta_{\!\regret}{=}1981$ (head-on) and ablating Rule~15 gives $1285$ (crossing); on
+\texttt{gemini-flash-lite-latest}, $658$ and $662$ respectively. The two rules are localized
+on disjoint scenario subsets, so the instrument reads reliance per rule.
 
 \section{Proxy learners as a pre-trial screen (application)}
 \label{sec:proxies}
@@ -380,8 +431,8 @@ classes as a cross-check, not a substitute for human data. \textbf{Instrument se
 The protocol depends on weighting choices (ship domain, CRI, objective); a sensitivity
 analysis showing the protocol \emph{ranking} is stable is outstanding. \textbf{Model and domain coverage.}
 The discrimination result (Table~\ref{tab:disc}) covers six models within one provider
-family and one encounter type (head-on) and one rule (14/15); cross-provider models and more
-rules/encounters would further tighten the claim. \textbf{Compute-gated:} the open-weight
+family, and two rules (Rule~14 head-on, Rule~15 crossing) on their respective encounters;
+cross-provider models and further rules/encounters would tighten the claim. \textbf{Compute-gated:} the open-weight
 unlearning run (Section~\ref{sec:weightlevel}) still needs one GPU.
 
 \section{Conclusion}
