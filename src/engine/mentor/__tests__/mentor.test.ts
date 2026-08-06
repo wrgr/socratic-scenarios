@@ -27,8 +27,26 @@ describe('createMentorService', () => {
       feedback: 'Great job.',
       followUpProbe: 'What happens if you skip it?',
       masteryPassed: true,
+      // No retrievalContext in baseCtx → the evaluation is ungrounded (naive).
+      grounded: false,
+      groundingNodeIds: [],
     });
     expect(result.degraded).toBeUndefined();
+  });
+
+  it('tags the evaluation grounded and carries the grounding node ids when corpus context is supplied', async () => {
+    const provider = stubProvider(async () =>
+      JSON.stringify({ score: 0.7, feedback: 'Good start.', followUpProbe: 'And then?' }),
+    );
+    const service = createMentorService(provider);
+    const result = await service.evaluate({
+      ...baseCtx,
+      retrievalContext: '[TACIT-EXAMPLE-001] some corpus background',
+      groundingNodeIds: ['TACIT-EXAMPLE-001'],
+    });
+
+    expect(result.grounded).toBe(true);
+    expect(result.groundingNodeIds).toEqual(['TACIT-EXAMPLE-001']);
   });
 
   it('raises the mastery threshold to 0.90 under a safety gate', async () => {

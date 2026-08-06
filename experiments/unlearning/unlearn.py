@@ -118,6 +118,9 @@ def main():
     ap.add_argument("--chat", action="store_true",
                     help="wrap examples in the tokenizer chat template (use for INSTRUCT "
                          "models; omit for base models like GPT-2/distilgpt2)")
+    ap.add_argument("--grad_checkpoint", action="store_true",
+                    help="gradient checkpointing — trade compute for memory (fits NPO's "
+                         "extra reference forward on modest RAM)")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--dtype", choices=list(DTYPES), default="float32",
                     help="model dtype (float32 for CPU; bfloat16 for a real GPU run)")
@@ -131,6 +134,12 @@ def main():
     if args.lora_targets:
         lora_kwargs["target_modules"] = args.lora_targets.split(",")
     model = get_peft_model(model, LoraConfig(**lora_kwargs))
+    if args.grad_checkpoint:
+        # Trades compute for memory — needed to fit NPO's extra reference forward on a
+        # 7-8B model (or a 1.5B in fp32 on a modest-RAM CPU box).
+        model.config.use_cache = False
+        model.enable_input_require_grads()
+        model.gradient_checkpointing_enable()
     model.train()
 
     forget = make_loader(load_jsonl(os.path.join(args.data, "forget.jsonl")), tok, args.batch_size, True, args.chat)

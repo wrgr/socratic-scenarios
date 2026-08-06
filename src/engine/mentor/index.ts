@@ -19,6 +19,12 @@
  * allowing callers to gracefully degrade to static probe display.
  */
 import type { ChatCompletionProvider } from '../llm/types';
+import {
+  isGrounded,
+  extractGroundingNodeIds,
+  diffEvaluations,
+  type AblationDiff,
+} from './provenance';
 
 // ─── Public Interfaces ────────────────────────────────────────────
 
@@ -47,6 +53,13 @@ export interface MentorContext {
    */
   retrievalContext?: string;
   /**
+   * Node ids that produced `retrievalContext`, for provenance tagging. Callers
+   * that hold the structured retrieval results should pass these (via
+   * `groundingNodeIdsFrom`); when omitted they are recovered (best-effort) from
+   * `retrievalContext`.
+   */
+  groundingNodeIds?: string[];
+  /**
    * Active domain's human name (e.g. "Aerosol Jet Printing", "Roadside Tire
    * Change", "COLREG — Collision Avoidance"). Used to frame the Mentor's system
    * instruction for the correct domain. When omitted, a domain-neutral framing
@@ -65,6 +78,10 @@ export interface MentorEvaluation {
   followUpProbe: string;
   /** True when score ≥ masteryThreshold (default 0.80, 0.90 for safetyGate). */
   masteryPassed: boolean;
+  /** Provenance: was corpus context actually put in front of the model? */
+  grounded: boolean;
+  /** Provenance: the corpus node ids that grounded this evaluation (may be empty). */
+  groundingNodeIds: string[];
   /**
    * True only when this evaluation is a fallback produced after the LLM call
    * failed (network error, quota exceeded) — score/masteryPassed are placeholder
@@ -73,6 +90,9 @@ export interface MentorEvaluation {
    */
   degraded?: boolean;
 }
+
+/** The core evaluation before provenance tagging is attached. */
+type MentorEvaluationCore = Omit<MentorEvaluation, 'grounded' | 'groundingNodeIds'>;
 
 /** Mentor service — evaluate a learner response and generate a follow-up probe. */
 export interface MentorService {
@@ -151,7 +171,7 @@ Respond with ONLY this JSON (no other text):
 function parseMentorResponse(
   raw: string,
   ctx: MentorContext,
-): MentorEvaluation {
+): MentorEvaluationCore {
   const threshold = ctx.safetyGate ? 0.90 : 0.80;
   let parsed: { score?: unknown; feedback?: unknown; followUpProbe?: unknown };
 
@@ -192,10 +212,16 @@ function parseMentorResponse(
 export function createMentorService(provider: ChatCompletionProvider): MentorService {
   return {
     async evaluate(ctx: MentorContext): Promise<MentorEvaluation> {
+      // Provenance is fixed by the inputs, independent of the model's reply.
+      const grounded = isGrounded(ctx.retrievalContext);
+      const groundingNodeIds = grounded
+        ? ctx.groundingNodeIds ?? extractGroundingNodeIds(ctx.retrievalContext)
+        : [];
+
       const prompt = buildPrompt(ctx);
       try {
         const raw = await provider.complete(systemInstruction(ctx.domainLabel), prompt);
-        return parseMentorResponse(raw, ctx);
+        return { ...parseMentorResponse(raw, ctx), grounded, groundingNodeIds };
       } catch (err) {
         // Network error or quota exceeded — fail gracefully
         console.error('[MentorService] LLM call failed:', err);
@@ -205,9 +231,35 @@ export function createMentorService(provider: ChatCompletionProvider): MentorSer
             'The Mentor is temporarily unavailable. Review your answer against the expected concepts and try again.',
           followUpProbe: ctx.probeQuestion,
           masteryPassed: false,
+          grounded,
+          groundingNodeIds,
           degraded: true,
         };
       }
     },
   };
 }
+
+// ─── Rigorous provenance probe: ablation diff ─────────────────────────────────
+
+/**
+ * Score the same learner answer twice — once WITH corpus grounding and once
+ * with it stripped — and report whether the corpus changed the answer. If it
+ * did not (`ragDependent === false`), the Mentor's output came from its
+ * baked-in knowledge, not the retrieved structure. Costs two model calls, so
+ * it is opt-in (a dev provenance toggle), not part of the normal flow.
+ */
+export async function runAblationProbe(
+  service: MentorService,
+  ctx: MentorContext,
+): Promise<AblationDiff<MentorEvaluation>> {
+  const grounded = await service.evaluate(ctx);
+  const ablated = await service.evaluate({
+    ...ctx,
+    retrievalContext: undefined,
+    groundingNodeIds: undefined,
+  });
+  return diffEvaluations(grounded, ablated);
+}
+
+export type { AblationDiff } from './provenance';

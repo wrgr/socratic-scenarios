@@ -51,7 +51,39 @@
  */
 
 import type { AJPNode } from '../../types/ajp';
-import { nodeById, outNeighbors, inNeighbors, matchNodes } from './graph-utils';
+import type { DomainDescriptor } from '../../corpus/types';
+import {
+  nodeById,
+  outNeighbors,
+  inNeighbors,
+  matchNodes,
+  boundGraphView,
+  createGraphView,
+  dedupeNodesById,
+  type GraphView,
+} from './graph-utils';
+
+// ─── Domain scoping ───────────────────────────────────────────────
+// Retrieval strategies default to the graph bound at boot (boundGraphView —
+// the src/domains active domain, AJP by default). To scope retrieval to another
+// domain's corpus, build a GraphView from that domain's descriptor and pass it
+// in. Without this, a tire/COLREG probe token-matches against the bound domain's
+// TacitKnowledge nodes (AJP's, by default) and surfaces wrong-domain
+// "background knowledge" in the Socratic/Scenario mentor context.
+
+/**
+ * Build a retrieval GraphView over one domain's own corpus. A descriptor's
+ * `nodes` may already include its probe/consequence nodes (AJP) or keep them
+ * separate (tire/COLREG), so both are merged and de-duplicated by id.
+ */
+export function graphViewForDomain(descriptor: DomainDescriptor): GraphView {
+  const nodes = dedupeNodesById([
+    ...descriptor.nodes,
+    ...descriptor.probes,
+    ...descriptor.consequences,
+  ]);
+  return createGraphView(nodes, descriptor.edges);
+}
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
 
@@ -187,12 +219,15 @@ export interface ProbeContext {
   probes: AJPNode[];
 }
 
-export function probeContextStrategy(nodeId: string): ProbeContext | null {
-  const anchor = nodeById(nodeId);
+export function probeContextStrategy(
+  nodeId: string,
+  graph: GraphView = boundGraphView,
+): ProbeContext | null {
+  const anchor = graph.nodeById(nodeId);
   if (!anchor) return null;
 
   // Probes point TO their teaching target via PROBES edge
-  const probes = inNeighbors(nodeId, 'PROBES');
+  const probes = graph.inNeighbors(nodeId, 'PROBES');
 
   return { anchorNode: anchor, probes };
 }
@@ -209,11 +244,14 @@ export interface SafetyGateResult {
   isBlocking: boolean;
 }
 
-export function safetyGateStrategy(nodeId: string): SafetyGateResult | null {
-  const source = nodeById(nodeId);
+export function safetyGateStrategy(
+  nodeId: string,
+  graph: GraphView = boundGraphView,
+): SafetyGateResult | null {
+  const source = graph.nodeById(nodeId);
   if (!source) return null;
 
-  const hazards = outNeighbors(nodeId, 'REQUIRES').filter((n) => n.type === 'SafetyHazard');
+  const hazards = graph.outNeighbors(nodeId, 'REQUIRES').filter((n) => n.type === 'SafetyHazard');
 
   return {
     sourceNode: source,
@@ -234,17 +272,21 @@ export interface TacitResult {
   linkedHazards: AJPNode[];
 }
 
-export function tacitLookupStrategy(text: string, topK = 3): TacitResult {
-  const matches = matchNodes(text, ['TacitKnowledge'], topK);
+export function tacitLookupStrategy(
+  text: string,
+  topK = 3,
+  graph: GraphView = boundGraphView,
+): TacitResult {
+  const matches = graph.matchNodes(text, ['TacitKnowledge'], topK);
   const linkedProbes: AJPNode[] = [];
   const linkedHazards: AJPNode[] = [];
   const seen = new Set<string>();
 
   for (const { node } of matches) {
-    for (const probe of inNeighbors(node.id, 'PROBES')) {
+    for (const probe of graph.inNeighbors(node.id, 'PROBES')) {
       if (!seen.has(probe.id)) { seen.add(probe.id); linkedProbes.push(probe); }
     }
-    for (const hazard of outNeighbors(node.id, 'REQUIRES')) {
+    for (const hazard of graph.outNeighbors(node.id, 'REQUIRES')) {
       if (hazard.type === 'SafetyHazard' && !seen.has(hazard.id)) {
         seen.add(hazard.id); linkedHazards.push(hazard);
       }
@@ -294,6 +336,27 @@ export function formatProbeRetrievalContext(
   }
 
   return parts.join('\n\n');
+}
+
+/**
+ * The corpus node ids that `formatProbeRetrievalContext` would emit for the same
+ * inputs — the exact set of nodes grounding a Mentor call. Pass this into
+ * `evaluate({ groundingNodeIds })` for accurate provenance tagging (avoids
+ * re-parsing the formatted string).
+ */
+export function groundingNodeIdsFrom(
+  probeCtx: ProbeContext | null,
+  tacitResult: TacitResult,
+): string[] {
+  const ids = new Set<string>();
+  for (const { node } of tacitResult.matches) ids.add(node.id);
+  for (const h of tacitResult.linkedHazards) ids.add(h.id);
+  if (probeCtx) {
+    for (const p of probeCtx.probes) {
+      if (p.expectedConcepts && p.expectedConcepts.length > 0) ids.add(p.id);
+    }
+  }
+  return [...ids];
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────────

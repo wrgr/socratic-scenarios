@@ -421,8 +421,15 @@ The predicted $2\times2$: the base model scores low even without the corpus (it 
 knowledge in weights); the unlearned model scores high without the corpus and recovers with
 it (weight-level corpus reliance). Nobody has scored an \emph{unlearned} learner on a
 control-task regret metric; this gives C1 a weight-level leakage result beside the
-context-level one. The harness is built and CPU-smoke-tested; the real 7--8B run is
-GPU-gated.
+context-level one. The harness is built, and a first CPU result already delivers the
+audit-level half: with the NPO baseline (the CPU-tractable arm) on Qwen2.5-1.5B-Instruct---a
+model that knows the rule---unlearning drives the forget-target NLL from $4.6$ to $41$ and
+the held-out direction-cue rate (robust to the starboard$\to$right synonym) from $5/6$ to
+$0/6$, while retain knowledge stays coherent. This establishes behavioral \emph{suppression},
+not yet verified semantic \emph{removal}: the probe is lexical and the NLL teacher-forced.
+Scoring the base-vs.-unlearned model on the full regret instrument at 7--8B scale with the
+primary SimNPO arm---the step that turns suppression into an instrument-level removal result
+and fills the corpus-recovery cell of the $2\times2$---remains GPU-gated.
 
 \section{Limitations and scope}
 \label{sec:limits}
@@ -434,8 +441,9 @@ The protocol depends on weighting choices (ship domain, CRI, objective); a sensi
 analysis showing the protocol \emph{ranking} is stable is outstanding. \textbf{Model and domain coverage.}
 The discrimination result (Table~\ref{tab:disc}) covers six models within one provider
 family, and two rules (Rule~14 head-on, Rule~15 crossing) on their respective encounters;
-cross-provider models and further rules/encounters would tighten the claim. \textbf{Compute-gated:} the open-weight
-unlearning run (Section~\ref{sec:weightlevel}) still needs one GPU.
+cross-provider models and further rules/encounters would tighten the claim. \textbf{Compute-gated:} the
+audit-level unlearning result is in hand (CPU), but the instrument-scoring step of the
+open-weight arm (Section~\ref{sec:weightlevel})---which settles \emph{removal}---still needs one GPU.
 
 \section{Conclusion}
 We have described an in-silico instrument that lets a designer falsify the mechanism of a

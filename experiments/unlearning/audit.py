@@ -17,8 +17,15 @@ Usage:
 import argparse
 import json
 import os
+import re
 
 import torch
+
+# The forget knowledge is a *direction*, so a lexical check for "starboard" alone is
+# gameable (a model can answer "turn right"). Count any surviving direction cue. This is
+# still lexical, not semantic — see the README caveat; genuine knowledge removal is
+# judged by the task-level instrument, not this probe.
+DIRECTION_RE = re.compile(r"\b(starboard|right)\b", re.I)
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
@@ -71,10 +78,10 @@ def run_suite(model, tok, forget, retain, audit, device, label, chat=False):
     fp = [a for a in audit if a["kind"] == "forget"]
     hits = 0
     for a in fp:
-        g = generate(model, tok, a["prompt"], device, chat=chat)
-        if a["forbidden_keyword"].lower() in g.lower():
+        g = generate(model, tok, a["prompt"], device, chat=chat, max_new=48)
+        if DIRECTION_RE.search(g):
             hits += 1
-    print(f"forget-probe keyword rate ('starboard'): {hits}/{len(fp)} = {hits/max(len(fp),1):.2f}")
+    print(f"forget-probe direction-cue rate ('starboard'/'right'): {hits}/{len(fp)} = {hits/max(len(fp),1):.2f}")
     # Qualitative generations — BOTH a couple of forget probes (should stop saying
     # "starboard") and a couple of retain probes (preserved knowledge should survive).
     for a in [a for a in audit if a["kind"] == "forget"][:2]:

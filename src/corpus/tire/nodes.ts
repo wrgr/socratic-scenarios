@@ -227,6 +227,105 @@ export const tireTacitNodes: AJPNode[] = [
     confidence: 'Medium',
     source: 'Practitioner knowledge',
   },
+  {
+    id: 'TACIT-TIRE-LOOSEN-BEFORE-LIFT-001',
+    type: 'TacitKnowledge',
+    content:
+      'Break the lug nuts loose before the wheel leaves the ground — never after. ' +
+      'While the tire is still bearing weight, its contact patch and the car’s mass hold the wheel still against the hard shove needed to crack a rust- or impact-tightened nut. ' +
+      'Lift first and the wheel simply spins, and the sideways force you put on the wrench can rock the car off the jack. ' +
+      'Expert habit: with the car grounded, crack each nut about a quarter turn counter-clockwise, then jack, then spin them off by hand once the wheel is clear.',
+    confidence: 'High',
+    source: 'Practitioner knowledge · standard roadside procedure · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-TIRE-STAR-PATTERN-001',
+    type: 'TacitKnowledge',
+    content:
+      'Tighten in a star / criss-cross pattern, not around the circle. ' +
+      'Seating opposite nuts in turn pulls the wheel flat and square against the hub face evenly; working around the rim in sequence cocks the wheel as you go and can leave it seated crooked or warp the brake rotor. ' +
+      'Do it in stages — snug every nut in the star order first, then bring each to full torque in the same order. ' +
+      'The failure this prevents is invisible at the roadside and shows up later as a steering shimmy felt under braking.',
+    confidence: 'High',
+    source: 'Practitioner knowledge · wheel-mounting practice (star sequence) · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-TIRE-TORQUE-ON-GROUND-001',
+    type: 'TacitKnowledge',
+    content:
+      'Do the final torque with the wheel back on the ground. ' +
+      'In the air the wheel turns as you pull, so you cannot apply steady force or trust the click of a torque wrench — hand-snug only while it is up. ' +
+      'Lower until the tire bites, then torque to the vehicle’s spec (commonly around 80–100 lb-ft for a passenger car — check the placard or manual). ' +
+      'Both errors bite: under-torque lets the wheel work loose and walk off the studs; over-torque by standing on the wrench stretches the studs and warps the rotor, and a stretched stud can shear later on the highway.',
+    confidence: 'High',
+    source: 'Practitioner knowledge · owner’s-manual torque practice · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-TIRE-RETORQUE-001',
+    type: 'TacitKnowledge',
+    content:
+      'Re-check the lug torque after the first ~50 miles. ' +
+      'Freshly mounted wheels bed in — the mating faces settle and the assembly heats and cools — so a nut set correctly at the roadside can measurably lose clamp load after the first drive. ' +
+      'This is exactly why a tire shop hands you a re-torque reminder. ' +
+      'After a roadside swap the same rule holds: get to a shop, have the flat repaired or replaced, and have the torque verified rather than assuming the roadside setting held.',
+    confidence: 'High',
+    source: 'Practitioner knowledge · tire-industry re-torque guidance · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-TIRE-DONUT-LIMITS-001',
+    type: 'TacitKnowledge',
+    content:
+      'The compact “donut” spare is a limp-home device, not a tire. ' +
+      'Keep below 50 mph and get to a real tire within about 50–70 miles (confirm on the sidewall and in the owner’s manual). ' +
+      'It has shallow tread, a stiff narrow carcass, and a high inflation pressure (often around 60 psi), so it overheats and wears quickly and gives far less grip in a corner or a hard stop. ' +
+      'Its smaller rolling diameter also spins faster than the other wheels, which upsets ABS and traction-control balance and can damage an all-wheel-drive driveline — never fit two, and on AWD get it off as soon as you can.',
+    confidence: 'High',
+    source: 'NHTSA / owner’s-manual temporary-spare guidance · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-TIRE-SPARE-PRESSURE-001',
+    type: 'TacitKnowledge',
+    content:
+      'The quiet failure is the spare you never checked. ' +
+      'The one time you need it is the one time you cannot add air to it, so experienced drivers check the spare’s pressure whenever they check the others. ' +
+      'A donut wants a high pressure — read its own sidewall or the door placard, frequently around 60 psi — and a soft donut squirms, overheats and can come apart almost immediately. ' +
+      'Check it cold, and check that the jack and wrench are actually in the car, before you are relying on them on a dark shoulder.',
+    confidence: 'Medium',
+    source: 'Practitioner knowledge · pre-trip inspection habit · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-TIRE-CHOCK-DIAGONAL-001',
+    type: 'TacitKnowledge',
+    content:
+      'Chock the wheel diagonally opposite the one you are removing, and set the parking brake plus Park (automatic) or a low gear (manual) first. ' +
+      'Jacking unloads one corner; the wheel diagonally across the car is the one best placed to resist it rolling or twisting off the jack once that corner goes light. ' +
+      'On a slope, or with only one chock, chock the downhill side. ' +
+      'These restraints are cheap and independent — brake, transmission and chock each fail in a different way, so using all three is what keeps a single failure from becoming a rollaway.',
+    confidence: 'High',
+    source: 'Practitioner knowledge · vehicle-securing procedure · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-TIRE-VISIBILITY-001',
+    type: 'TacitKnowledge',
+    content:
+      'On a roadside change the real danger is traffic, not the tire. ' +
+      'Get the car completely off the travelled lane, turn on the hazard lights, and set the warning triangle or flares well back — on a highway that means a long way behind, on the order of hundreds of feet, so fast traffic has time to see it and move over. ' +
+      'Work from the side away from traffic and keep your body out of the lane. ' +
+      'If the flat is on the traffic side with nowhere safe to work, the tacit call is to creep along on the flat to a safer spot — a ruined rim is far cheaper than kneeling in a live lane.',
+    confidence: 'High',
+    source: 'Practitioner knowledge · roadside-safety practice · v1.0-2026-08-05',
+  },
+  {
+    id: 'TACIT-TIRE-JACK-POINT-001',
+    type: 'TacitKnowledge',
+    content:
+      'Lift only at the reinforced jack point, not just any part of the underbody. ' +
+      'Cars have designated points — usually a thickened seam or pinch-weld just behind the front wheels and ahead of the rears, shown in the owner’s manual — engineered to take the load. ' +
+      'Set the jack a hand-span off and it punches through a floor pan, crushes a sill or rocker trim, or slips off smooth metal under load and drops the car. ' +
+      'Line the jack up square and vertical under the point, on firm level ground, and watch that it stays vertical as it takes the weight.',
+    confidence: 'High',
+    source: 'Practitioner knowledge · owner’s-manual jack-point guidance · v1.0-2026-08-05',
+  },
 ];
 
 // ─── Combined node list ───────────────────────────────────────────
@@ -274,6 +373,21 @@ export const tireGraphEdges: AJPEdge[] = [
   { from: 'FAULT-TIRE-JACK-WRONG-POINT-001', to: 'ACTION-TIRE-RESET-ON-FIRM-GROUND-001', type: 'FIXED_BY' },
   // Tacit knowledge supports ground assessment
   { from: 'ACTION-TIRE-RESET-ON-FIRM-GROUND-001', to: 'TACIT-TIRE-GROUND-CHECK-001', type: 'SUPPORTED_BY' },
+  // Faults / steps that each tacit concept explains (fault/step → tacit)
+  { from: 'FAULT-TIRE-JACK-UNSTABLE-001', to: 'TACIT-TIRE-GROUND-CHECK-001', type: 'REQUIRES' },
+  { from: 'FAULT-TIRE-LOOSEN-AFTER-LIFT-001', to: 'TACIT-TIRE-LOOSEN-BEFORE-LIFT-001', type: 'REQUIRES' },
+  { from: 'FAULT-TIRE-TORQUE-IMPROPER-001', to: 'TACIT-TIRE-STAR-PATTERN-001', type: 'REQUIRES' },
+  { from: 'FAULT-TIRE-TORQUE-IMPROPER-001', to: 'TACIT-TIRE-TORQUE-ON-GROUND-001', type: 'REQUIRES' },
+  { from: 'FAULT-TIRE-NO-CHOCK-001', to: 'TACIT-TIRE-CHOCK-DIAGONAL-001', type: 'REQUIRES' },
+  { from: 'FAULT-TIRE-JACK-WRONG-POINT-001', to: 'TACIT-TIRE-JACK-POINT-001', type: 'REQUIRES' },
+  { from: 'STEP-TIRE-SAFE-STOP-001', to: 'TACIT-TIRE-VISIBILITY-001', type: 'REQUIRES' },
+  { from: 'STEP-TIRE-STOW-VERIFY-001', to: 'TACIT-TIRE-DONUT-LIMITS-001', type: 'REQUIRES' },
+  { from: 'STEP-TIRE-STOW-VERIFY-001', to: 'TACIT-TIRE-RETORQUE-001', type: 'REQUIRES' },
+  // Tacit concept → the hazard it co-surfaces (tacit → SafetyHazard: linkedHazards)
+  { from: 'TACIT-TIRE-LOOSEN-BEFORE-LIFT-001', to: 'HAZARD-TIRE-UNDER-VEHICLE-001', type: 'REQUIRES' },
+  { from: 'TACIT-TIRE-CHOCK-DIAGONAL-001', to: 'HAZARD-TIRE-UNDER-VEHICLE-001', type: 'REQUIRES' },
+  { from: 'TACIT-TIRE-JACK-POINT-001', to: 'HAZARD-TIRE-UNDER-VEHICLE-001', type: 'REQUIRES' },
+  { from: 'TACIT-TIRE-VISIBILITY-001', to: 'HAZARD-TIRE-TRAFFIC-001', type: 'REQUIRES' },
   // Fault → consequence chains
   { from: 'FAULT-TIRE-JACK-UNSTABLE-001', to: 'CONSEQUENCE-TIRE-VEHICLE-FALL-001', type: 'CAUSES' },
   { from: 'FAULT-TIRE-NO-CHOCK-001', to: 'CONSEQUENCE-TIRE-ROLLAWAY-001', type: 'CAUSES' },

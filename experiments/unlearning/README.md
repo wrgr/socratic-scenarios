@@ -69,9 +69,49 @@ unlearning failed / left latent knowledge — and the same instrument flags it
   save/reload → OpenAI-compatible serving. On distilgpt2, GA drives the forget-set NLL
   from ~5.0 to ~140 (target likelihood destroyed), and the SimNPO (primary) and NPO paths
   execute cleanly. This proves the **machinery**, not the science.
-- **Needs a GPU + a real 7-8B model:** the actual result — a model that *knows* the
-  COLREGs, unlearned and scored on the instrument. A 100M–100k-param toy has no COLREG
-  knowledge to remove. LoRA unlearning on a 7-8B model is hours on one GPU.
+- **Run on CPU (`cpu_run.py`, Qwen2.5-1.5B-Instruct):** the **NPO** baseline strongly
+  **suppresses** the alter-to-starboard behavior on a model that knows the rule —
+  forget-target NLL 4.6→41, held-out direction-cue rate 5/6→0/6 (robust to the
+  starboard→right synonym) — while retain knowledge stays coherent. See **Result** below.
+  (SimNPO is the primary method for the GPU instrument run; NPO is the CPU-tractable
+  baseline that produced the numbers below.)
+- **Needs a GPU:** scoring the base/unlearned model on the reference-optimal **instrument**
+  (the 2×2 regret / compliance) with the primary SimNPO arm at 7-8B scale — this is what
+  turns behavioral *suppression* into a *semantic-removal* claim; the audit-level result is
+  here, the task-level result is the GPU step.
+
+## Result — CPU run (Qwen2.5-1.5B-Instruct, NPO baseline, chat-consistent)
+
+A real (if small) result on a model that **actually knows the rule**, run on CPU
+(`cpu_run.py`, 72 NPO steps, LoRA r=16, chat-templated train + audit):
+
+| metric | base | unlearned | target |
+|---|---|---|---|
+| forget-target NLL (teacher-forced) | 4.64 | **41.37** | ↑ |
+| retain-target NLL | 3.19 | 0.07 | preserved (not raised) |
+| direction-cue rate, held-out (`starboard` OR `right`) | **5/6** | **0/6** | ↓ |
+
+Base Qwen2.5-1.5B answers the head-on probe with the correct direction on 5/6 held-out
+probes; after NPO it gives **no** direction cue on any probe (robust to the obvious
+`starboard`→`right` lexical dodge), the teacher-forced forget-target likelihood
+collapses (NLL ×9), and the retain probes (lookout, safe speed, restricted visibility)
+stay coherent.
+
+**What this does and does not show (per PR #26 review).** These metrics establish strong
+**behavioral / target suppression** — the model stops producing the rule and its exact
+targets — but *not*, on their own, semantic knowledge **removal**: the probe check is
+lexical (two direction words on short greedy generations) and the NLL is over the small
+teacher-forced targets, so a model could in principle still "know" the rule and phrase
+around it. Genuine removal is the claim the **task-level instrument** settles — score the
+base vs unlearned model on the reference-optimal COLREG instrument (regret / per-rule
+compliance) via `serve.py` → `npm run colreg:leakage`; that is the remaining GPU step.
+
+Other honest notes: retain NLL *drops* because the retain term overfits the small retain
+set (preserved, not damaged — a larger retain corpus / KL regularization is the real-run
+choice); some forget-adjacent generations show mild fluency degradation. Single small
+model, CPU, 72 steps — a demonstration, not a study. This is the weight-level counterpart
+to the context-level leakage result (`src/engine/colreg-sim/leakage.ts`), and the
+objective-audit direction over dialogue-scored unlearning (Song et al. 2026).
 
 ## Troubleshooting
 
