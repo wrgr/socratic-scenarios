@@ -8,7 +8,7 @@
  * the global graph.
  */
 import { describe, expect, it } from 'vitest';
-import { tacitLookupStrategy, graphViewForDomain } from '../retrieval-router';
+import { tacitLookupStrategy, graphViewForDomain, retrieveForContext } from '../retrieval-router';
 import { tireDomain } from '../../../corpus/tire';
 import { colregDomain } from '../../../corpus/colreg';
 import { ajpDomain } from '../../../corpus/ajp';
@@ -108,5 +108,53 @@ describe('domain-scoped retrieval (graphViewForDomain)', () => {
     const scoped = tacitLookupStrategy(query, 3, ajpView).matches.map((m) => m.node.id);
     const def = tacitLookupStrategy(query, 3).matches.map((m) => m.node.id);
     expect(scoped).toEqual(def);
+  });
+});
+
+// The convenience dispatcher must thread the SAME scope. Before this fix its cases
+// called the bare strategies (always boundGraphView = AJP), so any non-AJP caller of
+// retrieveForContext silently got cross-domain contamination that the strategy-level
+// tests above could not catch.
+describe('retrieveForContext honors query.graph scope', () => {
+  it('tacit-lookup scoped to tire never surfaces AJP tacit nodes', () => {
+    const scoped = retrieveForContext({
+      mode: 'tacit-lookup',
+      text: TIRE_PROBE_TEXT,
+      topK: 3,
+      graph: graphViewForDomain(tireDomain),
+    });
+    const tacit = scoped.nodes.tacit ?? [];
+    for (const n of tacit) expect(ajpTacitIds.has(n.id)).toBe(false);
+    expect(tacit.map((n) => n.id)).not.toContain('TACIT-ASSEMBLY-TUBING-001');
+  });
+
+  it('tacit-lookup with NO graph preserves AJP default behavior', () => {
+    const def = retrieveForContext({
+      mode: 'tacit-lookup',
+      text: 'single change one parameter per test cycle when diagnosing',
+      topK: 3,
+    });
+    const tacit = def.nodes.tacit ?? [];
+    expect(tacit.length).toBeGreaterThan(0);
+    expect(tacit.every((n) => ajpTacitIds.has(n.id))).toBe(true);
+  });
+
+  it('fault-diagnosis scope is threaded — a tire-scoped query returns no AJP faults', () => {
+    const ajpFaultIds = new Set(
+      ajpDomain.nodes.filter((n) => n.type === 'FailureMode').map((n) => n.id),
+    );
+    // An AJP symptom phrasing: unscoped it finds AJP faults; tire-scoped it must not.
+    const symptomText = 'overspray and inconsistent line width during printing';
+    const unscoped = retrieveForContext({ mode: 'fault-diagnosis', text: symptomText, topK: 3 });
+    const tireScoped = retrieveForContext({
+      mode: 'fault-diagnosis',
+      text: symptomText,
+      topK: 3,
+      graph: graphViewForDomain(tireDomain),
+    });
+    const tireFaults = tireScoped.nodes.faults ?? [];
+    for (const f of tireFaults) expect(ajpFaultIds.has(f.id)).toBe(false);
+    // sanity: the unscoped (AJP) path can still find AJP faults for the same text
+    expect((unscoped.nodes.faults ?? []).every((f) => ajpFaultIds.has(f.id))).toBe(true);
   });
 });
