@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 340" width="1280" height="340" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="TeachMe — Socratic Scenarios: corpus-bound Socratic training for safety-critical work">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a1219"/>
+      <stop offset="0.55" stop-color="#0e1c28"/>
+      <stop offset="1" stop-color="#122636"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#3f8ae0" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#3f8ae0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rule" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5199ea"/>
+      <stop offset="1" stop-color="#35b985"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="340" rx="16" fill="url(#bg)"/>
+  <circle cx="965" cy="175" r="230" fill="url(#glow)"/>
+
+  <!-- ship-domain ring: a faint nod to the COLREG domain -->
+  <ellipse cx="975" cy="178" rx="212" ry="132" fill="none" stroke="#4a7ea8" stroke-opacity="0.28" stroke-width="1.5" stroke-dasharray="3 7"/>
+
+  <!-- knowledge-graph constellation -->
+  <g stroke="#8fb4d6" stroke-opacity="0.30" stroke-width="1.6">
+    <line x1="960" y1="180" x2="900" y2="108"/>
+    <line x1="960" y1="180" x2="1012" y2="92"/>
+    <line x1="960" y1="180" x2="1120" y2="140"/>
+    <line x1="960" y1="180" x2="860" y2="192"/>
+    <line x1="960" y1="180" x2="1082" y2="212"/>
+    <line x1="960" y1="180" x2="940" y2="272"/>
+    <line x1="900" y1="108" x2="1012" y2="92"/>
+    <line x1="1120" y1="140" x2="1082" y2="212"/>
+    <line x1="1082" y1="212" x2="1052" y2="286"/>
+    <line x1="860" y1="192" x2="940" y2="272"/>
+  </g>
+  <g fill="#dbe8f4">
+    <circle cx="900" cy="108" r="13" fill="#cfe0ef"/>
+    <circle cx="1012" cy="92" r="9"/>
+    <circle cx="1120" cy="140" r="12" fill="#cfe0ef"/>
+    <circle cx="860" cy="192" r="9"/>
+    <circle cx="1082" cy="212" r="12" fill="#cfe0ef"/>
+    <circle cx="940" cy="272" r="8"/>
+    <circle cx="1052" cy="286" r="8"/>
+  </g>
+
+  <!-- the probe node: the system asks, it doesn't answer -->
+  <circle cx="960" cy="180" r="30" fill="#5199ea"/>
+  <circle cx="960" cy="180" r="30" fill="none" stroke="#8fc0ff" stroke-opacity="0.5" stroke-width="2"/>
+  <circle cx="960" cy="180" r="41" fill="none" stroke="#5199ea" stroke-opacity="0.35" stroke-width="1.5"/>
+  <text x="960" y="181" text-anchor="middle" dominant-baseline="central" font-size="34" font-weight="700" fill="#0a1219">?</text>
+
+  <!-- wordmark + copy -->
+  <text x="72" y="118" font-size="15" font-weight="600" letter-spacing="3.4" fill="#7fb0d8">CORPUS-BOUND · SOCRATIC · SAFETY-CRITICAL</text>
+  <text x="70" y="196" font-size="70" font-weight="800" letter-spacing="-1.5" fill="#f2f7fb">Teach<tspan fill="#5199ea">Me</tspan></text>
+  <rect x="74" y="214" width="72" height="4" rx="2" fill="url(#rule)"/>
+  <text x="72" y="258" font-size="25" font-weight="600" fill="#dbe8f4">It doesn&#8217;t just answer questions — it <tspan fill="#5cc79b">asks</tspan> them.</text>
+  <text x="72" y="292" font-size="16.5" fill="#9fb6c6">A narrator that won&#8217;t fabricate · Socratic probes calibrated to your level · every answer traced to a knowledge graph.</text>
+</svg>
