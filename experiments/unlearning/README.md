@@ -83,10 +83,17 @@ unlearning failed / left latent knowledge — and the same instrument flags it
   starboard→right synonym) — while retain knowledge stays coherent. See **Result** below.
   (SimNPO is the primary method for the GPU instrument run; NPO is the CPU-tractable
   baseline that produced the numbers below.)
-- **Needs a GPU:** scoring the base/unlearned model on the reference-optimal **instrument**
-  (the 2×2 regret / compliance) with the primary SimNPO arm at 7-8B scale — this is what
-  turns behavioral *suppression* into a *semantic-removal* claim; the audit-level result is
-  here, the task-level result is the GPU step.
+- **Run on GPU (`run.sh`, Qwen2.5-3B-Instruct, SimNPO, bfloat16):** the audit signature
+  reproduces at larger scale — forget-target NLL 5.5→33.9 (↑) while retain-set NLL is
+  preserved (3.5→0.26), so the forget/retain separation holds across model size and
+  hardware. On this shorter 3B run the lexical direction-cue moved only modestly (5/6→4/6)
+  with some generation degradation, so the teacher-forced NLL separation is the cleaner
+  audit signal here. See **Result — GPU run** below.
+- **Remaining step (no longer hardware-gated):** scoring the base/unlearned model on the
+  reference-optimal **instrument** (the 2×2 regret / compliance) via `serve.py` →
+  `npm run colreg:leakage` — this is what turns behavioral *suppression* into a
+  *semantic-removal* claim. The audit-level result is now in hand on both CPU and GPU; the
+  task-level 2×2 is the outstanding piece.
 
 ## Result — CPU run (Qwen2.5-1.5B-Instruct, SimNPO primary + NPO baseline, chat-consistent)
 
@@ -123,6 +130,26 @@ choice); some forget-adjacent generations show mild fluency degradation. Single 
 model, CPU, 72 steps — a demonstration, not a study. This is the weight-level counterpart
 to the context-level leakage result (`src/engine/colreg-sim/leakage.ts`), and the
 objective-audit direction over dialogue-scored unlearning (Song et al. 2026).
+
+## Result — GPU run (Qwen2.5-3B-Instruct, SimNPO, bfloat16)
+
+The same SimNPO recipe on a larger model, run on GPU (`run.sh`, ~95 steps, batch 1). The
+audit-level pattern reproduces across scale and hardware:
+
+| metric | base | **SimNPO** (unlearned) | target |
+|---|---|---|---|
+| forget-set mean NLL | 5.512 | **33.861** | ↑ |
+| retain-set mean NLL | 3.517 | 0.263 | preserved (not raised) |
+| forget-probe direction-cue rate (`starboard`/`right`) | 5/6 = 0.83 | 4/6 = 0.67 | ↓ |
+
+The forget-target likelihood collapses (NLL 5.5→33.9) while retain knowledge is preserved
+(retain NLL stays low, 3.5→0.26) — the forget/retain separation that matters holds at 3B
+as it did at 1.5B. **Honest read:** the lexical direction-cue moved only modestly (5/6→4/6)
+and some unlearned generations degrade (e.g. `左 (Zuo)`, `Keep瞭眼瞭Constant`), so on this
+shorter 3B run the two-word probe is noisy and the teacher-forced NLL separation is the
+cleaner audit signal. As on CPU, this is behavioral **suppression** audited at the weight
+level — the task-level instrument 2×2 (`serve.py` → `npm run colreg:leakage`) is still the
+outstanding step that settles semantic **removal**.
 
 ## Troubleshooting
 
