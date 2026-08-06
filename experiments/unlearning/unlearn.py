@@ -36,6 +36,10 @@ from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model
 
+# float32 keeps the CPU smoke test exact; use bfloat16 for a real GPU run (a 7-8B model in
+# float32 will not fit on a single 24GB GPU).
+DTYPES = {"float32": torch.float32, "bfloat16": torch.bfloat16, "float16": torch.float16}
+
 
 def load_jsonl(path):
     with open(path) as f:
@@ -115,12 +119,14 @@ def main():
                     help="wrap examples in the tokenizer chat template (use for INSTRUCT "
                          "models; omit for base models like GPT-2/distilgpt2)")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--dtype", choices=list(DTYPES), default="float32",
+                    help="model dtype (float32 for CPU; bfloat16 for a real GPU run)")
     args = ap.parse_args()
 
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
-    model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=torch.float32).to(args.device)
+    model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=DTYPES[args.dtype]).to(args.device)
     lora_kwargs = dict(r=args.lora_r, lora_alpha=2 * args.lora_r, lora_dropout=0.0, task_type="CAUSAL_LM")
     if args.lora_targets:
         lora_kwargs["target_modules"] = args.lora_targets.split(",")

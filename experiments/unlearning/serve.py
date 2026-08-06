@@ -71,12 +71,15 @@ def main():
     ap.add_argument("--adapter", default=None)
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--dtype", choices=["float32", "bfloat16", "float16"], default="float32",
+                    help="model dtype (float32 for CPU; bfloat16 for a real GPU run)")
     args = ap.parse_args()
+    dtype = {"float32": torch.float32, "bfloat16": torch.bfloat16, "float16": torch.float16}[args.dtype]
 
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
-    model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=torch.float32).to(args.device).eval()
+    model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=dtype).to(args.device).eval()
     name = args.model
     if args.adapter:
         from peft import PeftModel

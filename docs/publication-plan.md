@@ -167,7 +167,8 @@ and the bidirectional diagnosis.
       audit (2607.28128, C3) and EduClaw-Bench (2608.03206, C3). Do **not** cite the
       withdrawn 2606.05633.
 - [ ] Write the proxy-validity limitations section (against ourselves).
-- [ ] Supply a **GPU** → run **Experiment 2** (`experiments/unlearning/run.sh`); include if it
+- [ ] Supply a **GPU** → run **Experiment 2**: open `experiments/unlearning/colab.ipynb` in
+      Colab (A100/L4), or `run.sh` on a rented hourly GPU (RunPod/Lambda). Include if it
       lands before the workshop deadline, else hold for Release B.
 - [ ] Build the **sensitivity analysis** experiment (Release B).
 - [ ] Verify the target **workshop CFP** and post the **arXiv** preprint at submission.

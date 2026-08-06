@@ -22,14 +22,25 @@ that model on the **reference-optimal control-task instrument**. See
 | `serve.py` | Minimal OpenAI-compatible server so the existing TS scorer (`openAiCompatCompleter` → `npm run colreg:leakage`) scores the model **unchanged**. |
 | `smoke_test.py` | CPU end-to-end pipeline check on a small real model (no GPU). |
 | `run.sh` | Full real run orchestration. |
+| `colab.ipynb` | One-tap **Google Colab** runner (GPU) — clone → install → unlearn → audit → score. |
 
 ## Quick start
+
+**No GPU locally?** Open [`colab.ipynb`](colab.ipynb) in Google Colab
+([colab.research.google.com](https://colab.research.google.com/github/wrgr/socratic-scenarios/blob/claude/publishing-strategy-angle-yp7vor/experiments/unlearning/colab.ipynb)),
+set the runtime to an **A100** or **L4** GPU, and run the cells top to bottom. It runs the
+whole arm and scores base-vs-unlearned on the instrument in one notebook. (Or rent an
+hourly GPU on RunPod/Lambda and use the shell path below.)
 
 ```bash
 pip install -r requirements.txt              # + a CUDA torch for GPU
 python smoke_test.py                         # CPU pipeline check (uses distilgpt2)
-MODEL=Qwen/Qwen2.5-7B-Instruct ./run.sh      # real run (GPU)
+MODEL=Qwen/Qwen2.5-7B-Instruct ./run.sh      # real run (GPU; bf16 by default, ~15GB)
 ```
+
+> A 7–8B model in **bf16** needs ~15 GB (A100/L4); `run.sh` defaults to `DTYPE=bfloat16`.
+> On a 16 GB T4, use a smaller model (e.g. `MODEL=Qwen/Qwen2.5-3B-Instruct`). `float32` is
+> for the CPU smoke test only.
 
 ## The experiment (2×2)
 

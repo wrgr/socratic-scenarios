@@ -89,8 +89,12 @@ def main():
     ap.add_argument("--adapter", default=None, help="LoRA dir from unlearn.py")
     ap.add_argument("--data", default=os.path.join(os.path.dirname(__file__), "data"))
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--dtype", choices=["float32", "bfloat16", "float16"], default="float32",
+                    help="model dtype (float32 for CPU; bfloat16 for a real GPU run) — "
+                         "match what unlearn.py used")
     ap.add_argument("--chat", action="store_true", help="chat-template probe generations (instruct models)")
     args = ap.parse_args()
+    dtype = {"float32": torch.float32, "bfloat16": torch.bfloat16, "float16": torch.float16}[args.dtype]
 
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:
@@ -99,7 +103,7 @@ def main():
     retain = load_jsonl(os.path.join(args.data, "retain.jsonl"))
     audit = load_jsonl(os.path.join(args.data, "audit.jsonl"))
 
-    base = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=torch.float32).to(args.device).eval()
+    base = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=dtype).to(args.device).eval()
     run_suite(base, tok, forget, retain, audit, args.device, "BASE (not unlearned)", chat=args.chat)
 
     if args.adapter:
