@@ -76,7 +76,8 @@ async function main() {
     const rpm = Number(process.env.GEMINI_RPM ?? 5);
     // Throttle to stay under the provider's rate limit, and retry on 429/5xx (honoring
     // the server's retryDelay) so a transient rate-limit doesn't abort the whole run.
-    const completer = throttleCompleter(retryCompleter(real.completer), Math.ceil(60000 / Math.max(1, rpm)) + 700);
+    const retries = Number(process.env.GEMINI_RETRIES ?? 5);
+    const completer = throttleCompleter(retryCompleter(real.completer, { retries }), Math.ceil(60000 / Math.max(1, rpm)) + 700);
     // CONDITION = bound (strict positive control) | unconstrained (parametric fallback
     // allowed) | both (Experiment 1 discrimination — the verdict should flip).
     const want = (process.env.CONDITION ?? 'bound').toLowerCase();

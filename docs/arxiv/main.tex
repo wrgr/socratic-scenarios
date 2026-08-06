@@ -188,11 +188,25 @@ continuous-control and a discrete-procedural instrument, it is a general measure
 property, not a COLREG artifact.
 
 \paragraph{Estimator recovery and calibration.} Feeding the instrument's outcomes into a
-generic learner-agent estimator, we recover known ground truth on synthetic data: Elo
-recovers static ability to mean absolute error $0.046$ with expected calibration error
-(ECE) $0.023$; BKT recovers the latent learned state ($P(\hat L)=0.997$ for truly-learned
-vs.\ $0.175$ for not) with ECE $0.004$. This turns ``we have a metric'' into ``the
-measurement is valid.''
+generic learner-agent estimator, we recover known ground truth on synthetic data
+(Table~\ref{tab:recovery}). This turns ``we have a metric'' into ``the measurement is
+valid.''
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Estimator & Recovery of known ground truth & Calibration (ECE) \\
+\midrule
+Elo & static ability, mean abs.\ error $0.046$ & $0.023$ \\
+BKT & latent state $P(\hat L)=0.997$ (learned) vs.\ $0.175$ (not) & $0.004$ \\
+\bottomrule
+\end{tabular}
+\caption{Estimator-recovery and calibration on synthetic data with a known ground truth.
+The measurement, not just the metric, is validated.}
+\label{tab:recovery}
+\end{table}
 
 \section{Bidirectional corpus diagnosis (C1)}
 \label{sec:diagnosis}
