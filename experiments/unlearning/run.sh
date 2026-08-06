@@ -11,6 +11,9 @@ MODEL="${MODEL:-Qwen/Qwen2.5-7B-Instruct}"
 METHOD="${METHOD:-simnpo}"    # simnpo (primary) | npo | ga
 DTYPE="${DTYPE:-bfloat16}"    # bfloat16 for a real GPU run; float32 for CPU
 OUT="${OUT:-out/unlearned}"
+# Memory-lean by default: batch 1 fits a 7-8B on a 16 GB T4 (the forget/retain sets are
+# tiny, so batch size barely affects the result). Raise BATCH on a bigger GPU (A100/L4).
+BATCH="${BATCH:-1}"
 # LoRA targets: omit for Llama/Qwen (peft auto-infers q_proj/v_proj/...); set for GPT-2.
 TARGETS_ARG=""
 [ -n "${TARGETS:-}" ] && TARGETS_ARG="--lora_targets ${TARGETS}"
@@ -22,11 +25,29 @@ CHAT_ARG="--chat"; CHAT_AUDIT="--chat"
 Q4_ARG=""
 [ "${LOAD_4BIT:-0}" = "1" ] && Q4_ARG="--load_4bit"
 
+echo "== 0/3 GPU check =="
+# A stale/OOM'd process pins GPU memory and causes an immediate re-OOM. If "used" is
+# already multiple GB here, restart the runtime before continuing.
+python - <<'PY' || true
+import torch
+if torch.cuda.is_available():
+    free, total = torch.cuda.mem_get_info()
+    used = (total - free) / 2**30
+    print(f"  GPU: {total/2**30:.1f} GiB total, {used:.2f} GiB already in use, {free/2**30:.1f} GiB free")
+    if used > 1.0:
+        print("  ! WARNING: GPU is not clean — restart the runtime (Runtime -> Restart session) before running.")
+else:
+    print("  no CUDA — CPU run")
+PY
+
 echo "== 1/3 build datasets =="
 python build_datasets.py
 
-echo "== 2/3 unlearn ($METHOD, $DTYPE${Q4_ARG:+, 4-bit}) on $MODEL =="
-python unlearn.py --model "$MODEL" --method "$METHOD" --dtype "$DTYPE" --out "$OUT" $TARGETS_ARG $CHAT_ARG $Q4_ARG "$@"
+echo "== 2/3 unlearn ($METHOD, $DTYPE${Q4_ARG:+, 4-bit}, batch $BATCH) on $MODEL =="
+# --grad_checkpoint trades compute for memory (essential for a 7-8B on a T4). SimNPO is
+# reference-free, so it avoids NPO's second forward — the lightest option on tight memory.
+python unlearn.py --model "$MODEL" --method "$METHOD" --dtype "$DTYPE" --out "$OUT" \
+    --batch_size "$BATCH" --grad_checkpoint $TARGETS_ARG $CHAT_ARG $Q4_ARG "$@"
 
 echo "== 3/3 audit removal =="
 python audit.py --model "$MODEL" --adapter "$OUT" --dtype "$DTYPE" $CHAT_AUDIT $Q4_ARG
