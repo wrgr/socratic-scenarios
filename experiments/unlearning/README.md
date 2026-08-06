@@ -73,6 +73,13 @@ unlearning failed / left latent knowledge — and the same instrument flags it
   COLREGs, unlearned and scored on the instrument. A 100M–100k-param toy has no COLREG
   knowledge to remove. LoRA unlearning on a 7-8B model is hours on one GPU.
 
+## Troubleshooting
+
+- **`ImportError: Found an incompatible version of torchao ... only versions above 0.16.0`**
+  (seen on Colab during `get_peft_model`). Colab pre-installs an old `torchao` that PEFT's
+  LoRA dispatch rejects. We don't use torchao — remove it: `pip uninstall -y torchao`
+  (or `pip install -U torchao`), then re-run. The Colab notebook does this automatically.
+
 ## Caveats (carry into the paper)
 
 - **Unlearning ≠ deletion.** Verify removal with more than one probe and test relearning
