@@ -162,7 +162,7 @@ parametric leakage by rule ablation (C1)---needing only API access to the learne
 
 \section{Related work and positioning}
 \label{sec:related}
-We foreground the shoulders we stand on; reviewers reward honest reuse plus a sharp delta.
+Each strand below is established prior art; we reuse it as infrastructure and mark where our delta departs from it.
 
 \paragraph{Learner modeling and instructional theory.} Knowledge tracing
 \citep{corbett1994bkt}, the Elo rating system for adaptive systems \citep{pelanek2016}, the
@@ -539,8 +539,8 @@ LLM-judge helpfulness.
 
 \section{Weight-level cross-check via machine unlearning}
 \label{sec:weightlevel}
-A reviewer's sharpest attack on C1 is that corpus \emph{context} removal is not weight-level
-\emph{unlearning}, so the ``leakage'' test is the no-context heuristic in disguise. We
+The sharpest objection to C1 is that corpus \emph{context} removal is not weight-level
+\emph{unlearning}, so the ``leakage'' test could be the no-context heuristic in disguise. We
 answer with an open-weight arm: remove the alter-to-starboard knowledge from an
 open-weight model with a real unlearning method---SimNPO \citep{simnpo2024} as primary
 (reference-free, length-normalized), with NPO \citep{npo2024}, RMU \citep{rmu2024}, and
