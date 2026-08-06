@@ -407,13 +407,16 @@ retrieval). Reading accuracy across them attributes the gain:
 $\mathrm{acc}(\textsc{oracle}){-}\mathrm{acc}(\textsc{none})$ is the \emph{content ceiling}
 (value if retrieval were perfect), $\mathrm{acc}(\textsc{retrieved}){-}\mathrm{acc}(\textsc{none})$
 is what the deployed pipeline \emph{delivers}, and their difference is the \emph{retrieval
-gap}---value present in the corpus but never surfaced. A generator-independent retrieval read
-(recall@$k$ of \emph{any} answer-bearing chunk) localizes that gap directly: on a terse
-equipment-SOP corpus, a MiniLM retriever surfaces the needed fact for only $4/7$ held-out
-fact-recall queries at $k{=}5$, so a substantial share of curated value is lost to
-\emph{retrieval}, not to the model or to the corpus's contents. This separates a curation
-failure (fact absent) from a retrieval failure (fact present but unranked) from a
-model-priors success---distinctions the binary leakage verdict cannot make.
+gap}---value present in the corpus but never surfaced. Running the three conditions through
+a small local generator (Qwen2.5-1.5B) on seven equipment-SOP fact-recall queries makes the
+split concrete: closed-book accuracy is $0/7$ (empty priors), \textsc{oracle} is $7/7$ (every
+fact is recoverable from its chunk), and the deployed MiniLM pipeline lands between at $3/7$
+---so of a $100\%$ content ceiling the pipeline \emph{delivers} $43\%$ and \emph{forfeits} a
+$57\%$ retrieval gap; a generator-independent recall@$5$ of any answer-bearing chunk ($4/7$)
+localizes it. Here the binding constraint is retrieval, not corpus coverage or model
+capability, and a curation failure (fact absent), a retrieval failure (present but unranked),
+and a priors success are distinct outcomes the binary leakage verdict cannot separate.
+(Numbers illustrate the method---one small model, seven queries---not a benchmark.)
 
 \begin{table}[t]
 \centering
