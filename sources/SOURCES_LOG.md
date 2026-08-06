@@ -123,6 +123,26 @@ Per disposition H: **use fully**, flag copyright only. 21 CEUR, **22 White Rose
 Wilkinson OA**, 23/24/25 Optomec, 26 NIOSH, 27 IPC-7711 TOC (**flag: IPC standard is
 copyrighted**), 28 Nature Comms, 29 OSHA, 30 OSTI. Disposition: **USE** (all; 27 flagged).
 
+## 6a. COLREG domain — primary rule source (public, authoritative)
+The COLREG Collision Avoidance domain (`src/corpus/colreg/`) does **not** use `SRC-###`
+IDs — each graph node cites its governing rule inline in the node `source` field. The
+authoritative primary source for that rule text is public and free to use:
+
+| Key | Origin | Rights | Uses | Disposition |
+|---|---|---|---|---|
+| `uscg-navrules-amalgamated` | net | U.S. Government work — public domain (USCG) | graph rule text (paraphrased) + cite | **USE** |
+
+- **URL:** https://www.navcen.uscg.gov/navigation-rules-amalgamated
+- **What it is:** the USCG "Navigation Rules, Amalgamated" edition — the International
+  Regulations for Preventing Collisions at Sea (72 COLREGS) interleaved with the U.S.
+  Inland Navigation Rules (33 CFR Subchapter E), covering Rules 1–41 (Parts A–F) and
+  Annexes I–V.
+- **How used:** `src/corpus/colreg/amalgamated.ts` extends the base give-way-loop graph
+  (`nodes.ts`) to the full rulebook — every rule/annex is a paraphrased `TheoryReference`
+  node cited to this edition, plus supporting parameters, tacit knowledge, failure modes,
+  corrective actions, and Socratic probes. Rule 2 (**no raw source text committed**)
+  holds: all node content is paraphrased, not copied.
+
 ## 7. Candidate docs — authored notes (`31–40`) — all fine to use (disposition I)
 Project-authored extraction notes, **not raw sources**. User: "these are all fine to
 use." J genericization applied.
