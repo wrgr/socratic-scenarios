@@ -19,13 +19,12 @@ import './_env';
 import {
   createLlmManeuverFn,
   runBenchmarkAsync,
-  geminiCompleter,
-  openAiCompatCompleter,
   retryCompleter,
   throttleCompleter,
   boundLearnerCompleter,
   leakingLearnerCompleter,
   type Completer,
+  realCompleterFromEnv,
 } from '../src/engine/colreg-sim';
 import { colregDomain } from '../src/corpus/colreg';
 import { collisionTarget, makeScenario } from '../src/corpus/colreg/benchmark-geometry';
@@ -43,14 +42,6 @@ async function cellJ(complete: Completer, corpus: 'full' | 'none', strict: boole
   return res.meanJ;
 }
 
-function realCompleter(): { completer: Completer; label: string } | null {
-  const env = process.env;
-  if (env.GEMINI_API_KEY)
-    return { completer: geminiCompleter(env.GEMINI_API_KEY, env.GEMINI_MODEL ?? 'gemini-flash-latest'), label: env.GEMINI_MODEL ?? 'gemini' };
-  if (env.OPENAI_API_KEY)
-    return { completer: openAiCompatCompleter({ baseUrl: env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1', apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL ?? 'gpt-4o-mini' }), label: env.OPENAI_MODEL ?? 'openai' };
-  return null;
-}
 
 async function report(complete: Completer, label: string) {
   const rpm = Number(process.env.GEMINI_RPM ?? 5);
@@ -74,7 +65,7 @@ async function report(complete: Completer, label: string) {
 }
 
 async function main() {
-  const real = realCompleter();
+  const real = realCompleterFromEnv();
   try {
     if (real) {
       await report(real.completer, real.label);

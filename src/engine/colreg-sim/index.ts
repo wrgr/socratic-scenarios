@@ -62,6 +62,8 @@ export {
   retryCompleter,
   openAiCompatCompleter,
   throttleCompleter,
+  realCompleterFromEnv,
+  isSafetyBlock,
   createLlmManeuverFn,
   type Completer,
   type LlmDecision,

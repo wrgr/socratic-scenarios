@@ -203,6 +203,32 @@ export function openAiCompatCompleter(cfg: { baseUrl: string; apiKey: string; mo
   };
 }
 
+/**
+ * Select a real completer from the environment (GEMINI → OPENAI → GitHub Models), returning
+ * `null` when no credential is set. Shared by the eval scripts so provider resolution can't
+ * drift between them.
+ */
+export function realCompleterFromEnv(): { completer: Completer; label: string } | null {
+  const env = process.env;
+  if (env.GEMINI_API_KEY)
+    return { completer: geminiCompleter(env.GEMINI_API_KEY, env.GEMINI_MODEL ?? 'gemini-flash-latest'), label: env.GEMINI_MODEL ?? 'gemini' };
+  if (env.OPENAI_API_KEY)
+    return { completer: openAiCompatCompleter({ baseUrl: env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1', apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL ?? 'gpt-4o-mini' }), label: env.OPENAI_MODEL ?? 'openai' };
+  if (env.GITHUB_MODELS_TOKEN)
+    return { completer: openAiCompatCompleter({ baseUrl: 'https://models.github.ai/inference', apiKey: env.GITHUB_MODELS_TOKEN, model: env.GITHUB_MODELS_MODEL ?? 'openai/gpt-4o-mini' }), label: 'github-models' };
+  return null;
+}
+
+/**
+ * True when a completion failed because a safety filter refused it (vs. a wrong answer).
+ * Shared so the "exclude blocks from the accuracy denominator" rule uses one classifier
+ * across the decomposition harnesses — a drifting regex would make their numbers
+ * non-comparable.
+ */
+export function isSafetyBlock(msg: string): boolean {
+  return /blocked|PROHIBITED_CONTENT|SAFETY|response was blocked/i.test(msg);
+}
+
 // ─── Live LLM policy ──────────────────────────────────────────────
 
 export interface LlmLearnerOptions extends CorpusOptions {

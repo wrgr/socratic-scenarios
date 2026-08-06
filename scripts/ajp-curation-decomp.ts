@@ -14,11 +14,11 @@
  */
 import './_env';
 import {
-  geminiCompleter,
-  openAiCompatCompleter,
   retryCompleter,
   throttleCompleter,
   type Completer,
+  realCompleterFromEnv,
+  isSafetyBlock,
 } from '../src/engine/colreg-sim';
 import { extendedSymptomNodes, extendedFaultNodes, extendedActionNodes } from '../src/corpus/ajp';
 
@@ -62,9 +62,6 @@ ${observable}
 Respond with ONLY a JSON object: {"fault": "<short fault name>", "action": "<short corrective action>", "abstained": <true|false>}`;
 }
 
-function isSafetyBlock(msg: string): boolean {
-  return /blocked|PROHIBITED_CONTENT|SAFETY|response was blocked/i.test(msg);
-}
 
 interface CellResult { rate: number; excluded: number; answerable: number }
 
@@ -99,17 +96,9 @@ async function cellError(complete: Completer, corpus: 'full' | 'none', strict: b
   return { rate: answerable ? wrong / answerable : NaN, excluded, answerable }; // error rate over answerable cells
 }
 
-function realCompleter(): { completer: Completer; label: string } | null {
-  const env = process.env;
-  if (env.GEMINI_API_KEY)
-    return { completer: geminiCompleter(env.GEMINI_API_KEY, env.GEMINI_MODEL ?? 'gemini-flash-latest'), label: env.GEMINI_MODEL ?? 'gemini' };
-  if (env.OPENAI_API_KEY)
-    return { completer: openAiCompatCompleter({ baseUrl: env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1', apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL ?? 'gpt-4o-mini' }), label: env.OPENAI_MODEL ?? 'openai' };
-  return null;
-}
 
 async function main() {
-  const real = realCompleter();
+  const real = realCompleterFromEnv();
   if (!real) { console.log('No key — set GEMINI_API_KEY / OPENAI_API_KEY to run the AJP diagnosis instrument.'); return; }
   const rpm = Number(process.env.GEMINI_RPM ?? 5);
   const c = throttleCompleter(retryCompleter(real.completer), Math.ceil(60000 / Math.max(1, rpm)) + 700);

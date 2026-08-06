@@ -18,7 +18,7 @@
 import './_env';
 import { readFileSync } from 'node:fs';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { geminiCompleter, retryCompleter, throttleCompleter, type Completer } from '../src/engine/colreg-sim';
+import { geminiCompleter, retryCompleter, throttleCompleter, isSafetyBlock, type Completer } from '../src/engine/colreg-sim';
 
 interface Chunk { id: string; section: string; text: string; embedding: number[] }
 const corpus: Chunk[] = JSON.parse(
@@ -86,9 +86,6 @@ Answer in one or two sentences with the specific values.`;
 // measurement artifact. So we score three states and take accuracy over answerable questions only.
 interface Tally { correct: number; wrong: number; blocked: number; error: number }
 
-function isSafetyBlock(msg: string): boolean {
-  return /blocked|PROHIBITED_CONTENT|SAFETY|response was blocked/i.test(msg);
-}
 
 async function accuracy(complete: Completer, mode: 'none' | 'retrieved' | 'oracle', key: string): Promise<Tally> {
   const t: Tally = { correct: 0, wrong: 0, blocked: 0, error: 0 };
