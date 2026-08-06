@@ -68,24 +68,51 @@ QUESTION: ${q}
 Answer in one or two sentences with the specific values.`;
 }
 
-async function accuracy(complete: Completer, mode: 'none' | 'retrieved' | 'oracle', key: string): Promise<number> {
-  let correct = 0;
+// A safety filter refusing to answer is NOT a wrong answer: the model never got its shot.
+// Folding blocks into "miss" would (a) inflate the apparent knowledge gap and (b) confound the
+// conditions asymmetrically — the `retrieved` context injects hazard wording that itself raises
+// the block rate, so a block==miss rule can make RAG look worse than closed-book as a pure
+// measurement artifact. So we score three states and take accuracy over answerable questions only.
+interface Tally { correct: number; wrong: number; blocked: number; error: number }
+
+function isSafetyBlock(msg: string): boolean {
+  return /blocked|PROHIBITED_CONTENT|SAFETY|response was blocked/i.test(msg);
+}
+
+async function accuracy(complete: Completer, mode: 'none' | 'retrieved' | 'oracle', key: string): Promise<Tally> {
+  const t: Tally = { correct: 0, wrong: 0, blocked: 0, error: 0 };
   for (const q of questions) {
-    let context = '';
-    if (mode === 'oracle') {
-      const gold = corpus.find((c) => c.text.includes(q.gold));
-      context = gold ? `[${gold.id}] ${gold.text}` : '';
-    } else if (mode === 'retrieved') {
-      const qe = await embed(key, q.q);
-      context = corpus.map((c) => ({ c, s: cosine(qe, c.embedding) }))
-        .sort((a, b) => b.s - a.s).slice(0, 5).map((m) => `[${m.c.id}] ${m.c.text}`).join('\n\n');
+    let outcome: 'OK' | 'MISS' | 'BLOCK' | 'ERR';
+    let detail = '';
+    try {
+      let context = '';
+      if (mode === 'oracle') {
+        const gold = corpus.find((c) => c.text.includes(q.gold));
+        context = gold ? `[${gold.id}] ${gold.text}` : '';
+      } else if (mode === 'retrieved') {
+        const qe = await embed(key, q.q);
+        context = corpus.map((c) => ({ c, s: cosine(qe, c.embedding) }))
+          .sort((a, b) => b.s - a.s).slice(0, 5).map((m) => `[${m.c.id}] ${m.c.text}`).join('\n\n');
+      }
+      const reply = await complete(prompt(q.q, context));
+      const ok = q.answer.every((re) => re.test(reply));
+      outcome = ok ? 'OK' : 'MISS';
+      if (ok) t.correct++; else t.wrong++;
+      detail = reply.replace(/\s+/g, ' ').slice(0, 120);
+    } catch (e) {
+      const msg = (e as Error).message ?? String(e);
+      if (isSafetyBlock(msg)) { outcome = 'BLOCK'; t.blocked++; } else { outcome = 'ERR'; t.error++; }
+      detail = msg.replace(/\s+/g, ' ').slice(0, 120);
     }
-    const reply = await complete(prompt(q.q, context));
-    const ok = q.answer.every((re) => re.test(reply));
-    if (process.env.AJP_DEBUG) console.error(`  [${q.id} ${mode}] ${ok ? 'OK ' : 'MISS'} :: ${reply.replace(/\s+/g, ' ').slice(0, 120)}`);
-    if (ok) correct++;
+    if (process.env.AJP_DEBUG) console.error(`  [${q.id} ${mode}] ${outcome.padEnd(5)} :: ${detail}`);
   }
-  return correct / questions.length;
+  return t;
+}
+
+// accuracy over ANSWERABLE questions only — blocks and errors excluded from the denominator.
+function acc(t: Tally): number {
+  const answerable = t.correct + t.wrong;
+  return answerable === 0 ? NaN : t.correct / answerable;
 }
 
 async function main() {
@@ -94,21 +121,36 @@ async function main() {
   const model = process.env.GEMINI_MODEL ?? 'gemini-flash-latest';
   const rpm = Number(process.env.GEMINI_RPM ?? 5);
   const complete = throttleCompleter(retryCompleter(geminiCompleter(key, model)), Math.ceil(60000 / Math.max(1, rpm)) + 700);
-  try {
-    const none = await accuracy(complete, 'none', key);
-    const retrieved = await accuracy(complete, 'retrieved', key);
-    const oracle = await accuracy(complete, 'oracle', key);
-    const pct = (x: number) => `${(100 * x).toFixed(0)}%`;
-    console.log(`\n── ${model} — AJP fact recall accuracy over ${questions.length} equipment-specific questions ──`);
-    console.log(`  none (priors only)     ${pct(none)}`);
-    console.log(`  retrieved (real RAG)   ${pct(retrieved)}`);
-    console.log(`  oracle (gold chunk)    ${pct(oracle)}`);
-    console.log('  attribution:');
-    console.log(`    CONTENT value   acc(oracle)-acc(none)      = ${pct(oracle - none)}   (worth of the curated knowledge)`);
-    console.log(`    RETRIEVAL gap   acc(oracle)-acc(retrieved) = ${pct(oracle - retrieved)}   (what the retriever leaves on the table)`);
-    console.log(`    real-RAG value  acc(retrieved)-acc(none)   = ${pct(retrieved - none)}   (what a deployed RAG delivers)`);
-  } catch (e) {
-    console.error(`\nFailed: ${(e as Error).message}`);
+  const none = await accuracy(complete, 'none', key);
+  const retrieved = await accuracy(complete, 'retrieved', key);
+  const oracle = await accuracy(complete, 'oracle', key);
+  const pct = (x: number) => (Number.isNaN(x) ? ' n/a' : `${(100 * x).toFixed(0)}%`);
+  const N = questions.length;
+  const row = (label: string, t: Tally) =>
+    `  ${label.padEnd(22)} ${pct(acc(t)).padStart(4)}   (${t.correct}/${t.correct + t.wrong} answerable` +
+    `${t.blocked ? `, ${t.blocked} blocked` : ''}${t.error ? `, ${t.error} err` : ''})`;
+  console.log(`\n── ${model} — AJP fact recall over ${N} equipment-specific questions ──`);
+  console.log('  accuracy = correct / answerable; blocks & errors are excluded from the denominator, reported separately');
+  console.log(row('none (priors only)', none));
+  console.log(row('retrieved (real RAG)', retrieved));
+  console.log(row('oracle (gold chunk)', oracle));
+
+  // Attribution is only meaningful where both conditions retained enough answerable questions.
+  const thin = (t: Tally) => t.correct + t.wrong < Math.ceil(N / 2);
+  const diff = (a: Tally, b: Tally, gloss: string) => {
+    if (thin(a) || thin(b)) return `n/a — too few answerable (${a.correct + a.wrong} & ${b.correct + b.wrong} of ${N})`;
+    return `${pct(acc(a) - acc(b))}   ${gloss}`;
+  };
+  console.log('  attribution:');
+  console.log(`    CONTENT value   acc(oracle)-acc(none)      = ${diff(oracle, none, '(worth of the curated knowledge)')}`);
+  console.log(`    RETRIEVAL gap   acc(oracle)-acc(retrieved) = ${diff(oracle, retrieved, '(what the retriever leaves on the table)')}`);
+  console.log(`    real-RAG value  acc(retrieved)-acc(none)   = ${diff(retrieved, none, '(what a deployed RAG delivers)')}`);
+
+  const totalBlocked = none.blocked + retrieved.blocked + oracle.blocked;
+  if (totalBlocked) {
+    console.log(`\n  ⚠ ${totalBlocked} safety block(s) across conditions ` +
+      `(none:${none.blocked} retrieved:${retrieved.blocked} oracle:${oracle.blocked}). ` +
+      `Block rate is itself a signal the domain is hazard-adjacent — but it is not an accuracy result.`);
   }
 }
 
