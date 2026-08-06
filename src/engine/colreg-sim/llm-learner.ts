@@ -73,10 +73,18 @@ export interface LlmDecision {
   reasoning?: string;
 }
 
-export function buildPrompt(scenario: SimScenario, corpus: string): string {
+export function buildPrompt(scenario: SimScenario, corpus: string, strict = true): string {
+  // `strict` (the default) is the corpus-binding positive control: the model must answer
+  // ONLY from the provided rules and abstain otherwise. `strict=false` is the
+  // `unconstrained` condition — the binding clause is removed so the model may fall back
+  // on its parametric COLREG knowledge; the instrument should then flip the verdict to
+  // "leaking" (see docs/novelty-and-positioning.md §8, Experiment 1).
+  const clause = strict
+    ? 'STRICT RULE: Use ONLY the numbered rules below. Do NOT use any outside knowledge of the COLREGs. If the provided rules do not cover the situation, set "abstained": true.'
+    : 'Use your knowledge of the COLREGs together with any rules provided below. If the rules are silent, apply what you know rather than abstaining.';
   return `You are the officer of the watch on a power-driven vessel. Decide a single collision-avoidance maneuver.
 
-STRICT RULE: Use ONLY the numbered rules below. Do NOT use any outside knowledge of the COLREGs. If the provided rules do not cover the situation, set "abstained": true.
+${clause}
 
 RULES:
 ${corpus}
@@ -137,6 +145,40 @@ export function throttleCompleter(inner: Completer, minIntervalMs: number): Comp
   };
 }
 
+/**
+ * Wrap a completer so transient failures (HTTP 429 rate-limit, 5xx) are retried with
+ * exponential backoff. If the provider reports a `retryDelay` (Gemini returns one in the
+ * 429 body), that hint is honored. Non-retryable errors (e.g. 401/403/404) propagate
+ * immediately. Dev-harness convenience; no effect on decision logic.
+ */
+export function retryCompleter(
+  inner: Completer,
+  opts: { retries?: number; baseMs?: number; maxMs?: number } = {},
+): Completer {
+  const retries = opts.retries ?? 5;
+  const baseMs = opts.baseMs ?? 2000;
+  const maxMs = opts.maxMs ?? 60000;
+  const retryable = (msg: string) => /\b(429|50\d|quota|rate.?limit|too many requests|overloaded)\b/i.test(msg);
+  return async (prompt: string) => {
+    let lastErr: unknown;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await inner(prompt);
+      } catch (e) {
+        lastErr = e;
+        const msg = (e as Error).message ?? String(e);
+        if (attempt === retries || !retryable(msg)) throw e;
+        const hinted = msg.match(/retry(?:Delay)?["']?\s*[:=]?\s*["']?(\d+(?:\.\d+)?)\s*s/i);
+        const backoff = Math.min(maxMs, baseMs * 2 ** attempt);
+        const waitMs = hinted ? Math.ceil(parseFloat(hinted[1]) * 1000) + 500 : backoff;
+        console.log(`  (retry ${attempt + 1}/${retries} after ${Math.round(waitMs / 1000)}s — ${msg.slice(0, 80)})`);
+        await new Promise((r) => setTimeout(r, waitMs));
+      }
+    }
+    throw lastErr;
+  };
+}
+
 /** Gemini via @google/generative-ai (needs a live key — the repo's default). */
 export function geminiCompleter(apiKey: string, model = 'gemini-2.5-flash'): Completer {
   const m = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model });
@@ -161,11 +203,39 @@ export function openAiCompatCompleter(cfg: { baseUrl: string; apiKey: string; mo
   };
 }
 
+/**
+ * Select a real completer from the environment (GEMINI → OPENAI → GitHub Models), returning
+ * `null` when no credential is set. Shared by the eval scripts so provider resolution can't
+ * drift between them.
+ */
+export function realCompleterFromEnv(): { completer: Completer; label: string } | null {
+  const env = process.env;
+  if (env.GEMINI_API_KEY)
+    return { completer: geminiCompleter(env.GEMINI_API_KEY, env.GEMINI_MODEL ?? 'gemini-flash-latest'), label: env.GEMINI_MODEL ?? 'gemini' };
+  if (env.OPENAI_API_KEY)
+    return { completer: openAiCompatCompleter({ baseUrl: env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1', apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL ?? 'gpt-4o-mini' }), label: env.OPENAI_MODEL ?? 'openai' };
+  if (env.GITHUB_MODELS_TOKEN)
+    return { completer: openAiCompatCompleter({ baseUrl: 'https://models.github.ai/inference', apiKey: env.GITHUB_MODELS_TOKEN, model: env.GITHUB_MODELS_MODEL ?? 'openai/gpt-4o-mini' }), label: 'github-models' };
+  return null;
+}
+
+/**
+ * True when a completion failed because a safety filter refused it (vs. a wrong answer).
+ * Shared so the "exclude blocks from the accuracy denominator" rule uses one classifier
+ * across the decomposition harnesses — a drifting regex would make their numbers
+ * non-comparable.
+ */
+export function isSafetyBlock(msg: string): boolean {
+  return /blocked|PROHIBITED_CONTENT|SAFETY|response was blocked/i.test(msg);
+}
+
 // ─── Live LLM policy ──────────────────────────────────────────────
 
 export interface LlmLearnerOptions extends CorpusOptions {
   complete: Completer;
   corpusNodes: AJPNode[];
+  /** false = the `unconstrained` prompt condition (parametric fallback allowed). */
+  strict?: boolean;
 }
 
 /**
@@ -176,7 +246,7 @@ export interface LlmLearnerOptions extends CorpusOptions {
 export function createLlmManeuverFn(opts: LlmLearnerOptions) {
   const corpus = renderCorpus(opts.corpusNodes, opts);
   return async (scenario: SimScenario): Promise<{ maneuver: Maneuver; decision: LlmDecision }> => {
-    const decision = parseDecision(await opts.complete(buildPrompt(scenario, corpus)));
+    const decision = parseDecision(await opts.complete(buildPrompt(scenario, corpus, opts.strict ?? true)));
     return { maneuver: decisionToManeuver(decision), decision };
   };
 }

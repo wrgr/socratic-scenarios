@@ -13,19 +13,21 @@
  */
 import { useState, useRef, useMemo, useEffect } from 'react';
 import type { LearnerProfile } from '../types';
-import type { MentorEvaluation } from '../engine/mentor';
-import { getMentorService } from '../engine/mentor';
+import type { MentorEvaluation, AblationDiff } from '../engine/mentor';
+import { getMentorService, runAblationProbe } from '../engine/mentor';
 import { getSimulatedLearnerService } from '../engine/simulated-learner';
 import type { SimulatedExpertiseLevel } from '../engine/simulated-learner';
 import { useScenarioEngine } from '../engine/scenario/engine';
 import type { ScenarioDefinition } from '../engine/scenario/types';
 import { useDomain } from '../domain/useDomain';
+import { useDomainGraph } from '../domain/useDomainGraph';
 import { findProbe, findConsequence, findNode } from '../corpus/registry';
 import { ProcedureScaffold } from './ProcedureScaffold';
 import { MentorDegradedBanner } from './MentorDegradedBanner';
+import { ProvenanceBadge, AblationPanel, ProvenanceToggle } from './MentorProvenance';
 import { SourceRefText } from './SourceRefText';
 import { GapFlagButton } from './GapFlagButton';
-import { safetyGateStrategy, probeContextStrategy, tacitLookupStrategy, formatProbeRetrievalContext } from '../engine/retrieval/retrieval-router';
+import { safetyGateStrategy, probeContextStrategy, tacitLookupStrategy, formatProbeRetrievalContext, groundingNodeIdsFrom } from '../engine/retrieval/retrieval-router';
 import type { AJPNode } from '../types/ajp';
 
 interface Props {
@@ -112,7 +114,8 @@ function GraphSafetyGatePanel({
   safetyGateId: string;
   onAcknowledge: () => void;
 }) {
-  const gateResult = useMemo(() => safetyGateStrategy(safetyGateId), [safetyGateId]);
+  const graph = useDomainGraph();
+  const gateResult = useMemo(() => safetyGateStrategy(safetyGateId, graph), [safetyGateId, graph]);
   // AJP gates resolve via the engine's baked graph; for other domains the gate
   // node lives only in the domain corpus — fall back to a registry lookup.
   const fallbackNode = useMemo(
@@ -197,11 +200,12 @@ function GraphSafetyGatePanel({
 function GraphProbeContextStrip({ probeId }: { probeId: string }) {
   const [expanded, setExpanded] = useState(false);
 
-  const probeCtx = useMemo(() => probeContextStrategy(probeId), [probeId]);
+  const graph = useDomainGraph();
+  const probeCtx = useMemo(() => probeContextStrategy(probeId, graph), [probeId, graph]);
   const tacitResult = useMemo(() => {
     const probe = findProbe(probeId);
-    return probe ? tacitLookupStrategy(probe.content, 2) : null;
-  }, [probeId]);
+    return probe ? tacitLookupStrategy(probe.content, 2, graph) : null;
+  }, [probeId, graph]);
 
   const hasTacit = (tacitResult?.matches.length ?? 0) > 0;
   const hasLinkedProbes = (probeCtx?.probes.length ?? 0) > 0;
@@ -365,6 +369,8 @@ function MentorReflectionPanel({
   const commonWrongAnswers = probe?.commonWrongAnswers ?? [];
   const masteryThreshold = probe?.masteryThreshold ?? 0.80;
   const isSafetyCritical = masteryThreshold >= 0.90;
+  // Scope Mentor grounding to the active domain's graph, not the boot-bound one.
+  const graph = useDomainGraph();
 
   const [response, setResponse] = useState(initialRecord && !initialRecord.wasSimulated ? initialRecord.learnerResponse : '');
   const [evaluation, setEvaluation] = useState<MentorEvaluation | null>(initialRecord?.evaluation ?? null);
@@ -374,18 +380,21 @@ function MentorReflectionPanel({
     initialRecord?.wasSimulated ? initialRecord.learnerResponse : null,
   );
   const [simLoading, setSimLoading] = useState(false);
+  const [ablationOn, setAblationOn] = useState(false);
+  const [ablation, setAblation] = useState<AblationDiff<MentorEvaluation> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   async function handleSubmit() {
     if (!response.trim() || !mentorService) return;
     setLoading(true);
     try {
-      const probeCtx = probe ? probeContextStrategy(probe.id) : null;
-      const tacitResult = tacitLookupStrategy(probeText, 4);
+      const probeCtx = probe ? probeContextStrategy(probe.id, graph) : null;
+      const tacitResult = tacitLookupStrategy(probeText, 4, graph);
       const retrievalContext = formatProbeRetrievalContext(probeCtx, tacitResult) || undefined;
+      const groundingNodeIds = groundingNodeIdsFrom(probeCtx, tacitResult);
 
       const typed = response.trim();
-      const result = await mentorService.evaluate({
+      const ctx = {
         probeQuestion: probeText,
         expectedConcepts,
         commonWrongAnswers,
@@ -393,8 +402,18 @@ function MentorReflectionPanel({
         priorAttempts: attempts,
         safetyGate: isSafetyCritical,
         retrievalContext,
+        groundingNodeIds,
         domainLabel: domain.name,
-      });
+      };
+      let result: MentorEvaluation;
+      if (ablationOn && retrievalContext) {
+        const diff = await runAblationProbe(mentorService, ctx);
+        setAblation(diff);
+        result = diff.grounded;
+      } else {
+        setAblation(null);
+        result = await mentorService.evaluate(ctx);
+      }
       setEvaluation(result);
       const nextAttempts = attempts + 1;
       setAttempts(nextAttempts);
@@ -422,10 +441,12 @@ function MentorReflectionPanel({
       });
       setSimulatedResponse(generatedText);
 
-      const probeCtx = probe ? probeContextStrategy(probe.id) : null;
-      const tacitResult = tacitLookupStrategy(probeText, 4);
+      const probeCtx = probe ? probeContextStrategy(probe.id, graph) : null;
+      const tacitResult = tacitLookupStrategy(probeText, 4, graph);
       const retrievalContext = formatProbeRetrievalContext(probeCtx, tacitResult) || undefined;
+      const groundingNodeIds = groundingNodeIdsFrom(probeCtx, tacitResult);
 
+      setAblation(null);
       const result = await mentorService.evaluate({
         probeQuestion: probeText,
         expectedConcepts,
@@ -434,6 +455,7 @@ function MentorReflectionPanel({
         priorAttempts: attempts,
         safetyGate: isSafetyCritical,
         retrievalContext,
+        groundingNodeIds,
         domainLabel: domain.name,
       });
       setEvaluation(result);
@@ -518,6 +540,13 @@ function MentorReflectionPanel({
               </button>
             )}
           </div>
+          {mentorService && !readOnly && (
+            <ProvenanceToggle
+              checked={ablationOn}
+              onChange={setAblationOn}
+              disabled={loading || simLoading}
+            />
+          )}
         </div>
       )}
 
@@ -552,6 +581,8 @@ function MentorReflectionPanel({
                 />
               </div>
               <p className="eval-feedback">{evaluation.feedback}</p>
+              <ProvenanceBadge evaluation={evaluation} />
+              {ablation && <AblationPanel diff={ablation} />}
             </>
           )}
           {!evaluation.masteryPassed && (

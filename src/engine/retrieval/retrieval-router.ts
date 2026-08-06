@@ -51,7 +51,44 @@
  */
 
 import type { AJPNode } from '../../types/ajp';
-import { nodeById, outNeighbors, inNeighbors, matchNodes } from './graph-utils';
+import type { DomainDescriptor } from '../../corpus/types';
+import {
+  boundGraphView,
+  createGraphView,
+  dedupeNodesById,
+  type GraphView,
+} from './graph-utils';
+
+// ─── Domain scoping ───────────────────────────────────────────────
+// Retrieval strategies default to the graph bound at boot (boundGraphView —
+// the src/domains active domain, AJP by default). To scope retrieval to another
+// domain's corpus, build a GraphView from that domain's descriptor and pass it
+// in. Without this, a tire/COLREG probe token-matches against the bound domain's
+// TacitKnowledge nodes (AJP's, by default) and surfaces wrong-domain
+// "background knowledge" in the Socratic/Scenario mentor context.
+
+/**
+ * Build a retrieval GraphView over one domain's own corpus. A descriptor's
+ * `nodes` may already include its probe/consequence nodes (AJP) or keep them
+ * separate (tire/COLREG), so both are merged and de-duplicated by id.
+ */
+// A domain's corpus is immutable, so its scoped view is built once and cached by descriptor
+// identity — every component/step that scopes to the same domain shares one view instead of
+// rebuilding (dedupe + Map construction) on each mount.
+const domainViewCache = new WeakMap<DomainDescriptor, GraphView>();
+
+export function graphViewForDomain(descriptor: DomainDescriptor): GraphView {
+  const cached = domainViewCache.get(descriptor);
+  if (cached) return cached;
+  const nodes = dedupeNodesById([
+    ...descriptor.nodes,
+    ...descriptor.probes,
+    ...descriptor.consequences,
+  ]);
+  const view = createGraphView(nodes, descriptor.edges);
+  domainViewCache.set(descriptor, view);
+  return view;
+}
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
 
@@ -69,6 +106,13 @@ export interface ContextualQuery {
   /** Direct node ID lookup (used by step-context, probe-context, safety-gate). */
   nodeId?: string;
   topK?: number;
+  /**
+   * Retrieval scope. Defaults to the boot-bound graph (AJP). Pass
+   * `graphViewForDomain(descriptor)` to scope the dispatcher to another domain's
+   * corpus — without it a tire/COLREG query matches AJP nodes (same cross-domain
+   * bug fixed in the direct mentor path).
+   */
+  graph?: GraphView;
 }
 
 export interface ContextualResult {
@@ -93,22 +137,26 @@ export interface FaultChain {
   reachbackNote?: string;
 }
 
-export function faultDiagnosisStrategy(text: string, topK = 3): FaultChain[] {
+export function faultDiagnosisStrategy(
+  text: string,
+  topK = 3,
+  graph: GraphView = boundGraphView,
+): FaultChain[] {
   const chains = new Map<string, { chain: FaultChain; score: number }>();
 
-  const symptomMatches = matchNodes(text, ['Symptom'], 6);
+  const symptomMatches = graph.matchNodes(text, ['Symptom'], 6);
   for (const { node, score } of symptomMatches) {
-    for (const fault of outNeighbors(node.id, 'INDICATES')) {
+    for (const fault of graph.outNeighbors(node.id, 'INDICATES')) {
       const existing = chains.get(fault.id);
       const newScore = score + (existing?.score ?? 0);
-      chains.set(fault.id, { chain: buildFaultChain(fault, newScore), score: newScore });
+      chains.set(fault.id, { chain: buildFaultChain(fault, newScore, graph), score: newScore });
     }
   }
 
-  const faultMatches = matchNodes(text, ['FailureMode'], 4);
+  const faultMatches = graph.matchNodes(text, ['FailureMode'], 4);
   for (const { node: fault, score } of faultMatches) {
     if (!chains.has(fault.id)) {
-      chains.set(fault.id, { chain: buildFaultChain(fault, score), score });
+      chains.set(fault.id, { chain: buildFaultChain(fault, score, graph), score });
     } else {
       const e = chains.get(fault.id)!;
       chains.set(fault.id, { chain: e.chain, score: e.score + score * 0.5 });
@@ -121,9 +169,9 @@ export function faultDiagnosisStrategy(text: string, topK = 3): FaultChain[] {
     .map((e) => ({ ...e.chain, score: e.score }));
 }
 
-function buildFaultChain(fault: AJPNode, score: number): FaultChain {
-  const safetyHazards = outNeighbors(fault.id, 'REQUIRES').filter((n) => n.type === 'SafetyHazard');
-  const tacitNodes = outNeighbors(fault.id, 'REQUIRES').filter((n) => n.type === 'TacitKnowledge');
+function buildFaultChain(fault: AJPNode, score: number, graph: GraphView): FaultChain {
+  const safetyHazards = graph.outNeighbors(fault.id, 'REQUIRES').filter((n) => n.type === 'SafetyHazard');
+  const tacitNodes = graph.outNeighbors(fault.id, 'REQUIRES').filter((n) => n.type === 'TacitKnowledge');
 
   let reachbackNote: string | undefined;
   if (score < 0.5) {
@@ -137,8 +185,8 @@ function buildFaultChain(fault: AJPNode, score: number): FaultChain {
 
   return {
     fault,
-    symptoms: inNeighbors(fault.id, 'INDICATES'),
-    correctiveActions: outNeighbors(fault.id, 'FIXED_BY'),
+    symptoms: graph.inNeighbors(fault.id, 'INDICATES'),
+    correctiveActions: graph.outNeighbors(fault.id, 'FIXED_BY'),
     safetyHazards,
     tacitNodes,
     score,
@@ -162,18 +210,21 @@ export interface StepContext {
   verificationChecks: AJPNode[];
 }
 
-export function stepContextStrategy(stepId: string): StepContext | null {
-  const step = nodeById(stepId);
+export function stepContextStrategy(
+  stepId: string,
+  graph: GraphView = boundGraphView,
+): StepContext | null {
+  const step = graph.nodeById(stepId);
   if (!step || step.type !== 'Step') return null;
 
   return {
     step,
-    nextSteps: outNeighbors(stepId, 'NEXT_STEP'),
-    probes: outNeighbors(stepId, 'PROBES'),
-    safetyHazards: outNeighbors(stepId, 'REQUIRES').filter((n) => n.type === 'SafetyHazard'),
+    nextSteps: graph.outNeighbors(stepId, 'NEXT_STEP'),
+    probes: graph.outNeighbors(stepId, 'PROBES'),
+    safetyHazards: graph.outNeighbors(stepId, 'REQUIRES').filter((n) => n.type === 'SafetyHazard'),
     // Step -[CAUSES]→ FailureMode: outNeighbors gives faults this step can trigger
-    triggerableFaults: outNeighbors(stepId, 'CAUSES'),
-    verificationChecks: outNeighbors(stepId, 'VERIFIED_BY'),
+    triggerableFaults: graph.outNeighbors(stepId, 'CAUSES'),
+    verificationChecks: graph.outNeighbors(stepId, 'VERIFIED_BY'),
   };
 }
 
@@ -187,12 +238,15 @@ export interface ProbeContext {
   probes: AJPNode[];
 }
 
-export function probeContextStrategy(nodeId: string): ProbeContext | null {
-  const anchor = nodeById(nodeId);
+export function probeContextStrategy(
+  nodeId: string,
+  graph: GraphView = boundGraphView,
+): ProbeContext | null {
+  const anchor = graph.nodeById(nodeId);
   if (!anchor) return null;
 
   // Probes point TO their teaching target via PROBES edge
-  const probes = inNeighbors(nodeId, 'PROBES');
+  const probes = graph.inNeighbors(nodeId, 'PROBES');
 
   return { anchorNode: anchor, probes };
 }
@@ -209,11 +263,14 @@ export interface SafetyGateResult {
   isBlocking: boolean;
 }
 
-export function safetyGateStrategy(nodeId: string): SafetyGateResult | null {
-  const source = nodeById(nodeId);
+export function safetyGateStrategy(
+  nodeId: string,
+  graph: GraphView = boundGraphView,
+): SafetyGateResult | null {
+  const source = graph.nodeById(nodeId);
   if (!source) return null;
 
-  const hazards = outNeighbors(nodeId, 'REQUIRES').filter((n) => n.type === 'SafetyHazard');
+  const hazards = graph.outNeighbors(nodeId, 'REQUIRES').filter((n) => n.type === 'SafetyHazard');
 
   return {
     sourceNode: source,
@@ -234,17 +291,21 @@ export interface TacitResult {
   linkedHazards: AJPNode[];
 }
 
-export function tacitLookupStrategy(text: string, topK = 3): TacitResult {
-  const matches = matchNodes(text, ['TacitKnowledge'], topK);
+export function tacitLookupStrategy(
+  text: string,
+  topK = 3,
+  graph: GraphView = boundGraphView,
+): TacitResult {
+  const matches = graph.matchNodes(text, ['TacitKnowledge'], topK);
   const linkedProbes: AJPNode[] = [];
   const linkedHazards: AJPNode[] = [];
   const seen = new Set<string>();
 
   for (const { node } of matches) {
-    for (const probe of inNeighbors(node.id, 'PROBES')) {
+    for (const probe of graph.inNeighbors(node.id, 'PROBES')) {
       if (!seen.has(probe.id)) { seen.add(probe.id); linkedProbes.push(probe); }
     }
-    for (const hazard of outNeighbors(node.id, 'REQUIRES')) {
+    for (const hazard of graph.outNeighbors(node.id, 'REQUIRES')) {
       if (hazard.type === 'SafetyHazard' && !seen.has(hazard.id)) {
         seen.add(hazard.id); linkedHazards.push(hazard);
       }
@@ -296,17 +357,38 @@ export function formatProbeRetrievalContext(
   return parts.join('\n\n');
 }
 
+/**
+ * The corpus node ids that `formatProbeRetrievalContext` would emit for the same
+ * inputs — the exact set of nodes grounding a Mentor call. Pass this into
+ * `evaluate({ groundingNodeIds })` for accurate provenance tagging (avoids
+ * re-parsing the formatted string).
+ */
+export function groundingNodeIdsFrom(
+  probeCtx: ProbeContext | null,
+  tacitResult: TacitResult,
+): string[] {
+  const ids = new Set<string>();
+  for (const { node } of tacitResult.matches) ids.add(node.id);
+  for (const h of tacitResult.linkedHazards) ids.add(h.id);
+  if (probeCtx) {
+    for (const p of probeCtx.probes) {
+      if (p.expectedConcepts && p.expectedConcepts.length > 0) ids.add(p.id);
+    }
+  }
+  return [...ids];
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 // Convenience dispatcher — callers can pass a ContextualQuery without knowing
 // which strategy handles it.
 
 export function retrieveForContext(query: ContextualQuery): ContextualResult {
-  const { mode, text = '', nodeId = '', topK = 3 } = query;
+  const { mode, text = '', nodeId = '', topK = 3, graph = boundGraphView } = query;
   const timestamp = Date.now();
 
   switch (mode) {
     case 'fault-diagnosis': {
-      const chains = faultDiagnosisStrategy(text, topK);
+      const chains = faultDiagnosisStrategy(text, topK, graph);
       return {
         mode,
         anchorIds: chains.map((c) => c.fault.id),
@@ -322,7 +404,7 @@ export function retrieveForContext(query: ContextualQuery): ContextualResult {
     }
 
     case 'step-context': {
-      const ctx = stepContextStrategy(nodeId);
+      const ctx = stepContextStrategy(nodeId, graph);
       if (!ctx) return { mode, anchorIds: [], nodes: {}, timestamp };
       return {
         mode,
@@ -340,7 +422,7 @@ export function retrieveForContext(query: ContextualQuery): ContextualResult {
     }
 
     case 'probe-context': {
-      const ctx = probeContextStrategy(nodeId);
+      const ctx = probeContextStrategy(nodeId, graph);
       if (!ctx) return { mode, anchorIds: [], nodes: {}, timestamp };
       return {
         mode,
@@ -351,7 +433,7 @@ export function retrieveForContext(query: ContextualQuery): ContextualResult {
     }
 
     case 'safety-gate': {
-      const ctx = safetyGateStrategy(nodeId);
+      const ctx = safetyGateStrategy(nodeId, graph);
       if (!ctx) return { mode, anchorIds: [], nodes: {}, timestamp };
       return {
         mode,
@@ -362,7 +444,7 @@ export function retrieveForContext(query: ContextualQuery): ContextualResult {
     }
 
     case 'tacit-lookup': {
-      const result = tacitLookupStrategy(text, topK);
+      const result = tacitLookupStrategy(text, topK, graph);
       return {
         mode,
         anchorIds: result.matches.map((m) => m.node.id),

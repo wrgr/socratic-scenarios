@@ -136,16 +136,19 @@ Current repo status → what's still needed:
 - [x] **Corpus-gap diagnosis** localization (`diagnose.ts`) — built.
 - [x] **Generic learner agent** with pluggable estimators (BKT/Elo) — built.
 - [x] **Estimator/instrument recovery + calibration** — built (`src/engine/learner-agent/validation.ts`, `__tests__/recovery.test.ts`, `npm run learner:recovery`). On synthetic data from a *known* ground truth: **Elo** recovers static ability to mean abs error **0.046** with calibration **ECE 0.023**; **BKT** recovers the latent known-state (P(L̂) **0.997** for truly-learned vs **0.175** for not) with **ECE 0.004**. Turns "we have a metric" into "the measurement is valid."
-- [~] **Leakage experiment, end to end** — harness built and *validated offline*
+- [x] **Leakage experiment, end to end** — harness built, *validated offline*, and *run on two real LLMs*
   (`src/engine/colreg-sim/leakage.ts`, `__tests__/leakage.test.ts`, `npm run colreg:leakage`).
   The bidirectional loop (ablation-delta + counterfactual adherence + `diagnose`
   localization + closed-book baseline) runs against two reference mock learners whose
   ground truth is known, and recovers it exactly: the corpus-bound mock → **δ 1.000**,
   follows the counterfactual, abstains closed-book → *corpus-bound*; the leaking mock →
-  **δ 0.000**, ignores the counterfactual, answers closed-book → *leaking*. The live
-  path is wired (Gemini / OpenAI-compatible / GitHub Models) and fails gracefully; the
-  one remaining external dependency is a **working LLM credential** to run a real model
-  through the same loop.
+  **δ 0.000**, ignores the counterfactual, answers closed-book → *leaking*. **Now also run
+  on two real LLMs** (Gemini `flash-latest` and `flash-lite-latest`, both prompt
+  conditions): under the strict prompt both are diagnosed *corpus-bound*; removing the
+  binding clause collapses ablation-δ to 0.000 and flips closed-book to contamination on
+  both, with the composite verdict flipping fully to *leaking* on the lighter model. Table
+  in `docs/arxiv/main.tex`. Broadening to more models (esp. weak instruction-followers)
+  remains.
 - [x] **Second domain** — built (`src/engine/procedure-sim/` + `src/corpus/tire/procedure.ts`). A *discrete procedural* task instrument (roadside tire change) alongside the *continuous-control* COLREG one, demonstrating the method transfers across task structures: construct validity (expert J=0 vs reckless J=200, safety violation caught), **exact KC→single-metric identifiability** (each ablated competence degrades only its governed metric), a monotone competence→performance gradient (J 204→0), and an end-to-end pipeline test feeding the instrument's outcomes into the generic learner agent. `__tests__/procedure.test.ts` (10 tests).
 - [ ] **Sensitivity analysis** over instrument/estimator weights (domain, CRI, objective) — show the protocol *ranking* is stable. Already listed as a limitation; make it an experiment.
 - [ ] **Head-on related-work differentiation** citing Song 2026, Apartsin 2026, Lu & Wang 2024, Agent4Edu 2025, SeedRG 2026, Prior Dominance 2026, Control-KT 2024.
@@ -309,10 +312,13 @@ unlearned model fails the governed metric without the corpus and recovers with i
 **Setup.**
 - **Model.** An open-weight instruct model (e.g. Llama-3.1-8B-Instruct or
   Qwen2.5-7B-Instruct), LoRA-friendly.
-- **Ablation.** Remove the alter-to-starboard knowledge with a real method — **NPO**
-  (2404.05868) as primary, **RMU** (2403.03218) or the gradient-ascent baseline
-  (2210.01504) as comparisons. *Forget set* = Rule 14/15 statements + paraphrases;
-  *retain set* = other COLREG rules + general instruction data (guard utility).
+- **Ablation.** Remove the alter-to-starboard knowledge with a real method — **SimNPO**
+  (Fan et al. 2024, arXiv:2410.07163) as primary (reference-free, length-normalized NPO;
+  better forget-quality/utility tradeoff), with **NPO** (2404.05868), **RMU** (2403.03218),
+  and gradient-ascent (2210.01504) as comparisons. For a *stable* novice that resists
+  benign relearning, layer in the robust utility-preserving recipe of Fan et al. 2025
+  (arXiv:2509.02820). *Forget set* = Rule 14/15 statements + paraphrases; *retain set* =
+  other COLREG rules + general instruction data (guard utility).
 - **Removal audit** (required, per Lynch 2402.16835): pre/post probes, paraphrase &
   jailbreak probes, and a benign-relearning test (2406.13356) — report whether the
   knowledge is *gone* vs *suppressed*.
@@ -336,14 +342,23 @@ on the instrument — a second, weight-level instance of the C2 KC→metric mapp
 
 **Cost / infra.** One GPU; LoRA unlearning on a 7–8B model is hours, not days.
 
-**Status: harness built + CPU-validated** (`experiments/unlearning/`). The full pipeline
-— dataset build → LoRA unlearn (**NPO** + gradient-ascent, reference-via-adapter-disable)
-→ removal audit → save/reload → OpenAI-compatible serving for the scorer — runs and is
-smoke-tested on CPU (`smoke_test.py`, distilgpt2: GA drives forget-set NLL ~5.0 → ~140;
-NPO's reference path executes cleanly). Only the **real 7-8B run needs a GPU**; the
-scoring side is already built and provider-agnostic — `serve.py` exposes the base/unlearned
-model as an OpenAI-compatible endpoint that `openAiCompatCompleter` + `npm run colreg:leakage`
-score unchanged. See `experiments/unlearning/README.md`.
+**Status: harness built + a real CPU unlearning result** (`experiments/unlearning/`). The
+full pipeline — dataset build → LoRA unlearn (**SimNPO** primary + NPO + gradient-ascent,
+reference-via-adapter-disable) → removal audit → serve for scoring — runs, and produced a
+genuine result on **Qwen2.5-1.5B-Instruct** (a model that actually knows the rule): the
+primary **SimNPO** method strongly **suppresses** the alter-to-starboard behavior —
+forget-target NLL **4.6 → 92**, held-out direction-cue rate **5/6 → 0/6** (robust to the
+starboard→right synonym) — while retain knowledge (lookout, safe speed, restricted
+visibility) stays coherent. The **NPO** baseline gives the same qualitative collapse
+(**4.6 → 41**, **5/6 → 0/6**), so the suppression is method-agnostic. Honest scope: this is behavioral/target
+suppression + teacher-forced NLL, **not** verified semantic *removal* — that is precisely
+what the task-level instrument settles (below). It is the weight-level counterpart to the
+context-level leakage result, and the objective-audit direction over dialogue-scored
+unlearning (Song et al. 2026). **Remaining GPU step:** score the base/unlearned model on
+the reference-optimal *instrument* (the 2×2 regret/compliance) with the primary SimNPO arm
+at 7-8B scale — the scoring side is already built (`serve.py` → `openAiCompatCompleter` →
+`npm run colreg:leakage`) and a one-tap Colab notebook (`colab.ipynb`) runs it end to end.
+See `experiments/unlearning/README.md`.
 
 ---
 
@@ -369,3 +384,49 @@ AAMAS 2024.
 
 > Note: several closest matches are mid-2026 preprints; verify venue/version at
 > submission time, and re-run the scan — this space is moving fast.
+
+---
+
+## 10. Re-scan addendum — 2026-08-06
+
+A second, independent prior-art sweep (three targeted searches, one per contribution).
+**All three novelty claims survive.** The sweep surfaced four new closest-neighbors that
+must now be *cited explicitly* (they strengthen the positioning rather than foreclose it),
+one methods update (SimNPO), and two data-hygiene notes.
+
+### Per-claim result
+
+| Claim | Verdict | Closest *new* neighbor | Surviving one-line differentiation |
+|---|---|---|---|
+| **C1** — localize gap + leakage on one control-task metric, per-rule, closed-model | holds | **CUE-R** (arXiv:2604.05467, Apr 2026) — intervention-based RAG eval, ablates *retrieved* evidence, API-compatible | CUE-R reads leakage from a *global* zero-retrieval control with multi-axis metrics; it does neither per-rule leakage attribution nor *absence*/gap localization, and never unifies both on one objective metric |
+| **C2** — reference-optimal regret instrument + KC→single-metric identifiability | holds | **Maritime training analytics** (arXiv:2507.01274, Springer '25/'26) — same domain, same novice/expert construct-validity logic | it regresses simulator measures onto *instructor ratings* (policy capturing); C2 measures regret vs an objective solver (instructor-free) and adds KC→single-metric identifiability it lacks |
+| **C3** — proxy learners as pre-trial screen | demotion to *application* confirmed correct; keep a **narrow** residual claim | **2607.28128** (Jul 30 2026, controlled-competence pre-registered audit) + **EduClaw-Bench** (arXiv:2608.03206, Aug 4 2026, KT-grounded pre-deployment screen) | neither runs the *parametric AND unlearned* proxy classes **together as two complementary arms**, and none scores proxies on a *regret-vs-optimal control-task* outcome tied to the same instrument the human trial will use. Frame C3 exactly that narrowly and cite both to pre-empt "already done" |
+
+### Methods update (folded into §8 and `experiments/unlearning/`)
+
+- **NPO → SimNPO** (arXiv:2410.07163) as the *primary* open-weight unlearning method:
+  reference-free, length-normalized, better forget-quality/utility tradeoff. NPO, RMU, and
+  gradient-ascent remain baselines. Implemented (`unlearn.py --method simnpo`, now default).
+- For a **stable** novice resistant to benign relearning, layer in **"Unlearning That
+  Lasts"** (arXiv:2509.02820); optionally the **ATWU** token-importance weighting
+  (arXiv:2606.06320).
+- Cite the unlearning-eval-validity critiques **defensively**: arXiv:2503.06991 and
+  arXiv:2506.00688 ("existing evaluations are inconclusive") — report probes, not a single
+  number; and note the "unlearning is overused" framing risk (arXiv:2606.27379).
+
+### Data-hygiene notes
+
+- **Do not cite arXiv:2606.05633** ("Answer Presence Drives RAG Rewriting Gains") — it was
+  **withdrawn by its authors for experimental errors** and is not valid prior art.
+- Indexing caveat: the arXiv 2607–2608 range is still sparsely indexed as of 2026-08-06, so
+  a very recent unindexed preprint cannot be fully ruled out. **Re-run the scan once more
+  immediately before submission.**
+
+### New bibliography entries (from this sweep)
+
+- **Closest-neighbors:** CUE-R (2604.05467) · maritime training analytics (2507.01274,
+  already listed) · LLM-judged-helpfulness pre-registered audit (2607.28128) ·
+  EduClaw-Bench (2608.03206).
+- **Unlearning methods/eval:** SimNPO (2410.07163) · Unlearning That Lasts (2509.02820) ·
+  ATWU token-importance (2606.06320) · eval-validity critiques (2503.06991; 2506.00688) ·
+  "MU is overused" position (2606.27379).

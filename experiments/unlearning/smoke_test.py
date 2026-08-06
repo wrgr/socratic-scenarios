@@ -2,11 +2,13 @@
 """
 CPU smoke test — validates the unlearning PIPELINE end to end on a tiny model, with no
 GPU. It runs the real CLI (build_datasets -> unlearn -> audit) on `sshleifer/tiny-gpt2`
-and asserts the direction the method must produce: after NPO unlearning, the forget-set
-NLL RISES (the target knowledge is made less likely).
+and asserts the direction unlearning must produce: after gradient-ascent unlearning, the
+forget-set NLL RISES (the target knowledge is made less likely). It then runs the two
+preference-based methods (SimNPO, the primary; and NPO) to confirm their code paths
+execute cleanly.
 
-This proves the code executes and the NPO/LoRA/reference-via-adapter-disable machinery
-is wired correctly. It does NOT test the science — a 100k-param random model has no
+This proves the code executes and the SimNPO/NPO/LoRA/reference-via-adapter-disable
+machinery is wired correctly. It does NOT test the science — a 100k-param random model has no
 COLREG knowledge to remove; that requires a real 7-8B model on a GPU (see README).
 
 Run:  python experiments/unlearning/smoke_test.py
@@ -52,14 +54,20 @@ def main():
     print(f"\n[GA] forget NLL: base={base:.3f} -> unlearned={unlearned:.3f}")
     assert unlearned > base + 0.1, "GA unlearning did not raise forget-set NLL — pipeline broken"
 
-    # NPO must run cleanly through the reference-via-adapter-disable path (magnitude not
-    # asserted — its whole point is to move gently).
+    # SimNPO (primary) must run cleanly through the reference-free, length-normalized path
+    # (magnitude not asserted — like NPO it is designed to move gently).
+    run([sys.executable, "unlearn.py", "--model", MODEL, "--method", "simnpo",
+         "--epochs", "10", "--max_steps", "10", "--batch_size", "4", "--lr", "5e-3",
+         "--lora_targets", TARGETS, "--out", "out/smoke_simnpo"])
+
+    # NPO baseline must run cleanly through the reference-via-adapter-disable path.
     run([sys.executable, "unlearn.py", "--model", MODEL, "--method", "npo",
          "--epochs", "10", "--max_steps", "10", "--batch_size", "4", "--lr", "5e-3",
          "--lora_targets", TARGETS, "--out", "out/smoke_npo"])
 
-    print("\nSMOKE PASS: build -> unlearn (GA + NPO) -> audit all run; GA moves the "
-          "forget metric the right way; NPO's reference path executes cleanly.")
+    print("\nSMOKE PASS: build -> unlearn (GA + SimNPO + NPO) -> audit all run; GA moves "
+          "the forget metric the right way; SimNPO (primary) and NPO's reference path "
+          "execute cleanly.")
 
 
 if __name__ == "__main__":

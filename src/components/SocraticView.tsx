@@ -7,11 +7,12 @@
  */
 import { useState, useMemo } from 'react';
 import type { AJPNode } from '../types/ajp';
-import type { MentorEvaluation } from '../engine/mentor';
-import { getMentorService } from '../engine/mentor';
+import type { MentorEvaluation, AblationDiff } from '../engine/mentor';
+import { getMentorService, runAblationProbe } from '../engine/mentor';
 import { getSimulatedLearnerService } from '../engine/simulated-learner';
 import type { SimulatedExpertiseLevel } from '../engine/simulated-learner';
 import { useDomain } from '../domain/useDomain';
+import { useDomainGraph } from '../domain/useDomainGraph';
 import {
   probeLabel,
   probeCategory,
@@ -21,10 +22,11 @@ import {
   scoreClass,
   masteryBadge,
 } from './socratic-view.utils';
-import { probeContextStrategy, tacitLookupStrategy, formatProbeRetrievalContext } from '../engine/retrieval/retrieval-router';
+import { probeContextStrategy, tacitLookupStrategy, formatProbeRetrievalContext, groundingNodeIdsFrom } from '../engine/retrieval/retrieval-router';
 import { loadProbeProgress, recordProbeAttempt } from '../engine/learner-model/probe-progress';
 import { SourceRefText } from './SourceRefText';
 import { MentorDegradedBanner } from './MentorDegradedBanner';
+import { ProvenanceBadge, AblationPanel, ProvenanceToggle } from './MentorProvenance';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -84,8 +86,11 @@ function TopicGrid({
 function SocraticGraphContext({ probe }: { probe: AJPNode }) {
   const [expanded, setExpanded] = useState(false);
 
-  const probeCtx = useMemo(() => probeContextStrategy(probe.id), [probe.id]);
-  const tacitResult = useMemo(() => tacitLookupStrategy(probe.content, 3), [probe.content]);
+  // Scope retrieval to the active domain so a tire/COLREG probe cannot surface
+  // AJP tacit knowledge as "background" (and vice-versa).
+  const graph = useDomainGraph();
+  const probeCtx = useMemo(() => probeContextStrategy(probe.id, graph), [probe.id, graph]);
+  const tacitResult = useMemo(() => tacitLookupStrategy(probe.content, 3, graph), [probe.content, graph]);
 
   const tacitCount = tacitResult.matches.length;
   const hazardCount = tacitResult.linkedHazards.length;
@@ -186,6 +191,12 @@ function ProbePanel({
   const [simulatedResponse, setSimulatedResponse] = useState<string | null>(null);
   const [simFollowUpResponse, setSimFollowUpResponse] = useState<string | null>(null);
   const [simLoading, setSimLoading] = useState(false);
+  // Ground the Mentor in the ACTIVE domain's graph, not the boot-bound graph.
+  const graph = useDomainGraph();
+  // Provenance probe (dev): run each evaluation with AND without corpus grounding
+  // and show whether the corpus actually changed the answer.
+  const [ablationOn, setAblationOn] = useState(false);
+  const [ablation, setAblation] = useState<AblationDiff<MentorEvaluation> | null>(null);
 
   async function simulateAndSubmit(isFollowUp: boolean) {
     if (!learnerService || !mentorService) return;
@@ -216,11 +227,12 @@ function ProbePanel({
     try {
       // Build retrieval context from graph for this probe — grounds the Mentor
       // in tacit knowledge and linked safety nodes without requiring dense corpus.
-      const probeCtx = probeContextStrategy(probe.id);
-      const tacitResult = tacitLookupStrategy(probe.content, 4);
+      const probeCtx = probeContextStrategy(probe.id, graph);
+      const tacitResult = tacitLookupStrategy(probe.content, 4, graph);
       const retrievalContext = formatProbeRetrievalContext(probeCtx, tacitResult) || undefined;
+      const groundingNodeIds = groundingNodeIdsFrom(probeCtx, tacitResult);
 
-      const result = await mentorService.evaluate({
+      const ctx = {
         probeQuestion: isFollowUp && evaluation
           ? evaluation.followUpProbe
           : probe.content,
@@ -230,7 +242,22 @@ function ProbePanel({
         priorAttempts: attempts,
         safetyGate: isSafetyProbe(probe),
         retrievalContext,
-      });
+        groundingNodeIds,
+      };
+
+      // Ablation probe (dev): only meaningful when grounding exists and on the
+      // first-pass answer. Reuses the grounded run so it costs one extra call.
+      let result: MentorEvaluation;
+      if (ablationOn && retrievalContext && !isFollowUp) {
+        const diff = await runAblationProbe(mentorService, ctx);
+        setAblation(diff);
+        result = diff.grounded;
+      } else {
+        // Clear any prior ablation on every non-ablation submit — including follow-ups —
+        // so a first-pass diff never renders stale beneath a later evaluation.
+        setAblation(null);
+        result = await mentorService.evaluate(ctx);
+      }
 
       const newAttempts = attempts + 1;
       setAttempts(newAttempts);
@@ -330,6 +357,13 @@ function ProbePanel({
               </button>
             )}
           </div>
+          {mentorService && (
+            <ProvenanceToggle
+              checked={ablationOn}
+              onChange={setAblationOn}
+              disabled={loading || simLoading}
+            />
+          )}
         </div>
       )}
 
@@ -363,6 +397,8 @@ function ProbePanel({
               </div>
               <p className="eval-score-label">{scoreLabel(evaluation.score)}</p>
               <p className="eval-feedback">{evaluation.feedback}</p>
+              <ProvenanceBadge evaluation={evaluation} />
+              {ablation && <AblationPanel diff={ablation} />}
             </>
           )}
 
@@ -437,6 +473,8 @@ function ProbePanel({
               </div>
               <p className="eval-score-label">{scoreLabel(currentEval.score)}</p>
               <p className="eval-feedback">{currentEval.feedback}</p>
+              <ProvenanceBadge evaluation={currentEval} />
+              {ablation && <AblationPanel diff={ablation} />}
             </>
           )}
 

@@ -2,18 +2,27 @@
 """
 Unlearn the alter-to-starboard knowledge from an open-weight LLM.
 
-Two methods (both LoRA, so the base weights are untouched and the reference policy is
-recovered by simply disabling the adapter):
+Three methods (all LoRA, so the base weights are untouched and, where a reference policy
+is needed, it is recovered by simply disabling the adapter):
 
-  --method npo   Negative Preference Optimization (Zhang et al. 2024, arXiv:2404.05868):
-                 treats the forget set as negative-only preference data. Loss on a
-                 forget example is (2/beta)*softplus(beta*(logp - logp_ref)), which
-                 pushes the target's likelihood BELOW the reference without the
-                 catastrophic collapse of plain gradient ascent.
-  --method ga    Gradient-ascent baseline (Jang et al. 2023, arXiv:2210.01504):
-                 maximize the LM loss on the forget set (loss_forget = -CE_forget).
+  --method simnpo  SimNPO (Fan et al. 2024, arXiv:2410.07163) — PRIMARY. A reference-free,
+                   length-normalized NPO. Loss on a forget example is
+                   (2/beta)*softplus(beta * (logp/|y|) + gamma): it penalizes the
+                   per-token mean log-prob of the forget target directly, with a reward
+                   margin gamma, and needs NO pi_ref forward pass (one fewer forward than
+                   NPO). Length normalization removes NPO's bias toward long sequences and
+                   gives a better forget-quality / utility tradeoff.
+  --method npo     Negative Preference Optimization (Zhang et al. 2024, arXiv:2404.05868)
+                   — baseline. Loss is (2/beta)*softplus(beta*(logp - logp_ref)), pushing
+                   the target's likelihood BELOW the reference (adapter-disabled) without
+                   the catastrophic collapse of plain gradient ascent.
+  --method ga      Gradient-ascent baseline (Jang et al. 2023, arXiv:2210.01504):
+                   maximize the LM loss on the forget set (loss_forget = -CE_forget).
 
-Both add a retain term (standard CE on the retain set) to preserve other knowledge.
+All add a retain term (standard CE on the retain set) to preserve other knowledge. For a
+*stable* novice that resists benign relearning, pair with the utility-preserving robust
+recipe of Fan et al. 2025 (arXiv:2509.02820); the removal audit (audit.py) reports whether
+the knowledge is gone vs merely suppressed.
 
 GPU strongly recommended for a real 7-8B run; CPU works for the tiny-model smoke test
 (smoke_test.py). See README.md.
@@ -24,8 +33,13 @@ import os
 
 import torch
 from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoTokenizer
 from peft import LoraConfig, get_peft_model
+
+from _model import load_base, DTYPES  # shared base loader + dtype map (see _model.py)
+
+# float32 keeps the CPU smoke test exact; use bfloat16 for a real GPU run (a 7-8B model in
+# float32 will not fit on a single 24GB GPU).
 
 
 def load_jsonl(path):
@@ -75,8 +89,9 @@ def seq_logprob_and_ce(model, input_ids, labels, attn):
     safe = labels.clamp(min=0).unsqueeze(-1)
     tok_logp = logp.gather(-1, safe).squeeze(-1) * mask
     seq_logp = tok_logp.sum(dim=1)                       # per example
+    tok_counts = mask.sum(dim=1)                         # labeled tokens per example
     ce = -(tok_logp.sum() / mask.sum().clamp(min=1))     # mean over labeled tokens
-    return seq_logp, ce
+    return seq_logp, ce, tok_counts
 
 
 def make_loader(rows, tok, bs, shuffle, chat=False):
@@ -89,8 +104,9 @@ def main():
     ap.add_argument("--model", required=True, help="HF model id or local path")
     ap.add_argument("--data", default=os.path.join(os.path.dirname(__file__), "data"))
     ap.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "out/unlearned"))
-    ap.add_argument("--method", choices=["npo", "ga"], default="npo")
-    ap.add_argument("--beta", type=float, default=0.1)             # NPO temperature
+    ap.add_argument("--method", choices=["simnpo", "npo", "ga"], default="simnpo")
+    ap.add_argument("--beta", type=float, default=0.1)             # NPO/SimNPO temperature
+    ap.add_argument("--gamma", type=float, default=0.0)            # SimNPO reward margin
     ap.add_argument("--retain_weight", type=float, default=1.0)
     ap.add_argument("--lr", type=float, default=1e-4)
     ap.add_argument("--epochs", type=int, default=8)
@@ -103,17 +119,41 @@ def main():
     ap.add_argument("--chat", action="store_true",
                     help="wrap examples in the tokenizer chat template (use for INSTRUCT "
                          "models; omit for base models like GPT-2/distilgpt2)")
+    ap.add_argument("--grad_checkpoint", action="store_true",
+                    help="gradient checkpointing — trade compute for memory (fits NPO's "
+                         "extra reference forward on modest RAM)")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--dtype", choices=list(DTYPES), default="float32",
+                    help="model dtype (float32 for CPU; bfloat16 for a real GPU run)")
+    ap.add_argument("--load_4bit", action="store_true",
+                    help="QLoRA: load the base in 4-bit NF4 (bitsandbytes). Fits a 7-8B "
+                         "model + LoRA on a 16 GB T4. GPU only; compute dtype = bfloat16.")
     args = ap.parse_args()
 
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
-    model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=torch.float32).to(args.device)
+    # QLoRA when --load_4bit: quantized base frozen in 4-bit, LoRA adapters trained in bf16.
+    model = load_base(args.model, load_4bit=args.load_4bit, device=args.device, dtype=DTYPES[args.dtype])
+    if args.load_4bit:
+        # prepare_model_for_kbit_training sets up grad flow / input-require-grads for the
+        # frozen quantized base (and enables gradient checkpointing when asked).
+        from peft import prepare_model_for_kbit_training
+        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=args.grad_checkpoint)
     lora_kwargs = dict(r=args.lora_r, lora_alpha=2 * args.lora_r, lora_dropout=0.0, task_type="CAUSAL_LM")
     if args.lora_targets:
         lora_kwargs["target_modules"] = args.lora_targets.split(",")
     model = get_peft_model(model, LoraConfig(**lora_kwargs))
+    if args.grad_checkpoint and not args.load_4bit:
+        # Trades compute for memory — needed to fit NPO's extra reference forward on a
+        # 7-8B model (or a 1.5B in fp32 on a modest-RAM CPU box).
+        model.config.use_cache = False
+        model.enable_input_require_grads()
+        model.gradient_checkpointing_enable()
+    elif args.load_4bit:
+        # prepare_model_for_kbit_training already enabled grad checkpointing +
+        # input-require-grads; just make sure the KV cache is off for training.
+        model.config.use_cache = False
     model.train()
 
     forget = make_loader(load_jsonl(os.path.join(args.data, "forget.jsonl")), tok, args.batch_size, True, args.chat)
@@ -132,16 +172,22 @@ def main():
                 r_ids, r_lab, r_attn = next(r_iter)
             r_ids, r_lab, r_attn = r_ids.to(args.device), r_lab.to(args.device), r_attn.to(args.device)
 
-            logp, ce_forget = seq_logprob_and_ce(model, f_ids, f_lab, f_attn)
-            if args.method == "npo":
+            logp, ce_forget, f_counts = seq_logprob_and_ce(model, f_ids, f_lab, f_attn)
+            if args.method == "simnpo":
+                # SimNPO (arXiv:2410.07163): reference-free, length-normalized. Penalize
+                # the per-token mean log-prob of the forget target, with margin gamma.
+                mean_logp = logp / f_counts.clamp(min=1)               # length-normalized
+                forget_loss = (2.0 / args.beta) * torch.nn.functional.softplus(
+                    args.beta * mean_logp + args.gamma).mean()
+            elif args.method == "npo":
                 with torch.no_grad(), model.disable_adapter():         # reference = base model
-                    logp_ref, _ = seq_logprob_and_ce(model, f_ids, f_lab, f_attn)
+                    logp_ref, _, _ = seq_logprob_and_ce(model, f_ids, f_lab, f_attn)
                 forget_loss = (2.0 / args.beta) * torch.nn.functional.softplus(
                     args.beta * (logp - logp_ref)).mean()
             else:  # gradient ascent: maximize CE on the forget set
                 forget_loss = -ce_forget
 
-            _, ce_retain = seq_logprob_and_ce(model, r_ids, r_lab, r_attn)
+            _, ce_retain, _ = seq_logprob_and_ce(model, r_ids, r_lab, r_attn)
             loss = forget_loss + args.retain_weight * ce_retain
 
             opt.zero_grad()

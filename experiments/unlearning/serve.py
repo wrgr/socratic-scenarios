@@ -20,7 +20,9 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoTokenizer
+
+from _model import load_base, DTYPES  # shared base loader + dtype map (see _model.py)
 
 STATE = {}
 
@@ -71,16 +73,24 @@ def main():
     ap.add_argument("--adapter", default=None)
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--dtype", choices=["float32", "bfloat16", "float16"], default="float32",
+                    help="model dtype (float32 for CPU; bfloat16 for a real GPU run)")
+    ap.add_argument("--load_4bit", action="store_true",
+                    help="serve the base in 4-bit NF4 (bitsandbytes) — fits a 7-8B on a "
+                         "16 GB T4 for scoring. Must match how the adapter was trained.")
     args = ap.parse_args()
 
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
-    model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=torch.float32).to(args.device).eval()
+    # Same shared loader as unlearn.py/audit.py so a served base matches the trained one.
+    model = load_base(args.model, load_4bit=args.load_4bit, device=args.device, dtype=DTYPES[args.dtype]).eval()
     name = args.model
     if args.adapter:
         from peft import PeftModel
-        model = PeftModel.from_pretrained(model, args.adapter).to(args.device).eval()
+        model = PeftModel.from_pretrained(model, args.adapter).eval()
+        if not args.load_4bit:
+            model = model.to(args.device)
         name = f"{args.model}+{args.adapter}"
     STATE.update(tok=tok, model=model, device=args.device, name=name)
 
