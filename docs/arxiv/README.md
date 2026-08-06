@@ -48,9 +48,14 @@ Two ways to get this into Overleaf:
   (δ 1.000 / 0.000), the procedural-domain gradient (J 204→0), and the **real-model
   corpus-binding positive control** on `gemini-flash-latest` (δ 1.000, counterfactual
   followed, closed-book abstained → corpus-bound).
-- **Real-model discrimination (Table 2): done** on two LLMs (`gemini-flash-latest`,
-  `gemini-flash-lite-latest`) — `CONDITION=both npm run colreg:leakage`. A broader model
-  sweep (more models, weak instruction-followers) would strengthen it.
+- **Real-model discrimination (Table 3): done** on **six** LLMs — `CONDITION=both
+  npm run colreg:leakage`. Strong flash models bind tightly (go inconclusive unconstrained);
+  lighter models flip to leaking; the lightest leaks even under the bound prompt.
+- **Construct validity + grading (Table 1): done** — `npm run colreg:construct` (naive vs
+  VO vs SB-MPC across 9 varied encounters; 19 distinct J values, graded not near-binary).
+- **Reviewer hardening done:** terminology is "reference policy" not "optimal" (VO/SB-MPC
+  are near-optimal solvers, not proven optima); the KC→metric identifiability objection is
+  addressed head-on (§3); the coarse ablation sub-metric vs graded transfer J is clarified.
 - **Compute-gated, still to fill:** the open-weight unlearning 2×2 (needs a GPU;
   `experiments/unlearning/colab.ipynb`).
 - Scope guard: keep every claim framed as **simulation-based mechanism evidence, not

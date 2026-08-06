@@ -22,7 +22,7 @@
 \newcommand{\regret}{\mathcal{R}}
 
 \title{\bfseries An In-Silico Instrument for Pre-Validating Corpus-Bounded
-Instruction:\\ Reference-Optimal Transfer Measurement with Bidirectional
+Instruction:\\ Reference-Policy Transfer Measurement with Bidirectional
 Corpus-Gap and Leakage Diagnosis}
 
 % TODO: fill in author name(s) and affiliation before submission.
@@ -43,8 +43,8 @@ sounding fluent---usually requires expensive human-subject studies. We present a
 \emph{in-silico measurement instrument} that lets a designer falsify the mechanism of a
 corpus-bounded instructional method \emph{before} spending human-subject effort. The
 instrument has two coupled parts. First (C2), we replace item-response correctness with
-an \emph{objective continuous-control simulator whose reference-optimal solver yields
-regret-vs-optimal} as the transfer outcome, and we establish a measurement-design
+an \emph{objective continuous-control simulator whose reference solver yields
+regret-to-reference} as the transfer outcome, and we establish a measurement-design
 property we call \emph{knowledge-component (\kc) $\to$ single-metric identifiability}:
 each knowledge component governs exactly one metric, so ablating it degrades that metric
 and no other. Second (C1), we use that \emph{same} instrument \emph{bidirectionally} over
@@ -55,11 +55,12 @@ model is answering from the corpus or from pretrained priors. The method is
 reads both diagnoses off a single control-task metric. We exercise the instrument with
 controlled-competence proxy learners on maritime collision avoidance (COLREG) and a
 discrete procedural domain (roadside tire change), and report construct validity,
-estimator-recovery calibration, and a real-model discrimination result: on two current
-LLMs the instrument diagnoses corpus-binding under a strict prompt and, when the binding
-clause is removed, detects the leakage signal (ablation-$\delta$ collapse and closed-book
-contamination), with the composite verdict flipping fully to \emph{leaking} on the lighter
-model. All results are \textbf{simulation-based mechanism evidence, not human-subject
+estimator-recovery calibration, and a real-model discrimination result across six current
+LLMs: under a strict prompt the instrument diagnoses corpus-binding, and removing the
+binding clause collapses the ablation-$\delta$ and flips closed-book abstention to
+contamination for \emph{every} model---with lighter models flipping fully to \emph{leaking},
+and the lightest leaking even under the strict prompt (a binding failure the instrument
+catches). All results are \textbf{simulation-based mechanism evidence, not human-subject
 external validity}; we scope the contribution accordingly and pre-register the human study
 as future work.
 \end{abstract}
@@ -72,8 +73,8 @@ really using the rulebook or just leaning on what the language model already lea
 you cannot tell whether the rulebook itself has holes. Normally you would find out by
 running an expensive study with real learners. We instead build a cheap ``test bench'' that
 answers both questions before involving any people. It drops the tutor into a realistic
-steering task---avoiding ship collisions---where we can compute the mathematically best
-move, and scores the tutor by how far its decisions fall from that best move. Because we
+steering task---avoiding ship collisions---where a standard automatic solver gives a strong
+reference move, and scores the tutor by how far its decisions fall from that reference. Because we
 design each rule to control exactly one part of the score, we can remove a single rule and
 watch what breaks: if the score gets worse, the tutor genuinely relied on that rule; if
 nothing changes, the tutor was quietly using its own built-in knowledge---a ``leak.'' Run
@@ -102,8 +103,8 @@ in silico, and we build the instrument to do it. Our contribution is a
 technique. Concretely:
 
 \begin{itemize}
-  \item \textbf{C2 --- a reference-optimal transfer instrument with \kc$\to$metric
-  identifiability.} We measure a learner by its \emph{regret against a reference-optimal
+  \item \textbf{C2 --- a reference-policy transfer instrument with \kc$\to$metric
+  identifiability.} We measure a learner by its \emph{regret against a reference-policy
   solver} on a continuous-control task, and design the instrument so that each knowledge
   component governs exactly one metric (Section~\ref{sec:instrument}).
   \item \textbf{C1 --- bidirectional corpus diagnosis on one instrument.} The same metric
@@ -115,7 +116,7 @@ technique. Concretely:
 \end{itemize}
 
 Every \emph{component} we build on is prior art; the \emph{unified instrument} and the
-\emph{reference-optimal transfer metric} are the open ground
+\emph{reference-policy transfer metric} are the open ground
 (Section~\ref{sec:related}). We are explicit throughout that our evidence is
 simulation-based: it tests whether the machinery behaves as designed and whether the
 measurement can distinguish competence, not whether humans learn more.
@@ -145,7 +146,7 @@ flight \citep{zinn2023flight} and construct-validity-by-novice/expert-separation
 \citep{vandongen2007lapsim}; control-theoretic notation has been applied to knowledge
 dynamics \citep{controlkt2024}; regret is used in RL transfer \citep{transferregret2024};
 maritime training analytics regress simulator measures onto instructor ratings
-\citep{maritime2025}. None uses a \emph{reference-optimal solver's regret} as the
+\citep{maritime2025}. None uses a \emph{reference solver's regret} as the
 \emph{learner} transfer outcome with \kc$\to$single-metric identifiability. That is our C2.
 We borrow mature maritime-autonomy tooling---velocity obstacles \citep{fiorini1998vo} and
 simulation-based MPC \citep{johansen2016sbmpc}---purely as reference solvers, never as a new
@@ -158,29 +159,63 @@ parametric competence \citep{ps2_2026}, or unlearn a model into a novice
 appeared \citep{llmjudgeaudit2026,educlaw2026}. We therefore \emph{demote} the proxy-learner
 idea to an application: our narrow residual claim is running \emph{two complementary proxy
 classes} (parametric competence \emph{and} unlearned LLM) scored on the \emph{same
-regret-vs-optimal instrument} the human trial would use---which none of these do.
+regret-to-reference instrument} the human trial would use---which none of these do.
 
 \section{The transfer instrument (C2)}
 \label{sec:instrument}
 \paragraph{Task and metric.} The worked domain is COLREG collision avoidance: a
 power-driven vessel must choose course and speed to resolve an encounter. We implement a
 kinematic simulator with an elliptical ship domain and a Collision Risk Index, and two
-reference-optimal solvers---velocity obstacles \citep{fiorini1998vo} and simulation-based
+reference solvers---velocity obstacles \citep{fiorini1998vo} and simulation-based
 MPC \citep{johansen2016sbmpc}. For a learner policy $\pi$ on scenario set $S$ we define the
-transfer outcome as regret against the reference optimum,
+transfer outcome as regret against a reference policy $\pi^\star$,
 \begin{equation}
   \regret(\pi) \;=\; \frac{1}{|S|}\sum_{s \in S}\big[\, J(\pi, s) - J(\pi^\star, s)\,\big],
 \end{equation}
-where $J$ is the per-encounter compliance-and-safety penalty (lower is better) and
-$\pi^\star$ is the reference-optimal maneuver. Unlike item correctness, $\regret$ is
-continuous, objective, and instructor-free.
+where $J$ is the per-encounter objective (a weighted sum of a safety-margin barrier, COLREG
+compliance penalty, and route deviation; lower is better) and $\pi^\star$ is the reference
+maneuver. Unlike item correctness, $\regret$ is continuous, objective, and instructor-free.
 
-\paragraph{Construct validity.} The instrument must separate good from bad policies before
-any learning claim. A naive policy, a velocity-obstacle policy, and an SB-MPC policy
-separate cleanly on $\regret$; on the discrete procedural domain an expert policy scores
-$J=0$ against a reckless $J=200$ with the safety violation caught. This is the
-novice/expert-separation logic of \citet{vandongen2007lapsim}, applied to a
-decision/control task rather than manual skill.
+\paragraph{On ``reference,'' not ``optimal.''} We deliberately avoid claiming a global
+optimum. VO and SB-MPC are strong, widely-used near-optimal solvers, but neither is proven
+globally optimal for the full nonconvex encounter; calling their output ``optimal'' would
+overclaim. The instrument does not need a true optimum---only a reference that construct
+validity shows separates naive from expert behavior (below). Regret is thus measured
+against a fixed, reproducible reference policy, and we report which solver is used.
+
+\paragraph{Construct validity and metric grading.} The instrument must separate good from
+bad policies before any learning claim, and---if it is to be a transfer measure rather than
+a pass/fail check---the metric must \emph{grade}, not collapse to two values. Across a
+varied set of nine encounters (head-on, starboard/port crossing, overtaking, and
+restricted-visibility geometries), three policies of increasing competence separate cleanly
+and continuously on $J$ (Table~\ref{tab:construct}): a naive hold-course policy
+(mean $J\approx1544$, clearing only $22\%$ of domains), a velocity-obstacle reference
+($J\approx0.71$, all clear), and SB-MPC ($J\approx0.03$). The objective takes $19$ distinct
+values in $[0.00, 1994.13]$ over the policy$\times$scenario cells---a graded metric, with
+the safe regime (VO/SB-MPC) itself spanning a continuous $0.00$--$1.27$ range. On the
+discrete procedural domain the same logic holds: an expert policy scores $J=0$ against a
+reckless $J=200$ with the safety violation caught. This is the novice/expert-separation
+logic of \citet{vandongen2007lapsim}, applied to a decision/control task rather than manual
+skill.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Policy & mean $J$ & median & min & max & cleared \\
+\midrule
+naive (hold course) & $1543.88$ & $1986.10$ & $1.08$ & $1994.13$ & $22\%$ \\
+VO reference & $0.71$ & $0.58$ & $0.33$ & $1.27$ & $100\%$ \\
+SB-MPC reference & $0.03$ & $0.01$ & $0.00$ & $0.17$ & $100\%$ \\
+\bottomrule
+\end{tabular}
+\caption{Construct validity and grading across nine varied encounters. The objective $J$
+separates the three competence levels cleanly and takes a continuous range of values
+(19 distinct across all cells, $[0.00, 1994.13]$)---it is a graded transfer metric, not a
+near-binary check. \texttt{npm run colreg:construct}.}
+\label{tab:construct}
+\end{table}
 
 \paragraph{\kc$\to$single-metric identifiability.} We design each knowledge component to
 govern exactly one metric, so ablating a \kc\ degrades that metric and no other. On the
@@ -189,6 +224,19 @@ metric, and a monotone competence$\to$performance gradient ($J:204\to 0$) follow
 competence is acquired in curriculum order. Because the property holds on both a
 continuous-control and a discrete-procedural instrument, it is a general measurement-design
 property, not a COLREG artifact.
+
+\paragraph{Is identifiability tautological?} A fair objection is that the mapping is a
+design choice, so ``ablate the \kc, that metric moves'' is true by construction. Two things
+make it a testable property rather than a tautology. First, the \emph{cross-effect} claim
+can fail: designing the metrics is not enough to guarantee that ablating one \kc\ leaves the
+\emph{others} unchanged---if the objective's terms are entangled (e.g.\ a safety barrier
+that also moves the deviation term), ablation bleeds across metrics, and we measure and
+report that it does not. Identifiability is the empirically-checked \emph{absence} of that
+bleed, not the presence of the intended effect. Second, the mapping is what makes the C1
+diagnosis (Section~\ref{sec:diagnosis}) actionable: without it, a task failure cannot be
+attributed to a specific corpus rule. We therefore treat identifiability as a design
+\emph{requirement to be verified per instrument}---a property an instrument can lack---and
+verifying it is part of building one, exactly as construct validity is.
 
 \paragraph{Estimator recovery and calibration.} Feeding the instrument's outcomes into a
 generic learner-agent estimator, we recover known ground truth on synthetic data
@@ -228,7 +276,10 @@ pretrained priors, not the corpus. We combine the ablation-delta with a
 \emph{counterfactual} test (replace ``alter to starboard'' with ``alter to port''; does the
 learner follow the altered rule?) and a \emph{closed-book} contamination baseline (no
 corpus supplied). The verdict---\textsc{corpus-bound}, \textsc{leaking}, or
-\textsc{inconclusive}---is read from the same metric.
+\textsc{inconclusive}---is read from the same metric. (The ablation signal uses the
+\emph{bounded compliance-penalty sub-metric} in $[0,1]$---deliberately near-binary, since
+following a discrete steering rule is itself close to binary---not the graded transfer
+objective $J$ of Table~\ref{tab:construct}; the two measure different things.)
 
 \paragraph{Offline recovery of known ground truth.} Against two reference mock learners
 whose truth is known, the instrument recovers it exactly: the corpus-bound mock yields
@@ -237,23 +288,24 @@ ablation-delta $1.000$, follows the counterfactual, and abstains closed-book
 ignores the counterfactual, and answers closed-book from priors
 ($\Rightarrow$ \textsc{leaking}).
 
-\paragraph{Real-model discrimination.} We run the instrument on two current production
-LLMs under both prompt conditions---\texttt{bound} (the strict corpus-binding positive
-control) and \texttt{unconstrained} (the binding clause removed, parametric fallback
-allowed)---and read the verdict off the same metric (Table~\ref{tab:disc}). Under
-\texttt{bound}, both models are diagnosed \textsc{corpus-bound}: a large ablation-delta,
-counterfactual adherence, and closed-book abstention. Under \texttt{unconstrained}, the
-central leakage signal appears for \emph{both} models---the ablation-delta collapses to
-$0.000$ (the governed metric no longer depends on the corpus) and the closed-book baseline
-flips from abstention to answering from priors (contamination). The composite verdict flips
-fully to \textsc{leaking} on the lighter model (\texttt{gemini-flash-lite-latest}); on the
-stronger model (\texttt{gemini-flash-latest}) it lands \textsc{inconclusive}, because that
-model continued to follow the counterfactual ``alter-to-port'' rule even without the binding
-clause---a more capable instruction-follower whose composite verdict the counterfactual
-sub-test holds back even as the ablation and closed-book signals both indicate leakage.
-This is the discrimination the instrument is designed to expose, and the mock learners
-(rows~1--2) bound the scale: known-corpus-bound $\to \delta{=}1.000$/abstain, known-leaking
-$\to \delta{=}0.000$/contaminate.
+\paragraph{Real-model discrimination.} We run the instrument on six current production LLMs
+under both prompt conditions---\texttt{bound} (the strict corpus-binding positive control)
+and \texttt{unconstrained} (the binding clause removed, parametric fallback allowed)---and
+read the verdict off the same metric (Table~\ref{tab:disc}). Three findings stand out.
+\emph{(1) The core leakage signal is universal:} for every model, removing the binding
+clause collapses the ablation-$\delta$ to $0.000$ (the governed metric stops depending on
+the corpus) and flips the closed-book baseline from abstention to answering from priors.
+\emph{(2) Capability tracks binding fidelity:} the three stronger flash models bind tightly
+under the strict prompt ($\delta{=}1.000$) and, when unconstrained, land
+\textsc{inconclusive} rather than \textsc{leaking}---they stop relying on the corpus and
+contaminate closed-book, yet still comply with the counterfactual ``alter-to-port''
+instruction, so the counterfactual sub-test holds the composite verdict back. The lighter
+models bind more weakly ($\delta{=}0.667/0.333$) and flip cleanly to \textsc{leaking} when
+unconstrained. \emph{(3) The instrument catches a binding \emph{failure}:} the lightest
+model (\texttt{gemini-3.1-flash-lite}) is diagnosed \textsc{leaking} \emph{even under the
+bound prompt}---it ignores the corpus ($\delta{=}0.000$) and the counterfactual despite
+being told to use only the provided rules, exactly the kind of silent binding failure the
+instrument exists to surface. Mock learners (rows~1--2) bound the scale.
 
 \begin{table}[t]
 \centering
@@ -266,15 +318,27 @@ mock (corpus-bound) & --- & $1.000$ & follows & abstains & \textsc{corpus-bound}
 mock (leaking) & --- & $0.000$ & ignores & answers & \textsc{leaking} \\
 \midrule
 \texttt{gemini-flash-latest} & bound & $1.000$ & follows & abstains & \textsc{corpus-bound} \\
-\texttt{gemini-flash-latest} & unconstrained & $0.000$ & follows & answers & \textsc{inconclusive} \\
+\texttt{gemini-flash-latest} & unconstr. & $0.000$ & follows & answers & \textsc{inconclusive} \\
+\texttt{gemini-2.5-flash} & bound & $1.000$ & follows & abstains & \textsc{corpus-bound} \\
+\texttt{gemini-2.5-flash} & unconstr. & $0.000$ & follows & answers & \textsc{inconclusive} \\
+\texttt{gemini-3.5-flash} & bound & $1.000$ & follows & abstains & \textsc{corpus-bound} \\
+\texttt{gemini-3.5-flash} & unconstr. & $0.000$ & follows & answers & \textsc{inconclusive} \\
+\midrule
 \texttt{gemini-flash-lite-latest} & bound & $0.667$ & follows & abstains & \textsc{corpus-bound} \\
-\texttt{gemini-flash-lite-latest} & unconstrained & $0.000$ & ignores & answers & \textsc{leaking} \\
+\texttt{gemini-flash-lite-latest} & unconstr. & $0.000$ & ignores & answers & \textsc{leaking} \\
+\texttt{gemini-3.5-flash-lite} & bound & $0.333$ & follows & abstains & \textsc{corpus-bound} \\
+\texttt{gemini-3.5-flash-lite} & unconstr. & $0.000$ & ignores & answers & \textsc{leaking} \\
+\texttt{gemini-3.1-flash-lite} & bound & $0.000$ & ignores & abstains & \textsc{leaking} \\
+\texttt{gemini-3.1-flash-lite} & unconstr. & $0.000$ & ignores & answers & \textsc{leaking} \\
 \bottomrule
 \end{tabular}
-\caption{C1 discrimination on two real LLMs (head-on instrument, $\delta$ threshold
+\caption{C1 discrimination on six real LLMs (head-on instrument, $\delta$ threshold
 $0.15$). Removing the corpus-binding clause collapses the ablation-$\delta$ to $0.000$ and
-flips closed-book abstention to contamination for both models; the composite verdict flips
-fully to \textsc{leaking} on the lighter model. Mock learners (top) bound the scale.}
+flips closed-book abstention to contamination for \emph{every} model. Stronger flash models
+bind tightly and go \textsc{inconclusive} unconstrained (they keep following the
+counterfactual); lighter models flip to \textsc{leaking}; the lightest leaks even under the
+bound prompt---a binding failure the instrument catches. Mock learners (top) bound the
+scale.}
 \label{tab:disc}
 \end{table}
 
@@ -297,7 +361,7 @@ answer with an open-weight arm: remove the alter-to-starboard knowledge from an
 open-weight model with a real unlearning method---SimNPO \citep{simnpo2024} as primary
 (reference-free, length-normalized), with NPO \citep{npo2024}, RMU \citep{rmu2024}, and
 gradient ascent \citep{ga2023} as baselines---and score the base vs.\ unlearned model on
-the reference-optimal instrument. A removal audit \citep{lynch2024} reports whether the
+the reference-policy instrument. A removal audit \citep{lynch2024} reports whether the
 knowledge is \emph{gone} vs.\ merely \emph{suppressed}; for a stable novice that resists
 benign relearning we layer in a robust utility-preserving recipe \citep{unlearninglasts2025}.
 The predicted $2\times2$: the base model scores low even without the corpus (it has the
@@ -314,15 +378,15 @@ evidence. We make no learning-gains claim and pre-register the human cohort stud
 work. \textbf{Proxy validity.} Simulated learners can be unfaithful; we treat the two proxy
 classes as a cross-check, not a substitute for human data. \textbf{Instrument sensitivity.}
 The protocol depends on weighting choices (ship domain, CRI, objective); a sensitivity
-analysis showing the protocol \emph{ranking} is stable is outstanding. \textbf{Model coverage.}
-The discrimination result (Table~\ref{tab:disc}) covers two models; a broader sweep
-(more models, and especially weak instruction-followers, which are the interesting leak
-cases) would tighten the ``verdict flips'' claim. \textbf{Compute-gated:} the open-weight
+analysis showing the protocol \emph{ranking} is stable is outstanding. \textbf{Model and domain coverage.}
+The discrimination result (Table~\ref{tab:disc}) covers six models within one provider
+family and one encounter type (head-on) and one rule (14/15); cross-provider models and more
+rules/encounters would further tighten the claim. \textbf{Compute-gated:} the open-weight
 unlearning run (Section~\ref{sec:weightlevel}) still needs one GPU.
 
 \section{Conclusion}
 We have described an in-silico instrument that lets a designer falsify the mechanism of a
-corpus-bounded instructional method before human-subject effort: a reference-optimal
+corpus-bounded instructional method before human-subject effort: a reference-policy
 transfer metric with \kc$\to$single-metric identifiability (C2), used bidirectionally to
 localize corpus gaps and detect parametric leakage on one closed-model-compatible metric
 (C1), exercised by two complementary proxy-learner classes. The claim is testable and
