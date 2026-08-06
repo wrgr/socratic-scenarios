@@ -2,7 +2,15 @@
 export * from './types';
 export { wrapPi, velocity, maxTurnRate, stepOwnship, stepTarget, integrate, maneuverControl } from './kinematics';
 export { cpa, minRangeToTarget, minRangeAllTargets, type CpaResult } from './cpa';
-export { domainRadii, clearanceFactor, assessInstant, type DomainRadii, type DomainAssessment } from './ship-domain';
+export {
+  domainRadii,
+  clearanceFactor,
+  assessInstant,
+  DEFAULT_DOMAIN,
+  type DomainRadii,
+  type DomainAssessment,
+  type DomainParams,
+} from './ship-domain';
 export { criInstant, criMax, criSeries, DEFAULT_CRI, type CriParams } from './cri';
 export {
   classify,
@@ -84,6 +92,13 @@ export {
   type CorpusFinding,
   type GapComponent,
 } from './diagnose';
+export {
+  runSensitivity,
+  kendallTau,
+  type SensitivityConfig,
+  type SensitivityReport,
+  type RankStability,
+} from './sensitivity';
 export {
   runRuleProbe,
   runLeakageExperiment,

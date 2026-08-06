@@ -12,7 +12,7 @@
 import type { SimScenario, Trajectory } from './types';
 import { M_TO_NM } from './types';
 import { criMax } from './cri';
-import { assessInstant } from './ship-domain';
+import { assessInstant, DEFAULT_DOMAIN, type DomainParams } from './ship-domain';
 import { minRangeAllTargets } from './cpa';
 import { scoreCompliance, type ComplianceReport } from './colreg-rules';
 
@@ -82,11 +82,12 @@ export function evaluate(
   scenario: SimScenario,
   traj: Trajectory,
   weights: ObjectiveWeights = DEFAULT_WEIGHTS,
+  domain: DomainParams = DEFAULT_DOMAIN,
 ): ObjectiveResult {
   // Worst-case domain clearance over the whole run.
   let minClearance = Infinity;
   for (const s of traj) {
-    const a = assessInstant(s.own, s.targets);
+    const a = assessInstant(s.own, s.targets, domain);
     if (a.minClearance < minClearance) minClearance = a.minClearance;
   }
   const incursion = minClearance < 1;

@@ -153,14 +153,16 @@ We borrow mature maritime-autonomy tooling---velocity obstacles \citep{fiorini19
 simulation-based MPC \citep{johansen2016sbmpc}---purely as reference solvers, never as a new
 collision-avoidance method \citep{colregcompliance2024,imo1972colregs}.
 
-\paragraph{Proxy learners.} Simulated students have long authored and evaluated tutors;
-recent LLM variants suppress knowledge by prompting \citep{apartsin2026}, interpolate
-parametric competence \citep{ps2_2026}, or unlearn a model into a novice
-\citep{song2026unlearn}. Pre-deployment simulated-learner screens have very recently
-appeared \citep{llmjudgeaudit2026,educlaw2026}. We therefore \emph{demote} the proxy-learner
-idea to an application: our narrow residual claim is running \emph{two complementary proxy
-classes} (parametric competence \emph{and} unlearned LLM) scored on the \emph{same
-regret-to-reference instrument} the human trial would use---which none of these do.
+\paragraph{Proxy learners.} Simulated students have long authored and evaluated tutors; LLM
+student agents now pilot assessment items \citep{luwang2024} and simulate learners for
+tutoring-system development \citep{agent4edu2025}, and controlled variants suppress knowledge
+by prompting \citep{apartsin2026}, interpolate parametric competence \citep{ps2_2026}, or
+unlearn a model into a novice \citep{song2026unlearn}. Pre-deployment simulated-learner
+screens have very recently appeared \citep{llmjudgeaudit2026,educlaw2026}. We therefore
+\emph{demote} the proxy-learner idea to an application: our narrow residual claim is running
+\emph{two complementary proxy classes} (parametric competence \emph{and} unlearned LLM)
+scored on the \emph{same regret-to-reference instrument} the human trial would use---which
+none of these do.
 
 \section{The transfer instrument (C2)}
 \label{sec:instrument}
@@ -190,9 +192,9 @@ a pass/fail check---the metric must \emph{grade}, not collapse to two values. Ac
 varied set of nine encounters (head-on, starboard/port crossing, overtaking, and
 restricted-visibility geometries), three policies of increasing competence separate cleanly
 and continuously on $J$ (Table~\ref{tab:construct}): a naive hold-course policy
-(mean $J\approx1544$, clearing only $22\%$ of domains), a velocity-obstacle reference
-($J\approx0.71$, all clear), and SB-MPC ($J\approx0.03$). The objective takes $19$ distinct
-values in $[0.00, 1994.13]$ over the policy$\times$scenario cells---a graded metric, with
+(mean $J\approx1765$, clearing only $11\%$ of domains), a velocity-obstacle reference
+($J\approx0.70$, all clear), and SB-MPC ($J\approx0.01$). The objective takes $20$ distinct
+values in $[0.00, 1995.18]$ over the policy$\times$scenario cells---a graded metric, with
 the safe regime (VO/SB-MPC) itself spanning a continuous $0.00$--$1.27$ range. On the
 discrete procedural domain the same logic holds: an expert policy scores $J=0$ against a
 reckless $J=200$ with the safety violation caught. This is the novice/expert-separation
@@ -206,14 +208,14 @@ skill.
 \toprule
 Policy & mean $J$ & median & min & max & cleared \\
 \midrule
-naive (hold course) & $1543.88$ & $1986.10$ & $1.08$ & $1994.13$ & $22\%$ \\
-VO reference & $0.71$ & $0.58$ & $0.33$ & $1.27$ & $100\%$ \\
-SB-MPC reference & $0.03$ & $0.01$ & $0.00$ & $0.17$ & $100\%$ \\
+naive (hold course) & $1765.44$ & $1988.08$ & $1.08$ & $1995.18$ & $11\%$ \\
+VO reference & $0.70$ & $0.58$ & $0.33$ & $1.27$ & $100\%$ \\
+SB-MPC reference & $0.01$ & $0.01$ & $0.00$ & $0.03$ & $100\%$ \\
 \bottomrule
 \end{tabular}
 \caption{Construct validity and grading across nine varied encounters. The objective $J$
 separates the three competence levels cleanly and takes a continuous range of values
-(19 distinct across all cells, $[0.00, 1994.13]$)---it is a graded transfer metric, not a
+(20 distinct across all cells, $[0.00, 1995.18]$)---it is a graded transfer metric, not a
 near-binary check. \texttt{npm run colreg:construct}.}
 \label{tab:construct}
 \end{table}
@@ -260,6 +262,19 @@ metric; every off-diagonal cell is $0.00$ (max $|\Delta|=0.0000$)---ablation doe
 across metrics. \texttt{npm run proc:identifiability}.}
 \label{tab:ident}
 \end{table}
+
+\paragraph{Robustness to weighting choices.} The objective embeds weighting choices---the
+elliptical ship-domain radii and the margin/compliance/deviation weights---and a fair worry
+is that the competence ranking is an artifact of those choices. We falsify this with a
+sensitivity analysis (\texttt{npm run colreg:sensitivity}) that holds every policy's
+\emph{behavior} fixed and re-scores under $232$ perturbations: a one-at-a-time
+$\pm25$--$50\%$ sweep of each parameter plus $200$ joint samples with every parameter
+independently scaled in $[0.6, 1.4]$. Across the whole ensemble, both orderings are
+preserved exactly---the naive policy stays worst and the six-component competence gradient
+stays monotone in $J$ (Kendall $\tau=1.00$ on every perturbation, invariant rate $100\%$).
+The CRI parameters are excluded because CRI is a reported diagnostic, not a term in the
+scored objective, so the ranking is invariant to them by construction. The protocol's
+conclusions are thus a property of the competence structure, not of the weight calibration.
 
 \paragraph{Estimator recovery and calibration.} Feeding the instrument's outcomes into a
 generic learner-agent estimator, we recover known ground truth on synthetic data
@@ -478,10 +493,17 @@ fills the corpus-recovery cell of the $2\times2$---remains GPU-gated.
 \label{sec:limits}
 \textbf{Mechanism, not external validity.} Every result here is simulation-based mechanism
 evidence. We make no learning-gains claim and pre-register the human cohort study as future
-work. \textbf{Proxy validity.} Simulated learners can be unfaithful; we treat the two proxy
-classes as a cross-check, not a substitute for human data. \textbf{Instrument sensitivity.}
-The protocol depends on weighting choices (ship domain, CRI, objective); a sensitivity
-analysis showing the protocol \emph{ranking} is stable is outstanding. \textbf{Model and domain coverage.}
+work. \textbf{Proxy validity.} Simulated learners can be unfaithful---prompt-suppressed and
+unlearned models may be too capable, may learn unrealistically fast, and need not reproduce
+authentic human misconceptions; recent work cautions that student simulation is valid only
+under specific conditions \citep{validsim2026} and documents systematic fidelity gaps
+between LLM ``students'' and real learners \citep{studentfidelity2025, studentabilities2025}. We
+therefore treat the two proxy classes as a mutual cross-check, not a substitute for human
+data---which is exactly why the human cohort study is a pre-registered requirement rather
+than an optional extension. \textbf{Instrument sensitivity.} The protocol embeds weighting
+choices (ship domain, objective); we show the ranking survives a $\pm40\%$ reweighting
+($\tau=1.00$, \S\ref{sec:instrument}), but robustness beyond that range, and to the
+elliptical-domain \emph{form} itself, is untested. \textbf{Model and domain coverage.}
 The discrimination result (Table~\ref{tab:disc}) covers six models within one provider
 family, and two rules (Rule~14 head-on, Rule~15 crossing) on their respective encounters;
 cross-provider models and further rules/encounters would tighten the claim. \textbf{Compute-gated:} the
