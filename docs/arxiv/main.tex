@@ -61,6 +61,26 @@ human-subject external validity}; we scope the contribution accordingly and pre-
 the human study as future work.
 \end{abstract}
 
+\vspace{0.5em}
+\noindent\fbox{\parbox{\dimexpr\textwidth-2\fboxsep-2\fboxrule}{%
+\small\textbf{Plain-language summary.} An AI tutor that is supposed to answer only from an
+approved rulebook is easy to demo but hard to trust: you cannot easily tell whether it is
+really using the rulebook or just leaning on what the language model already learned, and
+you cannot tell whether the rulebook itself has holes. Normally you would find out by
+running an expensive study with real learners. We instead build a cheap ``test bench'' that
+answers both questions before involving any people. It drops the tutor into a realistic
+steering task---avoiding ship collisions---where we can compute the mathematically best
+move, and scores the tutor by how far its decisions fall from that best move. Because we
+design each rule to control exactly one part of the score, we can remove a single rule and
+watch what breaks: if the score gets worse, the tutor genuinely relied on that rule; if
+nothing changes, the tutor was quietly using its own built-in knowledge---a ``leak.'' Run
+the other way, the same measurement pinpoints which rule is missing when the tutor fails.
+It works with ordinary commercial models over an API, needs no access to their internals,
+and we confirm it on a current model. Everything here is a controlled simulation that
+checks the machinery works---not yet a claim that learners learn more, which is the study
+we set up next.}}
+\vspace{0.5em}
+
 \section{Introduction}
 Generic retrieval-augmented (RAG) assistants optimize for semantic relevance: give a
 plausible answer to whatever is asked. That objective is wrong for training in

@@ -14,15 +14,29 @@ supporting material, not the submission.
 
 ## Build
 
-No TeX toolchain ships in the web sandbox, so build locally or in CI:
-
 ```bash
 cd docs/arxiv
-pdflatex main && bibtex main && pdflatex main && pdflatex main
-# -> main.pdf
+./build.sh          # -> main.pdf
 ```
 
-Or `latexmk -pdf main.tex`.
+`build.sh` uses `latexmk` (or `pdflatex`+`bibtex`) if a TeX install is present; otherwise it
+self-bootstraps a [Tectonic](https://tectonic-typesetting.github.io/) binary (self-contained,
+fetches packages on demand) — so it works in a fresh Claude-on-the-web sandbox with no TeX
+install. Equivalent manual flow: `pdflatex main && bibtex main && pdflatex main && pdflatex main`.
+
+## Overleaf
+
+Two ways to get this into Overleaf:
+
+1. **Upload a zip** — zip the two source files and upload:
+   ```bash
+   cd docs/arxiv && zip -j teachme-arxiv.zip main.tex refs.bib
+   ```
+   In Overleaf: **New Project → Upload Project →** select the zip. Overleaf sets `main.tex`
+   as the main document; the default **pdfLaTeX** compiler auto-runs BibTeX for the
+   `\bibliography{refs}` call. (No custom settings needed.)
+2. **Import from GitHub** — Overleaf **New Project → Import from GitHub →** this repo, then
+   set the main document to `docs/arxiv/main.tex`.
 
 ## Before submitting
 
