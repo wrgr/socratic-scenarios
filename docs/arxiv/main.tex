@@ -19,6 +19,16 @@
 \usepackage{microtype}
 \usepackage{xcolor}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% Figure accent colors (print- and CVD-safe; see docs/novelty-and-positioning.md).
+\definecolor{figblue}{HTML}{2A78D6}
+\definecolor{figorange}{HTML}{EB6834}
+\definecolor{figink}{HTML}{0B0B0B}
+\definecolor{figmuted}{HTML}{9A9A93}
 
 \newcommand{\kc}{\textsc{kc}}
 \newcommand{\regret}{\mathcal{R}}
@@ -99,7 +109,7 @@ by human-subject study is slow and expensive, and a null result there conflates 
 causes.
 
 We argue that the \emph{mechanism} of a corpus-bounded method can be falsified cheaply and
-in silico, and we build the instrument to do it. Our contribution is a
+in silico, and we build the instrument to do it (Figure~\ref{fig:instrument}). Our contribution is a
 \emph{methods/measurement} one, not a new tutor and not a new collision-avoidance
 technique. Concretely:
 
@@ -121,6 +131,34 @@ Every \emph{component} we build on is prior art; the \emph{unified instrument} a
 (Section~\ref{sec:related}). We are explicit throughout that our evidence is
 simulation-based: it tests whether the machinery behaves as designed and whether the
 measurement can distinguish competence, not whether humans learn more.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\small,
+  box/.style={rounded corners=2pt, draw=figink, line width=0.6pt, align=center, inner sep=5pt},
+  instr/.style={rounded corners=3pt, draw=figblue, line width=1pt, align=center, inner sep=6pt, fill=figblue!7},
+  flow/.style={-{Stealth[length=5pt]}, line width=0.8pt},
+  lbl/.style={font=\scriptsize, text=figink, align=center}]
+\node[box] (corpus) {\textbf{Governed}\\\textbf{corpus}\\[2pt]{\footnotesize rules $r_1\!\dots r_n$}};
+\node[instr, right=20mm of corpus] (sim) {\textbf{Reference-policy instrument}\\[2pt]{\footnotesize regret $J$ vs.\ solver}};
+\node[box, right=20mm of sim] (learner) {\textbf{Learner}\\[2pt]{\footnotesize proxy / API LLM}};
+\draw[flow] (corpus) -- node[lbl,above]{renders} (sim);
+\draw[flow] (learner) -- node[lbl,above]{acts} (sim);
+\node[draw=figorange, rounded corners=2pt, line width=0.8pt, dashed, fill=figorange!5,
+      align=left, below=8mm of sim, inner sep=6pt, text width=0.86\linewidth] (diag)
+  {\footnotesize\textbf{One metric, read three ways.}\;
+   \textbf{C2 identifiability:} ablate a knowledge component $\Rightarrow$ exactly one metric moves.\;
+   \textbf{C1 localize:} a task failure $\Rightarrow$ which rule is missing.\;
+   \textbf{C1 leakage:} ablate a rule $\Rightarrow$ $J$ jumps $=$ corpus-bound, $J$ unchanged $=$ leaking.};
+\draw[flow, figorange, dashed] (sim) -- (diag);
+\end{tikzpicture}
+\caption{The instrument, used bidirectionally. A governed corpus and a learner both feed one
+reference-policy simulator that scores the learner's \emph{regret} $J$ against an automatic
+solver. The same metric is then read three ways---to verify \kc$\to$single-metric
+identifiability (C2), to localize a missing rule from task failures (C1), and to detect
+parametric leakage by rule ablation (C1)---needing only API access to the learner.}
+\label{fig:instrument}
+\end{figure}
 
 \section{Related work and positioning}
 \label{sec:related}
@@ -220,11 +258,47 @@ near-binary check. \texttt{npm run colreg:construct}.}
 \label{tab:construct}
 \end{table}
 
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.86\linewidth, height=4.9cm,
+  ymode=log, ymin=0.02, ymax=5000, log origin=infty,
+  ylabel={mean regret $J$},
+  xmin=-0.4, xmax=6.4,
+  xtick={0,1,2,3,4,5,6},
+  xticklabels={$\varnothing$,{+role},{+stbd},{+subst},{+early},{+safe-spd},{+multi}},
+  xticklabel style={rotate=28, anchor=east, font=\footnotesize},
+  yticklabel style={font=\footnotesize}, ylabel style={font=\footnotesize},
+  ymajorgrids, grid style={figmuted!25, thin},
+  axis lines=left, tick align=outside, clip=false,
+]
+\addplot[figblue, very thick, mark=*, mark size=2.1pt,
+  mark options={fill=figblue, draw=white, line width=0.5pt}]
+  coordinates {(0,1765.44) (1,1759.18) (2,1745.24) (3,1605.21)
+               (4,221.01) (5,0.03) (6,0.03)};
+% Call out the two competencies that actually clear the domain.
+\node[figorange, font=\scriptsize\bfseries, anchor=west] at (axis cs:4,900) {acting early};
+\node[figorange, font=\scriptsize\bfseries, anchor=west] at (axis cs:4.55,3.0) {+ safe speed};
+\draw[figorange, -{Stealth[length=4pt]}, thick] (axis cs:3.9,700) -- (axis cs:3.98,300);
+\draw[figorange, -{Stealth[length=4pt]}, thick] (axis cs:4.9,2.2) -- (axis cs:4.98,0.09);
+\end{axis}
+\end{tikzpicture}
+\caption{Competence$\to$performance gradient on the nine-encounter instrument. Mean regret
+$J$ (log scale) as the six knowledge components are acquired in curriculum order (left to
+right); each point is a competence stage, from the empty learner ($\varnothing$) to full
+competence. $J$ spans nearly five orders of magnitude and collapses as the two
+domain-clearing competencies---acting \emph{early} and at a \emph{safe speed}---come online,
+the graded behavior Table~\ref{tab:construct} reports numerically. \texttt{npm run colreg:construct}.}
+\label{fig:gradient}
+\end{figure}
+
 \paragraph{\kc$\to$single-metric identifiability.} We design each knowledge component to
 govern exactly one metric, so ablating a \kc\ degrades that metric and no other. On the
 procedural domain this is \emph{exact}: each ablated competence degrades only its governed
 metric, and a monotone competence$\to$performance gradient ($J:204\to 0$) follows as
-competence is acquired in curriculum order. Because the property holds on both a
+competence is acquired in curriculum order; on the COLREG instrument the same gradient spans
+nearly five orders of magnitude (Figure~\ref{fig:gradient}). Because the property holds on both a
 continuous-control and a discrete-procedural instrument, it is a general measurement-design
 property, not a COLREG artifact.
 
