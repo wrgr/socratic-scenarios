@@ -7,6 +7,12 @@
  *
  * All rule text is paraphrased from the International Regulations for Preventing
  * Collisions at Sea (COLREG 1972); node sources cite the governing rule number.
+ *
+ * This file holds the core give-way decision loop (Rules 5–19). The remaining rules
+ * of the full USCG "Navigation Rules, Amalgamated" rulebook — Part A general, narrow
+ * channels & TSS, sailing vessels, lights/shapes, sound signals, exemptions,
+ * verification, and Annexes I–V — live in ./amalgamated.ts and are merged into the
+ * domain in ./index.ts.
  */
 import type { AJPNode, AJPEdge } from '../../types/ajp';
 
