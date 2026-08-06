@@ -42,8 +42,16 @@ MODEL=Qwen/Qwen2.5-7B-Instruct ./run.sh      # real run (GPU; bf16 by default, ~
 ```
 
 > A 7–8B model in **bf16** needs ~15 GB (A100/L4); `run.sh` defaults to `DTYPE=bfloat16`.
-> On a 16 GB T4, use a smaller model (e.g. `MODEL=Qwen/Qwen2.5-3B-Instruct`). `float32` is
-> for the CPU smoke test only.
+> **On a 16 GB T4**, a 7–8B in bf16 OOMs — either drop to a smaller model
+> (`MODEL=Qwen/Qwen2.5-3B-Instruct`) **or** run 4-bit QLoRA: `LOAD_4BIT=1 ./run.sh`
+> (needs `bitsandbytes`; quantizes the frozen base to NF4 ~4–5 GB, LoRA trains in bf16).
+> SimNPO is reference-free, so it avoids NPO's second forward and is the lighter choice on
+> tight memory. `float32` is for the CPU smoke test only.
+>
+> `--load_4bit` is threaded through `unlearn.py`, `audit.py`, and `serve.py` — pass it (or
+> `LOAD_4BIT=1`) to **all three** so the base is quantized identically at train, audit, and
+> serve time. If the run OOMs, the crashed process keeps holding GPU memory: free it
+> (Runtime → Restart) before retrying, or the next `serve.py` will fail with `fetch failed`.
 
 ## The experiment (2×2)
 

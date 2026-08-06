@@ -73,17 +73,33 @@ def main():
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--dtype", choices=["float32", "bfloat16", "float16"], default="float32",
                     help="model dtype (float32 for CPU; bfloat16 for a real GPU run)")
+    ap.add_argument("--load_4bit", action="store_true",
+                    help="serve the base in 4-bit NF4 (bitsandbytes) — fits a 7-8B on a "
+                         "16 GB T4 for scoring. Must match how the adapter was trained.")
     args = ap.parse_args()
     dtype = {"float32": torch.float32, "bfloat16": torch.bfloat16, "float16": torch.float16}[args.dtype]
 
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
-    model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=dtype).to(args.device).eval()
+    if args.load_4bit:
+        # 4-bit base is placed by device_map; do not .to(device) it.
+        from transformers import BitsAndBytesConfig
+        bnb = BitsAndBytesConfig(
+            load_in_4bit=True, bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True,
+        )
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model, quantization_config=bnb, device_map={"": 0}, torch_dtype=torch.bfloat16,
+        ).eval()
+    else:
+        model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=dtype).to(args.device).eval()
     name = args.model
     if args.adapter:
         from peft import PeftModel
-        model = PeftModel.from_pretrained(model, args.adapter).to(args.device).eval()
+        model = PeftModel.from_pretrained(model, args.adapter).eval()
+        if not args.load_4bit:
+            model = model.to(args.device)
         name = f"{args.model}+{args.adapter}"
     STATE.update(tok=tok, model=model, device=args.device, name=name)
 

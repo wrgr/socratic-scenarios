@@ -100,6 +100,9 @@ def main():
                     help="model dtype (float32 for CPU; bfloat16 for a real GPU run) — "
                          "match what unlearn.py used")
     ap.add_argument("--chat", action="store_true", help="chat-template probe generations (instruct models)")
+    ap.add_argument("--load_4bit", action="store_true",
+                    help="load the base in 4-bit NF4 (bitsandbytes) — match unlearn.py so a "
+                         "7-8B audit fits a 16 GB T4.")
     args = ap.parse_args()
     dtype = {"float32": torch.float32, "bfloat16": torch.bfloat16, "float16": torch.float16}[args.dtype]
 
@@ -110,11 +113,23 @@ def main():
     retain = load_jsonl(os.path.join(args.data, "retain.jsonl"))
     audit = load_jsonl(os.path.join(args.data, "audit.jsonl"))
 
-    base = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=dtype).to(args.device).eval()
+    if args.load_4bit:
+        from transformers import BitsAndBytesConfig
+        bnb = BitsAndBytesConfig(
+            load_in_4bit=True, bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True,
+        )
+        base = AutoModelForCausalLM.from_pretrained(
+            args.model, quantization_config=bnb, device_map={"": 0}, torch_dtype=torch.bfloat16,
+        ).eval()
+    else:
+        base = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=dtype).to(args.device).eval()
     run_suite(base, tok, forget, retain, audit, args.device, "BASE (not unlearned)", chat=args.chat)
 
     if args.adapter:
-        unlearned = PeftModel.from_pretrained(base, args.adapter).to(args.device).eval()
+        unlearned = PeftModel.from_pretrained(base, args.adapter).eval()
+        if not args.load_4bit:
+            unlearned = unlearned.to(args.device)
         run_suite(unlearned, tok, forget, retain, audit, args.device, "UNLEARNED", chat=args.chat)
         print("\nExpected: forget NLL up, retain NLL ~flat, forget-probe keyword rate down.")
 

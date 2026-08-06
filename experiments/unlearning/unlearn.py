@@ -124,22 +124,46 @@ def main():
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--dtype", choices=list(DTYPES), default="float32",
                     help="model dtype (float32 for CPU; bfloat16 for a real GPU run)")
+    ap.add_argument("--load_4bit", action="store_true",
+                    help="QLoRA: load the base in 4-bit NF4 (bitsandbytes). Fits a 7-8B "
+                         "model + LoRA on a 16 GB T4. GPU only; compute dtype = bfloat16.")
     args = ap.parse_args()
 
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
-    model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=DTYPES[args.dtype]).to(args.device)
+    if args.load_4bit:
+        # QLoRA: quantized base frozen in 4-bit, LoRA adapters trained in bf16. A 4-bit
+        # model is placed by device_map — do NOT .to(device) it. prepare_model_for_kbit_
+        # training sets up grad flow / input require_grads for the frozen quantized base.
+        from transformers import BitsAndBytesConfig
+        from peft import prepare_model_for_kbit_training
+        bnb = BitsAndBytesConfig(
+            load_in_4bit=True, bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True,
+        )
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model, quantization_config=bnb, device_map={"": 0}, torch_dtype=torch.bfloat16,
+        )
+        model = prepare_model_for_kbit_training(
+            model, use_gradient_checkpointing=args.grad_checkpoint,
+        )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=DTYPES[args.dtype]).to(args.device)
     lora_kwargs = dict(r=args.lora_r, lora_alpha=2 * args.lora_r, lora_dropout=0.0, task_type="CAUSAL_LM")
     if args.lora_targets:
         lora_kwargs["target_modules"] = args.lora_targets.split(",")
     model = get_peft_model(model, LoraConfig(**lora_kwargs))
-    if args.grad_checkpoint:
+    if args.grad_checkpoint and not args.load_4bit:
         # Trades compute for memory — needed to fit NPO's extra reference forward on a
         # 7-8B model (or a 1.5B in fp32 on a modest-RAM CPU box).
         model.config.use_cache = False
         model.enable_input_require_grads()
         model.gradient_checkpointing_enable()
+    elif args.load_4bit:
+        # prepare_model_for_kbit_training already enabled grad checkpointing +
+        # input-require-grads; just make sure the KV cache is off for training.
+        model.config.use_cache = False
     model.train()
 
     forget = make_loader(load_jsonl(os.path.join(args.data, "forget.jsonl")), tok, args.batch_size, True, args.chat)
