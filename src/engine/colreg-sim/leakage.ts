@@ -234,7 +234,10 @@ export function crossingGiveWayProbe(probeScenario: SimScenario, scenarios: SimS
   return {
     ruleId: 'RULE-COLREG-15',
     label: 'Rule 15 — crossing give-way, keep clear',
-    governedComponent: 'role',
+    // diagnose.ts files RULE-COLREG-15 under the `starboard` component (a port turn in a
+    // give-way situation), detected by the ['direction','no-port-turn'] checks — not `role`
+    // (which is "took no action and was struck"). Must match, or localization false-negatives.
+    governedComponent: 'starboard',
     counterfactualText:
       'Rule 15 — Crossing situation: when two power-driven vessels are crossing, the give-way vessel shall alter course to PORT and may cross ahead of the other vessel.',
     followedCounterfactual: (d) => !d.abstained && d.courseOffsetDeg < 0, // turned port = followed the altered rule

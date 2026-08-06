@@ -254,7 +254,9 @@ function ProbePanel({
         setAblation(diff);
         result = diff.grounded;
       } else {
-        if (!isFollowUp) setAblation(null);
+        // Clear any prior ablation on every non-ablation submit — including follow-ups —
+        // so a first-pass diff never renders stale beneath a later evaluation.
+        setAblation(null);
         result = await mentorService.evaluate(ctx);
       }
 
