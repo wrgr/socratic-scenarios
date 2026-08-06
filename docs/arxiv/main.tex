@@ -1,37 +1,38 @@
-\documentclass[11pt]{article}
+\documentclass{article}
 
 % ------------------------------------------------------------------
-% An in-silico instrument for pre-validating corpus-bounded instruction.
-% Self-contained preprint layout (arXiv). Compile: pdflatex; bibtex; pdflatex x2.
+% NeurIPS 2026 workshop submission (double-blind) — TAE: Can We Trust AI Evaluation?
+% Build: ./build.sh  (pdflatex/bibtex, or Tectonic).
+% NOTE: neurips_2026.sty here is the official 2025 style with the year bumped to 2026;
+% it carries the same [dblblindworkshop] option. Replace it with the official NeurIPS
+% 2026 style file from the workshop's OpenReview page before final submission.
 % ------------------------------------------------------------------
-\usepackage[margin=1in]{geometry}
-\usepackage{times}
-\usepackage{amsmath,amssymb}
-\usepackage{graphicx}
+\usepackage[dblblindworkshop]{neurips_2026}
+\workshoptitle{Can We Trust AI Evaluation? (TAE)}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
 \usepackage{booktabs}
-\usepackage{array}
+\usepackage{amsmath,amssymb,amsfonts}
 \usepackage{microtype}
-\usepackage[numbers,sort&compress]{natbib}
-\usepackage[colorlinks=true,allcolors=blue!55!black]{hyperref}
 \usepackage{xcolor}
-\usepackage{titlesec}
-\titleformat*{\section}{\large\bfseries}
-\titleformat*{\subsection}{\normalsize\bfseries}
+\usepackage{graphicx}
 
 \newcommand{\kc}{\textsc{kc}}
 \newcommand{\regret}{\mathcal{R}}
 
-\title{\bfseries An In-Silico Instrument for Pre-Validating Corpus-Bounded
-Instruction:\\ Reference-Policy Transfer Measurement with Bidirectional
-Corpus-Gap and Leakage Diagnosis}
+\title{An In-Silico Instrument for Pre-Validating Corpus-Bounded Instruction:
+Reference-Policy Transfer Measurement with Bidirectional Corpus-Gap and Leakage Diagnosis}
 
-% TODO: fill in author name(s) and affiliation before submission.
+% Double-blind submission: authors are anonymized by the style in non-final mode.
 \author{%
-  Author Name(s)\\
+  Anonymous Author(s)\\
   Affiliation\\
-  \texttt{ExpertTrace / TeachMe}\\
+  Address\\
+  \texttt{email}
 }
-\date{\today}
 
 \begin{document}
 \maketitle
@@ -351,6 +352,7 @@ rules"\}}), so the leakage is genuine prior-following, not a parse artifact. Moc
 \begin{table}[t]
 \centering
 \small
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}llccccl@{}}
 \toprule
 Learner & Condition & $\delta$ (compl.) & $\delta_{\!\regret}$ ($J$) & counterfact. & closed-book & Verdict \\
@@ -372,7 +374,7 @@ mock (leaking) & --- & $0.000$ & $0$ & ignores & answers & \textsc{leaking} \\
 \texttt{gemini-3.1-flash-lite} & bound & $0.000$ & $0$ & follows & abstains & \textsc{inconclusive} \\
 \texttt{gemini-3.1-flash-lite} & unconstr. & $0.000$ & $0$ & ignores & answers & \textsc{leaking} \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \caption{C1 discrimination on six real LLMs (head-on instrument, $\delta$ threshold
 $0.15$; verdict = majority of three signals). $\delta_{\!\regret}$ is the \emph{same}
 ablation read on the full regret instrument $J$ (Section~\ref{sec:instrument}), not a
@@ -444,9 +446,9 @@ localize corpus gaps and detect parametric leakage on one closed-model-compatibl
 narrow; the domains are worked examples, and the measurement method is the point.
 
 \paragraph{Reproducibility.} The simulator, instrument, diagnosis harness, proxy learners,
-and the open-weight unlearning scaffold are released, along with a deterministic no-key
+and the open-weight unlearning scaffold will be released, along with a deterministic no-key
 dry-run that recovers the mock ground truth and a one-tap GPU notebook for the unlearning
-arm.
+arm. (Code is withheld here to preserve double-blind review.)
 
 \small
 \bibliographystyle{plainnat}
