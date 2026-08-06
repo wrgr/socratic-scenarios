@@ -1,0 +1,272 @@
+\documentclass[11pt]{article}
+
+% ------------------------------------------------------------------
+% An in-silico instrument for pre-validating corpus-bounded instruction.
+% Self-contained preprint layout (arXiv). Compile: pdflatex; bibtex; pdflatex x2.
+% ------------------------------------------------------------------
+\usepackage[margin=1in]{geometry}
+\usepackage{times}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[colorlinks=true,allcolors=blue!55!black]{hyperref}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\titleformat*{\section}{\large\bfseries}
+\titleformat*{\subsection}{\normalsize\bfseries}
+
+\newcommand{\kc}{\textsc{kc}}
+\newcommand{\regret}{\mathcal{R}}
+
+\title{\bfseries An In-Silico Instrument for Pre-Validating Corpus-Bounded
+Instruction:\\ Reference-Optimal Transfer Measurement with Bidirectional
+Corpus-Gap and Leakage Diagnosis}
+
+% TODO: fill in author name(s) and affiliation before submission.
+\author{%
+  Author Name(s)\\
+  Affiliation\\
+  \texttt{ExpertTrace / TeachMe}\\
+}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Retrieval-augmented tutors are increasingly proposed for safety-critical, procedural
+domains, but validating that a tutor's mechanism actually works---rather than merely
+sounding fluent---usually requires expensive human-subject studies. We present an
+\emph{in-silico measurement instrument} that lets a designer falsify the mechanism of a
+corpus-bounded instructional method \emph{before} spending human-subject effort. The
+instrument has two coupled parts. First (C2), we replace item-response correctness with
+an \emph{objective continuous-control simulator whose reference-optimal solver yields
+regret-vs-optimal} as the transfer outcome, and we establish a measurement-design
+property we call \emph{knowledge-component (\kc) $\to$ single-metric identifiability}:
+each knowledge component governs exactly one metric, so ablating it degrades that metric
+and no other. Second (C1), we use that \emph{same} instrument \emph{bidirectionally} over
+a governed external corpus---to \emph{localize} which corpus rule is missing from measured
+task failures, and to \emph{detect parametric leakage} by rule ablation, i.e.\ whether a
+model is answering from the corpus or from pretrained priors. The method is
+\emph{closed-model compatible} (it needs only API access), operates \emph{per rule}, and
+reads both diagnoses off a single control-task metric. We exercise the instrument with
+controlled-competence proxy learners on maritime collision avoidance (COLREG) and a
+discrete procedural domain (roadside tire change), report construct validity,
+estimator-recovery calibration, and a real-model corpus-binding positive control on a
+current LLM. All results are \textbf{simulation-based mechanism evidence, not
+human-subject external validity}; we scope the contribution accordingly and pre-register
+the human study as future work.
+\end{abstract}
+
+\section{Introduction}
+Generic retrieval-augmented (RAG) assistants optimize for semantic relevance: give a
+plausible answer to whatever is asked. That objective is wrong for training in
+safety-critical procedural domains, where a semantically accurate answer can still be
+instructionally wrong---delivered at the wrong complexity, skipping a prerequisite, or
+worse, confidently fabricated. A growing body of work therefore builds
+\emph{corpus-bounded} tutors that abstain outside a curated corpus. But a designer who has
+built such a system faces a prior question: \emph{does the mechanism work?} Does the tutor
+actually rely on its corpus, and does the corpus actually cover the domain? Answering this
+by human-subject study is slow and expensive, and a null result there conflates many
+causes.
+
+We argue that the \emph{mechanism} of a corpus-bounded method can be falsified cheaply and
+in silico, and we build the instrument to do it. Our contribution is a
+\emph{methods/measurement} one, not a new tutor and not a new collision-avoidance
+technique. Concretely:
+
+\begin{itemize}
+  \item \textbf{C2 --- a reference-optimal transfer instrument with \kc$\to$metric
+  identifiability.} We measure a learner by its \emph{regret against a reference-optimal
+  solver} on a continuous-control task, and design the instrument so that each knowledge
+  component governs exactly one metric (Section~\ref{sec:instrument}).
+  \item \textbf{C1 --- bidirectional corpus diagnosis on one instrument.} The same metric
+  both \emph{localizes} a missing corpus rule and \emph{detects parametric leakage} via
+  rule ablation, per rule, using only API access (Section~\ref{sec:diagnosis}).
+  \item \textbf{Application --- controlled-competence proxy learners} exercise the
+  instrument as a pre-human-trial screen, including an open-weight machine-unlearning arm
+  (Sections~\ref{sec:proxies}--\ref{sec:weightlevel}).
+\end{itemize}
+
+Every \emph{component} we build on is prior art; the \emph{unified instrument} and the
+\emph{reference-optimal transfer metric} are the open ground
+(Section~\ref{sec:related}). We are explicit throughout that our evidence is
+simulation-based: it tests whether the machinery behaves as designed and whether the
+measurement can distinguish competence, not whether humans learn more.
+
+\section{Related work and positioning}
+\label{sec:related}
+We foreground the shoulders we stand on; reviewers reward honest reuse plus a sharp delta.
+
+\paragraph{Learner modeling and instructional theory.} Knowledge tracing
+\citep{corbett1994bkt}, the Elo rating system for adaptive systems \citep{pelanek2016}, the
+Knowledge-Learning-Instruction framework \citep{koedinger2012kli}, open learner models
+\citep{bull2007olm}, and the Zone of Proximal Development \citep{vygotsky1978} are all
+established. We reuse them as infrastructure, not as contributions.
+
+\paragraph{Corpus-bounded tutoring, leakage, and faithfulness.} RAG tutors that abstain
+outside a corpus are standard engineering. A separate line detects whether a model relies
+on provided context versus parametric memory: no-context filtering \citep{seedrg2026},
+aggregate prior-dominance \citep{priordominance2026}, counterfactual context
+\citep{faithfulrag2025}, and---closest to us---intervention-based evidence ablation with a
+zero-retrieval control \citep{cuer2026}. These are per-answer or system-level and judge
+\emph{answer text}; none localizes \emph{which specific corpus rule is missing} and detects
+leakage \emph{on one objective control-task metric}, per rule, bidirectionally. That join
+is our C1.
+
+\paragraph{Objective competency instruments.} Deviation-from-optimal scoring appears in
+flight \citep{zinn2023flight} and construct-validity-by-novice/expert-separation in surgery
+\citep{vandongen2007lapsim}; control-theoretic notation has been applied to knowledge
+dynamics \citep{controlkt2024}; regret is used in RL transfer \citep{transferregret2024};
+maritime training analytics regress simulator measures onto instructor ratings
+\citep{maritime2025}. None uses a \emph{reference-optimal solver's regret} as the
+\emph{learner} transfer outcome with \kc$\to$single-metric identifiability. That is our C2.
+We borrow mature maritime-autonomy tooling---velocity obstacles \citep{fiorini1998vo} and
+simulation-based MPC \citep{johansen2016sbmpc}---purely as reference solvers, never as a new
+collision-avoidance method \citep{colregcompliance2024,imo1972colregs}.
+
+\paragraph{Proxy learners.} Simulated students have long authored and evaluated tutors;
+recent LLM variants suppress knowledge by prompting \citep{apartsin2026}, interpolate
+parametric competence \citep{ps2_2026}, or unlearn a model into a novice
+\citep{song2026unlearn}. Pre-deployment simulated-learner screens have very recently
+appeared \citep{llmjudgeaudit2026,educlaw2026}. We therefore \emph{demote} the proxy-learner
+idea to an application: our narrow residual claim is running \emph{two complementary proxy
+classes} (parametric competence \emph{and} unlearned LLM) scored on the \emph{same
+regret-vs-optimal instrument} the human trial would use---which none of these do.
+
+\section{The transfer instrument (C2)}
+\label{sec:instrument}
+\paragraph{Task and metric.} The worked domain is COLREG collision avoidance: a
+power-driven vessel must choose course and speed to resolve an encounter. We implement a
+kinematic simulator with an elliptical ship domain and a Collision Risk Index, and two
+reference-optimal solvers---velocity obstacles \citep{fiorini1998vo} and simulation-based
+MPC \citep{johansen2016sbmpc}. For a learner policy $\pi$ on scenario set $S$ we define the
+transfer outcome as regret against the reference optimum,
+\begin{equation}
+  \regret(\pi) \;=\; \frac{1}{|S|}\sum_{s \in S}\big[\, J(\pi, s) - J(\pi^\star, s)\,\big],
+\end{equation}
+where $J$ is the per-encounter compliance-and-safety penalty (lower is better) and
+$\pi^\star$ is the reference-optimal maneuver. Unlike item correctness, $\regret$ is
+continuous, objective, and instructor-free.
+
+\paragraph{Construct validity.} The instrument must separate good from bad policies before
+any learning claim. A naive policy, a velocity-obstacle policy, and an SB-MPC policy
+separate cleanly on $\regret$; on the discrete procedural domain an expert policy scores
+$J=0$ against a reckless $J=200$ with the safety violation caught. This is the
+novice/expert-separation logic of \citet{vandongen2007lapsim}, applied to a
+decision/control task rather than manual skill.
+
+\paragraph{\kc$\to$single-metric identifiability.} We design each knowledge component to
+govern exactly one metric, so ablating a \kc\ degrades that metric and no other. On the
+procedural domain this is \emph{exact}: each ablated competence degrades only its governed
+metric, and a monotone competence$\to$performance gradient ($J:204\to 0$) follows as
+competence is acquired in curriculum order. Because the property holds on both a
+continuous-control and a discrete-procedural instrument, it is a general measurement-design
+property, not a COLREG artifact.
+
+\paragraph{Estimator recovery and calibration.} Feeding the instrument's outcomes into a
+generic learner-agent estimator, we recover known ground truth on synthetic data: Elo
+recovers static ability to mean absolute error $0.046$ with expected calibration error
+(ECE) $0.023$; BKT recovers the latent learned state ($P(\hat L)=0.997$ for truly-learned
+vs.\ $0.175$ for not) with ECE $0.004$. This turns ``we have a metric'' into ``the
+measurement is valid.''
+
+\section{Bidirectional corpus diagnosis (C1)}
+\label{sec:diagnosis}
+The same instrument answers two opposite questions with one objective metric.
+
+\paragraph{(i) Corpus-gap localization.} When the corpus is missing or wrong on a rule, the
+learner's failures on the governed metric have a signature that attributes the failure to a
+\emph{specific} rule/node. We compute, per rule, an ablation-delta---the rise in the
+governed penalty when that rule is removed---and a localization that names the governed
+component. A large delta plus a matching localization means the learner \emph{relied on}
+that corpus rule.
+
+\paragraph{(ii) Parametric leakage detection.} The mirror image: ablate a rule from the
+corpus; if the metric it governs does \emph{not} degrade, the model is answering from
+pretrained priors, not the corpus. We combine the ablation-delta with a
+\emph{counterfactual} test (replace ``alter to starboard'' with ``alter to port''; does the
+learner follow the altered rule?) and a \emph{closed-book} contamination baseline (no
+corpus supplied). The verdict---\textsc{corpus-bound}, \textsc{leaking}, or
+\textsc{inconclusive}---is read from the same metric.
+
+\paragraph{Offline recovery of known ground truth.} Against two reference mock learners
+whose truth is known, the instrument recovers it exactly: the corpus-bound mock yields
+ablation-delta $1.000$, follows the counterfactual, and abstains closed-book
+($\Rightarrow$ \textsc{corpus-bound}); the leaking mock yields ablation-delta $0.000$,
+ignores the counterfactual, and answers closed-book from priors
+($\Rightarrow$ \textsc{leaking}).
+
+\paragraph{Real-model positive control.} On a current production LLM
+(\texttt{gemini-flash-latest}) under the strict corpus-binding prompt, the instrument
+returns \textsc{corpus-bound}: ablation-delta $1.000$ (governed penalty $0.000$ with the
+rule present vs.\ $1.000$ with it ablated), the model follows the counterfactual
+``alter-to-port'' rule, the failure localizes to the governed component, and the model
+abstains under the closed-book baseline. This confirms the live path end-to-end on a real
+model, not only on mocks. The complementary \emph{discrimination} result---the verdict
+flipping to \textsc{leaking} when the binding clause is removed (the \texttt{unconstrained}
+prompt condition), across several models---is implemented and validated offline; a
+rate-limited free API tier prevented a full multi-model sweep here, and it is the first
+item on the compute-gated checklist (Section~\ref{sec:limits}).
+
+\section{Proxy learners as a pre-trial screen (application)}
+\label{sec:proxies}
+We exercise the instrument with \emph{two complementary} controlled-competence proxy
+classes: (a) a parametric competence-vector learner, and (b) a knowledge-suppressed /
+unlearned LLM learner. Because both are scored on the \emph{same} $\regret$ instrument, a
+method that fails to move the instrument in the expected direction is a \emph{no-go} before
+any human is recruited. This differs from prior proxy-learner work
+\citep{apartsin2026,ps2_2026,song2026unlearn,llmjudgeaudit2026,educlaw2026} in scoring on an
+objective control-task outcome rather than dialogue behavior, profile alignment, or
+LLM-judge helpfulness.
+
+\section{Weight-level cross-check via machine unlearning}
+\label{sec:weightlevel}
+A reviewer's sharpest attack on C1 is that corpus \emph{context} removal is not weight-level
+\emph{unlearning}, so the ``leakage'' test is the no-context heuristic in disguise. We
+answer with an open-weight arm: remove the alter-to-starboard knowledge from an
+open-weight model with a real unlearning method---SimNPO \citep{simnpo2024} as primary
+(reference-free, length-normalized), with NPO \citep{npo2024}, RMU \citep{rmu2024}, and
+gradient ascent \citep{ga2023} as baselines---and score the base vs.\ unlearned model on
+the reference-optimal instrument. A removal audit \citep{lynch2024} reports whether the
+knowledge is \emph{gone} vs.\ merely \emph{suppressed}; for a stable novice that resists
+benign relearning we layer in a robust utility-preserving recipe \citep{unlearninglasts2025}.
+The predicted $2\times2$: the base model scores low even without the corpus (it has the
+knowledge in weights); the unlearned model scores high without the corpus and recovers with
+it (weight-level corpus reliance). Nobody has scored an \emph{unlearned} learner on a
+control-task regret metric; this gives C1 a weight-level leakage result beside the
+context-level one. The harness is built and CPU-smoke-tested; the real 7--8B run is
+GPU-gated.
+
+\section{Limitations and scope}
+\label{sec:limits}
+\textbf{Mechanism, not external validity.} Every result here is simulation-based mechanism
+evidence. We make no learning-gains claim and pre-register the human cohort study as future
+work. \textbf{Proxy validity.} Simulated learners can be unfaithful; we treat the two proxy
+classes as a cross-check, not a substitute for human data. \textbf{Instrument sensitivity.}
+The protocol depends on weighting choices (ship domain, CRI, objective); a sensitivity
+analysis showing the protocol \emph{ranking} is stable is outstanding. \textbf{Compute-gated
+items:} (1) the multi-model \texttt{bound}-vs-\texttt{unconstrained} discrimination sweep
+(needs a paid API tier), and (2) the open-weight unlearning run (needs one GPU).
+
+\section{Conclusion}
+We have described an in-silico instrument that lets a designer falsify the mechanism of a
+corpus-bounded instructional method before human-subject effort: a reference-optimal
+transfer metric with \kc$\to$single-metric identifiability (C2), used bidirectionally to
+localize corpus gaps and detect parametric leakage on one closed-model-compatible metric
+(C1), exercised by two complementary proxy-learner classes. The claim is testable and
+narrow; the domains are worked examples, and the measurement method is the point.
+
+\paragraph{Reproducibility.} The simulator, instrument, diagnosis harness, proxy learners,
+and the open-weight unlearning scaffold are released, along with a deterministic no-key
+dry-run that recovers the mock ground truth and a one-tap GPU notebook for the unlearning
+arm.
+
+\small
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}
