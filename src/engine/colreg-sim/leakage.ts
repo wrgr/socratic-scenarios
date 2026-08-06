@@ -42,6 +42,12 @@ export interface RuleProbe {
   followedCounterfactual: (d: LlmDecision) => boolean;
   /** Scenario for the single-shot counterfactual probe. */
   probeScenario: SimScenario;
+  /**
+   * Instrument subset that exercises THIS rule (e.g. crossing encounters for a crossing
+   * rule). Ablating a rule only moves the metric on scenarios that invoke it, so each
+   * probe carries its own matched set. Falls back to the shared `cfg.scenarios`.
+   */
+  scenarios?: SimScenario[];
 }
 
 export type Verdict = 'corpus-bound' | 'leaking' | 'inconclusive';
@@ -55,6 +61,14 @@ export interface LeakageVerdict {
   metricWithout: number;
   /** metricWithout − metricWith. Large positive ⇒ the learner relied on the rule. */
   ablationDelta: number;
+  /** Same ablation, read on the FULL transfer objective J (regret instrument, C2) with
+   * the rule present and ablated — showing C1 runs on the same instrument as C2, with the
+   * bounded compliance penalty above as a low-variance readout of the same signal. */
+  regretWith: number;
+  regretWithout: number;
+  regretDelta: number;
+  /** Contamination baseline shared across rules: did the learner answer closed-book? */
+  closedBookContaminated: boolean;
   /** Did the learner follow the counterfactual (altered) rule? */
   counterfactualFollowed: boolean;
   /** Top diagnose component on the ablated run (the localization). */
@@ -92,19 +106,36 @@ export interface LeakageConfig {
 
 const DEFAULT_DELTA_THRESHOLD = 0.15;
 
-function classify(ablationDelta: number, counterfactualFollowed: boolean, thr: number): Verdict {
-  const reliedOn = ablationDelta >= thr;
-  if (reliedOn && counterfactualFollowed) return 'corpus-bound';
-  if (!reliedOn && !counterfactualFollowed) return 'leaking';
+/**
+ * Verdict from a majority vote of three orthogonal leakage signals, rather than the old
+ * AND of two. The old rule left capable models "inconclusive" whenever they stopped
+ * relying on the corpus (delta collapse) and contaminated closed-book yet still complied
+ * with the counterfactual instruction — undercounting clear leakage. The vote over
+ * {low ablation-delta, counterfactual ignored, closed-book contaminated} fixes that:
+ * >=2 leak signals ⇒ leaking, 0 ⇒ corpus-bound, exactly 1 ⇒ genuinely mixed (inconclusive).
+ */
+function classify(
+  ablationDelta: number,
+  counterfactualFollowed: boolean,
+  closedBookContaminated: boolean,
+  thr: number,
+): Verdict {
+  const leakSignals =
+    (ablationDelta < thr ? 1 : 0) +
+    (counterfactualFollowed ? 0 : 1) +
+    (closedBookContaminated ? 1 : 0);
+  if (leakSignals >= 2) return 'leaking';
+  if (leakSignals === 0) return 'corpus-bound';
   return 'inconclusive';
 }
 
 /** Run one rule probe: ablation-delta + counterfactual adherence + localization. */
 export async function runRuleProbe(
   complete: Completer,
-  cfg: { corpusNodes: AJPNode[]; scenarios: SimScenario[]; probe: RuleProbe; deltaThreshold?: number; strict?: boolean },
+  cfg: { corpusNodes: AJPNode[]; scenarios: SimScenario[]; probe: RuleProbe; deltaThreshold?: number; strict?: boolean; closedBookContaminated?: boolean },
 ): Promise<LeakageVerdict> {
-  const { corpusNodes, scenarios, probe } = cfg;
+  const { corpusNodes, probe } = cfg;
+  const scenarios = probe.scenarios ?? cfg.scenarios; // rule-matched instrument subset
   const thr = cfg.deltaThreshold ?? DEFAULT_DELTA_THRESHOLD;
   const strict = cfg.strict ?? true;
 
@@ -118,12 +149,21 @@ export async function runRuleProbe(
   const metricWith = withRule.meanCompliancePenalty;
   const metricWithout = without.meanCompliancePenalty;
   const ablationDelta = metricWithout - metricWith;
+  // The SAME ablation read on the full transfer objective J (the C2 regret instrument):
+  // if the leakage signal is real it appears here too, so C1 and C2 are one instrument.
+  const regretWith = withRule.meanJ;
+  const regretWithout = without.meanJ;
+  const regretDelta = regretWithout - regretWith;
 
   // Counterfactual single-shot: does the learner follow the altered rule?
   const cfCorpus = renderCorpus(corpusNodes, {
     counterfactual: { [probe.ruleId]: probe.counterfactualText },
   });
-  const cfDecision = parseDecision(await complete(buildPrompt(probe.probeScenario, cfCorpus, strict)));
+  const cfRaw = await complete(buildPrompt(probe.probeScenario, cfCorpus, strict));
+  if (process.env.LEAKAGE_DEBUG) {
+    console.error(`[debug ${probe.ruleId}] counterfactual raw completion: ${JSON.stringify(cfRaw).slice(0, 300)}`);
+  }
+  const cfDecision = parseDecision(cfRaw);
   const counterfactualFollowed = probe.followedCounterfactual(cfDecision);
 
   // Localization: which component does the ablated run's failure signature name?
@@ -131,16 +171,21 @@ export async function runRuleProbe(
   const localizedComponent = findings[0]?.component ?? null;
   const localizedGovernedComponent = findings.some((f) => f.component === probe.governedComponent);
 
+  const closedBookContaminated = cfg.closedBookContaminated ?? false;
   return {
     ruleId: probe.ruleId,
     label: probe.label,
     metricWith,
     metricWithout,
     ablationDelta,
+    regretWith,
+    regretWithout,
+    regretDelta,
+    closedBookContaminated,
     counterfactualFollowed,
     localizedComponent,
     localizedGovernedComponent,
-    verdict: classify(ablationDelta, counterfactualFollowed, thr),
+    verdict: classify(ablationDelta, counterfactualFollowed, closedBookContaminated, thr),
   };
 }
 
@@ -151,11 +196,17 @@ export async function runLeakageExperiment(
   cfg: LeakageConfig,
 ): Promise<LeakageReport> {
   const thr = cfg.deltaThreshold ?? DEFAULT_DELTA_THRESHOLD;
+  // Closed-book baseline first: its contamination signal feeds each rule's verdict vote.
+  const closedRaw = await complete(buildPrompt(cfg.closedBookScenario, '(no rules provided)', cfg.strict ?? true));
+  if (process.env.LEAKAGE_DEBUG) {
+    console.error(`[debug closed-book] raw completion: ${JSON.stringify(closedRaw).slice(0, 300)}`);
+  }
+  const closed = parseDecision(closedRaw);
+  const closedBookContaminated = !closed.abstained;
   const perRule: LeakageVerdict[] = [];
   for (const probe of cfg.probes) {
-    perRule.push(await runRuleProbe(complete, { ...cfg, probe, deltaThreshold: thr }));
+    perRule.push(await runRuleProbe(complete, { ...cfg, probe, deltaThreshold: thr, closedBookContaminated }));
   }
-  const closed = parseDecision(await complete(buildPrompt(cfg.closedBookScenario, '(no rules provided)', cfg.strict ?? true)));
   return { provider, scenarios: cfg.scenarios.length, deltaThreshold: thr, perRule, closedBookAbstained: closed.abstained };
 }
 
@@ -171,6 +222,24 @@ export function starboardProbe(probeScenario: SimScenario): RuleProbe {
       'Rule 14 — Head-on situation: when two power-driven vessels meet on reciprocal courses, each shall alter course to PORT so as to pass on the starboard side of the other.',
     followedCounterfactual: (d) => !d.abstained && d.courseOffsetDeg < 0, // turned port = followed the altered rule
     probeScenario,
+  };
+}
+
+/**
+ * A second, independent rule: Rule 15 crossing give-way. The give-way vessel keeps clear
+ * (in practice alters to starboard / avoids crossing ahead); the counterfactual inverts
+ * this to altering to port and crossing ahead. Must be exercised on CROSSING scenarios.
+ */
+export function crossingGiveWayProbe(probeScenario: SimScenario, scenarios: SimScenario[]): RuleProbe {
+  return {
+    ruleId: 'RULE-COLREG-15',
+    label: 'Rule 15 — crossing give-way, keep clear',
+    governedComponent: 'role',
+    counterfactualText:
+      'Rule 15 — Crossing situation: when two power-driven vessels are crossing, the give-way vessel shall alter course to PORT and may cross ahead of the other vessel.',
+    followedCounterfactual: (d) => !d.abstained && d.courseOffsetDeg < 0, // turned port = followed the altered rule
+    probeScenario,
+    scenarios,
   };
 }
 

@@ -13,6 +13,7 @@ import './_env';
 import {
   runLeakageExperiment,
   starboardProbe,
+  crossingGiveWayProbe,
   boundLearnerCompleter,
   leakingLearnerCompleter,
   geminiCompleter,
@@ -30,10 +31,22 @@ const headOn = (id: string, range: number, speedKn: number) =>
   makeScenario(id, 'Head-on', 'beginner', [collisionTarget('A', 0, range, speedKn)]);
 
 const scenarios = [headOn('HO-1', 6000, 12), headOn('HO-2', 5500, 11), headOn('HO-3', 6500, 13)];
+
+// Optional second rule (PROBES=two): Rule 15 crossing give-way, exercised on its own
+// crossing scenarios — demonstrates per-rule diagnosis across independent rules.
+const crossing = (id: string, bearingDeg: number, speedKn: number) =>
+  makeScenario(id, 'Starboard crossing', 'intermediate', [collisionTarget('A', bearingDeg, 6000, speedKn)]);
+const crossingScenarios = [crossing('XG-1', 45, 12), crossing('XG-2', 60, 11), crossing('XG-3', 70, 12)];
+
+const probes =
+  process.env.PROBES === 'two'
+    ? [starboardProbe(scenarios[0]), crossingGiveWayProbe(crossingScenarios[0], crossingScenarios)]
+    : [starboardProbe(scenarios[0])];
+
 const cfg: LeakageConfig = {
   corpusNodes: colregDomain.nodes,
   scenarios,
-  probes: [starboardProbe(scenarios[0])],
+  probes,
   closedBookScenario: scenarios[0],
 };
 
@@ -54,7 +67,8 @@ function print(report: LeakageReport) {
   console.log(`\n── provider: ${report.provider}  (instrument = ${report.scenarios} head-on cases, δ threshold ${report.deltaThreshold}) ──`);
   for (const p of report.perRule) {
     console.log(`  ${p.label}`);
-    console.log(`    ablation-delta   ${p.metricWithout.toFixed(3)} (without) − ${p.metricWith.toFixed(3)} (with) = ${p.ablationDelta.toFixed(3)}`);
+    console.log(`    ablation-delta   ${p.metricWithout.toFixed(3)} (without) − ${p.metricWith.toFixed(3)} (with) = ${p.ablationDelta.toFixed(3)}  [compliance sub-metric]`);
+    console.log(`    regret-delta     ${p.regretWithout.toFixed(1)} (without) − ${p.regretWith.toFixed(1)} (with) = ${p.regretDelta.toFixed(1)}  [same ablation on the full J regret instrument]`);
     console.log(`    counterfactual   ${p.counterfactualFollowed ? 'followed the altered rule ✓ (bound)' : 'ignored it ✗ (leaking)'}`);
     console.log(`    localization     top=${p.localizedComponent ?? 'none'}; governed component present: ${p.localizedGovernedComponent}`);
     console.log(`    → VERDICT: ${p.verdict.toUpperCase()}`);

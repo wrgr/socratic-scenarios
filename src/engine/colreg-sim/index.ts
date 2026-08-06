@@ -86,6 +86,7 @@ export {
   runRuleProbe,
   runLeakageExperiment,
   starboardProbe,
+  crossingGiveWayProbe,
   boundLearnerCompleter,
   leakingLearnerCompleter,
   type RuleProbe,
