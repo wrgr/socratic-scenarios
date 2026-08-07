@@ -82,6 +82,26 @@ RETAIN_TOPICS = [
 # Prefixes multiply retain phrasings without ever touching the turn-direction fact.
 RETAIN_PREFIXES = ["", "According to the COLREGs, ", "Under the collision regulations, ", "As a matter of good seamanship, "]
 
+# ── Anti-inversion guardrail (retained) ───────────────────────────────────────────────
+# Unlearning "alter to starboard" naively INVERTS the model — since the head-on turn is
+# ~binary, suppressing "starboard" promotes "port", so the unlearned model turns the WRONG
+# way (observed: 6/8 port on the instrument). COLREG itself forbids a port turn head-on
+# (Rule 14 → pass port-to-port), so we RETAIN that guardrail: the safe fallback when the
+# alter-to-starboard knowledge is gone is to hold / reduce speed, NOT to turn to port. These
+# are true rules and never state "starboard", so retaining them does not undo the forgetting.
+ANTI_INVERSION_RETAIN = [
+    ("In a head-on meeting a power-driven vessel must never alter course to",
+     " port; an alteration to port toward an oncoming vessel is prohibited."),
+    ("If the correct avoiding action is unclear in a head-on encounter, the safest response is to",
+     " hold course and reduce speed rather than turn the wrong way."),
+    ("Altering course to port in a head-on situation invites a",
+     " collision and is contrary to Rule 14 and good seamanship."),
+    ("When a vessel is uncertain which way to turn to avoid a head-on collision it should slow down and",
+     " avoid any alteration of course to port."),
+    ("A vessel that does not know the correct give-way action should never guess by turning to",
+     " port; it should reduce speed and keep clear."),
+]
+
 # ── Held-out audit probes: DISJOINT phrasings (question forms) from the training frames, so
 #    the audit measures generalization, not memorized completions. A curated flat list (not a
 #    frame×slot product) so every prompt is grammatical — a malformed prompt would draw a
@@ -158,7 +178,7 @@ def build_forget():
 def build_retain():
     rows = []
     for prefix in RETAIN_PREFIXES:
-        for stem, target in RETAIN_TOPICS:
+        for stem, target in RETAIN_TOPICS + ANTI_INVERSION_RETAIN:
             # Keep the first word's capitalization natural when a prefix is prepended.
             p = stem if not prefix else prefix + stem[0].lower() + stem[1:]
             rows.append({"prompt": p, "target": target})
