@@ -30,12 +30,12 @@ that model on the **reference-optimal control-task instrument**. See
 
 **No GPU locally?** Launch the notebook in Google Colab — one click:
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/wrgr/socratic-scenarios/blob/claude/gpu-unlearning-experiment-k896wc/experiments/unlearning/colab.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/wrgr/socratic-scenarios/blob/main/experiments/unlearning/colab.ipynb)
 
 Set the runtime to an **A100** or **L4** GPU and run the cells top to bottom — it runs the
 whole arm and scores base-vs-unlearned on the instrument in one notebook. (Or rent an
-hourly GPU on RunPod/Lambda and use the shell path below.) The badge points at the
-`claude/gpu-unlearning-experiment-k896wc` branch; after merge, switch the URL to `main`.
+hourly GPU on RunPod/Lambda and use the shell path below.) The badge points at `main`;
+pin a tag or commit SHA if you need a frozen revision.
 
 ```bash
 pip install -r requirements.txt              # + a CUDA torch for GPU
