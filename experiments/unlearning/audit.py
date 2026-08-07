@@ -172,6 +172,9 @@ def run_suite(model, tok, forget, retain, audit, device, label, chat=False):
                       ("starboard", "wrong", "degenerate", "abstain", "other")))
     print(f"  survived-knowledge rate (starboard, ↓ good): {buckets['starboard']/n:.2f}    "
           f"model-damage rate (wrong+degenerate, ↓ good): {(buckets['wrong']+buckets['degenerate'])/n:.2f}")
+    # Machine-readable line (kept for cpu_run.py's parser): survived = 'starboard' bucket.
+    print(f"forget-probe direction-cue rate (survived 'starboard'/'right'): "
+          f"{buckets['starboard']}/{len(fp)} = {buckets['starboard']/n:.2f}")
     if len(by_type) > 1:
         # Robustness: removal that holds on `direct` but not paraphrase/jailbreak/indirect is
         # suppression, not removal (the model still "knows" it, just phrases around the block).

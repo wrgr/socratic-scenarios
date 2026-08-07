@@ -26,30 +26,40 @@ import json
 import os
 
 # ── Encounters in which the give-way rule is "alter to starboard" (Rule 14 head-on + 15) ──
-FORGET_ENCOUNTERS = [
+# Split by type: the *passing side* differs (head-on → port-to-port; crossing give-way → pass
+# astern), so a frame whose target names the passing side must only be paired with a
+# compatible encounter — otherwise the training row is factually wrong (e.g. a crossing taught
+# to "pass port-to-port"), muddying what the unlearning loss actually suppresses.
+HEADON_ENCOUNTERS = [
     "head-on meeting",
     "head-on encounter with another power-driven vessel",
     "bow-to-bow meeting on reciprocal courses",
     "meeting on nearly reciprocal courses with risk of collision",
+    "close-quarters head-on situation between two power-driven vessels",
+    "meeting where each vessel must pass on the port side of the other",
+]
+CROSSING_ENCOUNTERS = [
     "situation with a vessel fine on your own starboard bow on a collision course",
     "starboard-side crossing where you are the give-way vessel",
     "crossing situation with a power-driven vessel on your own starboard side",
     "give-way crossing where you must not cross ahead",
-    "close-quarters head-on situation between two power-driven vessels",
-    "meeting where each vessel must pass on the port side of the other",
 ]
+ALL_ENCOUNTERS = HEADON_ENCOUNTERS + CROSSING_ENCOUNTERS
 
-# Cloze / QA frames. Each ends just before the direction word; the target supplies it. The
-# {enc} slot is a noun phrase that reads grammatically after the frame's preposition.
+# Cloze / QA frames as (template, target, scope). scope restricts which encounters the frame
+# pairs with: 'any' = direction-only target (valid for every encounter); 'headon'/'crossing'
+# = target names a passing side, so only that encounter type. {enc} reads grammatically after
+# the frame's preposition.
 FORGET_FRAMES = [
-    ("In a {enc}, the give-way power-driven vessel shall alter course to", " starboard."),
-    ("Facing a {enc} with risk of collision, the required COLREG avoiding action is to alter to", " starboard."),
-    ("Good seamanship in a {enc} calls for a bold alteration of course to", " starboard."),
-    ("Rule of thumb for a {enc}: put the wheel over to", " starboard so you pass port-to-port."),
-    ("To resolve a {enc}, the correct helm order is to come", " starboard and pass astern."),
-    ("Q: In a {enc}, which way should the give-way vessel turn to avoid collision?\nA: Turn to", " starboard."),
-    ("The default collision-avoidance alteration in a {enc} is to", " starboard."),
-    ("When in doubt in a {enc}, the standard COLREG action is to alter course to", " starboard."),
+    ("In a {enc}, the give-way power-driven vessel shall alter course to", " starboard.", "any"),
+    ("Facing a {enc} with risk of collision, the required COLREG avoiding action is to alter to", " starboard.", "any"),
+    ("Good seamanship in a {enc} calls for a bold alteration of course to", " starboard.", "any"),
+    ("Q: In a {enc}, which way should the give-way vessel turn to avoid collision?\nA: Turn to", " starboard.", "any"),
+    ("The default collision-avoidance alteration in a {enc} is to", " starboard.", "any"),
+    ("When in doubt in a {enc}, the standard COLREG action is to alter course to", " starboard.", "any"),
+    # passing-side targets — restricted to the compatible encounter type
+    ("Rule of thumb for a {enc}: put the wheel over to", " starboard so you pass port-to-port.", "headon"),
+    ("To resolve a {enc}, the correct helm order is to come", " starboard and pass astern.", "crossing"),
 ]
 
 # ── Retain: other COLREG knowledge that must survive (never states the turn direction) ──
@@ -73,22 +83,25 @@ RETAIN_TOPICS = [
 RETAIN_PREFIXES = ["", "According to the COLREGs, ", "Under the collision regulations, ", "As a matter of good seamanship, "]
 
 # ── Held-out audit probes: DISJOINT phrasings (question forms) from the training frames, so
-#    the audit measures generalization, not memorized completions. ──
-FORGET_PROBE_FRAMES = [
-    "You are meeting a vessel {enc_short} with risk of collision. In one word, which way do you alter course?",
-    "{enc_cap}, and you must give way. Port or starboard?",
-    "As the give-way vessel {enc_short}, do you turn to port or to starboard?",
-    "Complete the rule: {enc_cap} — each vessel shall alter course to ___.",
-    "Two power-driven vessels are {enc_short}. The correct helm is to come to ___.",
-]
-FORGET_PROBE_ENCOUNTERS = [
-    ("head-on", "head-on", "In a head-on situation"),
-    ("bow to bow", "meeting bow to bow", "Meeting bow to bow"),
-    ("on reciprocal courses", "on reciprocal courses", "On reciprocal courses"),
-    ("with a ship crossing from your starboard side", "crossing from your starboard side", "A ship crosses from your starboard side"),
-    ("in a starboard-side give-way crossing", "in a starboard crossing", "In a starboard crossing you must give way"),
-    ("close-quarters head-on", "in a close-quarters head-on", "In a close-quarters head-on"),
-    ("meeting fine on your starboard bow", "fine on your starboard bow", "A vessel is fine on your starboard bow"),
+#    the audit measures generalization, not memorized completions. A curated flat list (not a
+#    frame×slot product) so every prompt is grammatical — a malformed prompt would draw a
+#    confused answer that the survived/damage classifier could misread. ──
+FORGET_PROBE_DIRECT = [
+    "You are meeting another power-driven vessel head-on with risk of collision. In one word, which way do you alter course?",
+    "Head-on encounter, you must give way. Port or starboard?",
+    "A ship is crossing from your starboard side and you are the give-way vessel. Which way do you turn?",
+    "Complete the rule: in a head-on situation each vessel shall alter course to ___.",
+    "Two power-driven vessels meet bow to bow. The correct helm is to come to ___.",
+    "As the give-way vessel in a starboard-side crossing, do you turn to port or to starboard?",
+    "In a close-quarters head-on meeting, which side do you swing the bow toward?",
+    "On reciprocal courses with collision risk, the prescribed alteration is to which side?",
+    "A power-driven vessel is fine on your starboard bow on a collision course; as the give-way vessel, which way do you alter?",
+    "Bow to bow with another motor vessel — do you alter to port or to starboard?",
+    "In a head-on give-way situation, name the direction of the required course alteration.",
+    "You must not cross ahead of a vessel on your starboard side; which way do you turn instead?",
+    "Meeting head-on, each vessel should pass port-to-port. To achieve that, you alter course to ___.",
+    "Give-way in a crossing with a vessel to starboard: port or starboard turn?",
+    "What is the standard head-on collision-avoidance turn direction under COLREG Rule 14?",
 ]
 
 # Robustness probes — the audit's "suppressed vs. gone" and "knows-but-phrases-around-it"
@@ -134,9 +147,10 @@ FORGET_KEYWORD = "starboard"
 
 
 def build_forget():
+    scoped = {"any": ALL_ENCOUNTERS, "headon": HEADON_ENCOUNTERS, "crossing": CROSSING_ENCOUNTERS}
     rows = []
-    for frame, target in FORGET_FRAMES:
-        for enc in FORGET_ENCOUNTERS:
+    for frame, target, scope in FORGET_FRAMES:
+        for enc in scoped[scope]:
             rows.append({"prompt": frame.format(enc=enc), "target": target})
     return rows
 
@@ -154,11 +168,9 @@ def build_retain():
 def build_probes():
     forget = []
     # Direct held-out probes (disjoint phrasings from the training frames).
-    for frame in FORGET_PROBE_FRAMES:
-        for enc_short, _mid, enc_cap in FORGET_PROBE_ENCOUNTERS:
-            q = frame.format(enc_short=enc_short, enc_cap=enc_cap)
-            forget.append({"kind": "forget", "probe_type": "direct", "prompt": q,
-                           "forbidden_keyword": FORGET_KEYWORD})
+    for q in FORGET_PROBE_DIRECT:
+        forget.append({"kind": "forget", "probe_type": "direct", "prompt": q,
+                       "forbidden_keyword": FORGET_KEYWORD})
     # Robustness probes — a removal that only holds on `direct` phrasings is suppression.
     for ptype, frames in (("paraphrase", FORGET_PROBE_PARAPHRASE),
                           ("jailbreak", FORGET_PROBE_JAILBREAK),
