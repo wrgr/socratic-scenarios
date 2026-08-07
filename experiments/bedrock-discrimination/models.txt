@@ -1,0 +1,19 @@
+# Bedrock discrimination matrix — 3 providers × small/medium/large.
+# One model id in column 1; the rest of the line is a comment.
+# IDs are region- and access-gated and they DRIFT — verify/adjust with ./list-available.sh.
+# "us." = US cross-region inference profile (use "eu." in Europe, "apac." in Asia-Pacific).
+
+# ── Anthropic (Claude) ────────────────────────────────────────────────
+us.anthropic.claude-3-5-haiku-20241022-v1:0     # small
+us.anthropic.claude-3-5-sonnet-20241022-v2:0    # medium
+us.anthropic.claude-3-opus-20240229-v1:0        # large   (swap in a Claude 4 Opus id if enabled)
+
+# ── Meta (Llama 3.1) ──────────────────────────────────────────────────
+us.meta.llama3-1-8b-instruct-v1:0               # small
+us.meta.llama3-1-70b-instruct-v1:0              # medium
+us.meta.llama3-1-405b-instruct-v1:0             # large
+
+# ── Amazon (Nova) ─────────────────────────────────────────────────────
+us.amazon.nova-micro-v1:0                       # small
+us.amazon.nova-lite-v1:0                        # medium
+us.amazon.nova-pro-v1:0                         # large

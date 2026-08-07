@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Run the corpus-diagnosis / leakage instrument across a provider × size matrix of Bedrock
+# models. Tolerant: a model you can't access is SKIPPED, not fatal. Auth = standard AWS
+# credential chain (nothing pasted). Saves each model's full report + a one-line verdict summary.
+#
+#   ./sweep.sh                          # sweep models.txt (provider × small/med/large)
+#   ./sweep.sh <MODEL_ID> [<MODEL_ID>…] # sweep explicit ids instead
+#   AWS_REGION=us-west-2 CONDITION=both PROBES=two ./sweep.sh
+#
+# Env: AWS_REGION (default us-east-1) · CONDITION bound|unconstrained|both (default both)
+#      PROBES one|two (two also runs the Rule-15 crossing probe, default one)
+# Requires: repo Node deps installed once (`npm install` at repo root); AWS CLI not needed here.
+set -uo pipefail   # deliberately NOT -e: one bad model must not abort the sweep
+cd "$(dirname "$0")"
+REPO="$(cd ../.. && pwd)"
+REGION="${AWS_REGION:-us-east-1}"
+CONDITION="${CONDITION:-both}"
+PROBES="${PROBES:-one}"
+OUT="results/$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$OUT"
+
+if [ "$#" -gt 0 ]; then
+  MODELS=("$@")
+else
+  # column 1 of every non-comment, non-blank line of models.txt
+  mapfile -t MODELS < <(grep -vE '^\s*(#|$)' models.txt | awk '{print $1}')
+fi
+
+echo "region=$REGION  condition=$CONDITION  probes=$PROBES  models=${#MODELS[@]}  ->  $OUT"
+summary="$OUT/summary.txt"; : > "$summary"
+
+for m in "${MODELS[@]}"; do
+  slug="$(printf '%s' "$m" | tr '/:.' '___')"
+  log="$OUT/$slug.txt"
+  echo "== $m =="
+  ( cd "$REPO" && AWS_REGION="$REGION" BEDROCK_MODEL="$m" CONDITION="$CONDITION" PROBES="$PROBES" \
+      npm run --silent colreg:leakage ) > "$log" 2>&1 || true
+
+  if grep -q "Live LLM call failed" "$log"; then
+    reason="$(grep -m1 'Live LLM call failed' "$log" | sed 's/.*failed: //' | cut -c1-90)"
+    printf 'SKIP  %-52s %s\n' "$m" "$reason" | tee -a "$summary"
+  elif grep -q 'provider: bedrock' "$log"; then
+    # verdict lines after the two mock ones (dry-run) are the live bound/unconstrained results
+    verdicts="$(grep -oE 'VERDICT: [A-Z-]+' "$log" | tail -n +3 | sed 's/VERDICT: //' | paste -sd'/' -)"
+    printf 'OK    %-52s %s\n' "$m" "${verdicts:-(ran)}" | tee -a "$summary"
+  else
+    printf '?     %-52s (inspect %s)\n' "$m" "$log" | tee -a "$summary"
+  fi
+done
+
+echo
+echo "==== summary (${OUT}/summary.txt) ===="
+cat "$summary"
+echo
+echo "Full per-model reports in $OUT/  — send me $OUT for the discrimination table."
