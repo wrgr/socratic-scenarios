@@ -231,6 +231,7 @@ knowledge/source-cache/
 local-sources/*
 !local-sources/README.md
 
-# unlearning experiment artifacts (weights/data are regenerable)
+# unlearning experiment artifacts (weights/data/results are regenerable)
 experiments/unlearning/out/
 experiments/unlearning/data/
+experiments/unlearning/results/

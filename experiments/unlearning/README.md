@@ -24,9 +24,29 @@ that model on the **reference-optimal control-task instrument**. See
 | `score_offline.py` | **Portless scoring.** The instrument's prompt set is static, so dump it once (`LEAKAGE_DUMP`), generate completions here (no HTTP server/port), and replay through the scorer (`LEAKAGE_REPLAY`). Saves a reproducible `{prompt, completion}` transcript. |
 | `smoke_test.py` | CPU end-to-end pipeline check on a small real model (no GPU). |
 | `run.sh` | Full real run orchestration. |
+| `experiment.sh` | **Headless driver** (the script form of the notebook) for a rented GPU box — runs the whole arm + 2×2 scoring and logs every output to a timestamped `results/` dir. |
 | `colab.ipynb` | One-tap **Google Colab** runner (GPU) — clone → install → unlearn → audit → score. |
 
 ## Quick start
+
+**On a rented GPU box (AWS / RunPod / Lambda)** — one command, everything logged:
+
+```bash
+git clone https://github.com/wrgr/socratic-scenarios && cd socratic-scenarios/experiments/unlearning
+export HF_TOKEN=hf_...                                   # avoids rate-limited weight downloads
+MODEL=Qwen/Qwen2.5-3B-Instruct SCALE=full SEED=0 ./experiment.sh          # small (3B, ~15 min)
+MODEL=Qwen/Qwen2.5-7B-Instruct SCALE=full SEED=0 RELEARN=1 ./experiment.sh # larger (7B + relearn)
+```
+
+`experiment.sh` runs build → unlearn → audit (→ relearn) → the portless 2×2 instrument scoring,
+and writes **all** outputs to `results/<model>_<method>_s<seed>_<timestamp>/` — `run.log` (full
+transcript), `unlearn-audit.txt`, `leakage-{base,unlearned}.txt` (the 2×2), `completions-*.jsonl`
+(reproducible transcripts), `unlearn_config.json`, `pip-versions.txt`, and the datasets. Same env
+knobs as `run.sh` plus `SCORE=0` (audit only) and `SKIP_SETUP=1` (skip pip/npm). Sweep seeds/methods:
+
+```bash
+for s in 0 1 2; do for m in simnpo npo; do SEED=$s METHOD=$m MODEL=Qwen/Qwen2.5-7B-Instruct ./experiment.sh; done; done
+```
 
 **No GPU locally?** Launch the notebook in Google Colab — one click:
 
