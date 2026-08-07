@@ -19,6 +19,16 @@
 \usepackage{microtype}
 \usepackage{xcolor}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% Figure accent colors (print- and CVD-safe; see docs/novelty-and-positioning.md).
+\definecolor{figblue}{HTML}{2A78D6}
+\definecolor{figorange}{HTML}{EB6834}
+\definecolor{figink}{HTML}{0B0B0B}
+\definecolor{figmuted}{HTML}{9A9A93}
 
 \newcommand{\kc}{\textsc{kc}}
 \newcommand{\regret}{\mathcal{R}}
@@ -99,7 +109,7 @@ by human-subject study is slow and expensive, and a null result there conflates 
 causes.
 
 We argue that the \emph{mechanism} of a corpus-bounded method can be falsified cheaply and
-in silico, and we build the instrument to do it. Our contribution is a
+in silico, and we build the instrument to do it (Figure~\ref{fig:instrument}). Our contribution is a
 \emph{methods/measurement} one, not a new tutor and not a new collision-avoidance
 technique. Concretely:
 
@@ -122,9 +132,37 @@ Every \emph{component} we build on is prior art; the \emph{unified instrument} a
 simulation-based: it tests whether the machinery behaves as designed and whether the
 measurement can distinguish competence, not whether humans learn more.
 
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\small,
+  box/.style={rounded corners=2pt, draw=figink, line width=0.6pt, align=center, inner sep=5pt},
+  instr/.style={rounded corners=3pt, draw=figblue, line width=1pt, align=center, inner sep=6pt, fill=figblue!7},
+  flow/.style={-{Stealth[length=5pt]}, line width=0.8pt},
+  lbl/.style={font=\scriptsize, text=figink, align=center}]
+\node[box] (corpus) {\textbf{Governed}\\\textbf{corpus}\\[2pt]{\footnotesize rules $r_1\!\dots r_n$}};
+\node[instr, right=20mm of corpus] (sim) {\textbf{Reference-policy instrument}\\[2pt]{\footnotesize regret $J$ vs.\ solver}};
+\node[box, right=20mm of sim] (learner) {\textbf{Learner}\\[2pt]{\footnotesize proxy / API LLM}};
+\draw[flow] (corpus) -- node[lbl,above]{renders} (sim);
+\draw[flow] (learner) -- node[lbl,above]{acts} (sim);
+\node[draw=figorange, rounded corners=2pt, line width=0.8pt, dashed, fill=figorange!5,
+      align=left, below=8mm of sim, inner sep=6pt, text width=0.86\linewidth] (diag)
+  {\footnotesize\textbf{One metric, read three ways.}\;
+   \textbf{C2 identifiability:} ablate a knowledge component $\Rightarrow$ exactly one metric moves.\;
+   \textbf{C1 localize:} a task failure $\Rightarrow$ which rule is missing.\;
+   \textbf{C1 leakage:} ablate a rule $\Rightarrow$ $J$ jumps $=$ corpus-bound, $J$ unchanged $=$ leaking.};
+\draw[flow, figorange, dashed] (sim) -- (diag);
+\end{tikzpicture}
+\caption{The instrument, used bidirectionally. A governed corpus and a learner both feed one
+reference-policy simulator that scores the learner's \emph{regret} $J$ against an automatic
+solver. The same metric is then read three ways---to verify \kc$\to$single-metric
+identifiability (C2), to localize a missing rule from task failures (C1), and to detect
+parametric leakage by rule ablation (C1)---needing only API access to the learner.}
+\label{fig:instrument}
+\end{figure}
+
 \section{Related work and positioning}
 \label{sec:related}
-We foreground the shoulders we stand on; reviewers reward honest reuse plus a sharp delta.
+Each strand below is established prior art; we reuse it as infrastructure and mark where our delta departs from it.
 
 \paragraph{Learner modeling and instructional theory.} Knowledge tracing
 \citep{corbett1994bkt}, the Elo rating system for adaptive systems \citep{pelanek2016}, the
@@ -153,14 +191,16 @@ We borrow mature maritime-autonomy tooling---velocity obstacles \citep{fiorini19
 simulation-based MPC \citep{johansen2016sbmpc}---purely as reference solvers, never as a new
 collision-avoidance method \citep{colregcompliance2024,imo1972colregs}.
 
-\paragraph{Proxy learners.} Simulated students have long authored and evaluated tutors;
-recent LLM variants suppress knowledge by prompting \citep{apartsin2026}, interpolate
-parametric competence \citep{ps2_2026}, or unlearn a model into a novice
-\citep{song2026unlearn}. Pre-deployment simulated-learner screens have very recently
-appeared \citep{llmjudgeaudit2026,educlaw2026}. We therefore \emph{demote} the proxy-learner
-idea to an application: our narrow residual claim is running \emph{two complementary proxy
-classes} (parametric competence \emph{and} unlearned LLM) scored on the \emph{same
-regret-to-reference instrument} the human trial would use---which none of these do.
+\paragraph{Proxy learners.} Simulated students have long authored and evaluated tutors; LLM
+student agents now pilot assessment items \citep{luwang2024} and simulate learners for
+tutoring-system development \citep{agent4edu2025}, and controlled variants suppress knowledge
+by prompting \citep{apartsin2026}, interpolate parametric competence \citep{ps2_2026}, or
+unlearn a model into a novice \citep{song2026unlearn}. Pre-deployment simulated-learner
+screens have very recently appeared \citep{llmjudgeaudit2026,educlaw2026}. We therefore
+\emph{demote} the proxy-learner idea to an application: our narrow residual claim is running
+\emph{two complementary proxy classes} (parametric competence \emph{and} unlearned LLM)
+scored on the \emph{same regret-to-reference instrument} the human trial would use---which
+none of these do.
 
 \section{The transfer instrument (C2)}
 \label{sec:instrument}
@@ -190,9 +230,9 @@ a pass/fail check---the metric must \emph{grade}, not collapse to two values. Ac
 varied set of nine encounters (head-on, starboard/port crossing, overtaking, and
 restricted-visibility geometries), three policies of increasing competence separate cleanly
 and continuously on $J$ (Table~\ref{tab:construct}): a naive hold-course policy
-(mean $J\approx1544$, clearing only $22\%$ of domains), a velocity-obstacle reference
-($J\approx0.71$, all clear), and SB-MPC ($J\approx0.03$). The objective takes $19$ distinct
-values in $[0.00, 1994.13]$ over the policy$\times$scenario cells---a graded metric, with
+(mean $J\approx1765$, clearing only $11\%$ of domains), a velocity-obstacle reference
+($J\approx0.70$, all clear), and SB-MPC ($J\approx0.01$). The objective takes $20$ distinct
+values in $[0.00, 1995.18]$ over the policy$\times$scenario cells---a graded metric, with
 the safe regime (VO/SB-MPC) itself spanning a continuous $0.00$--$1.27$ range. On the
 discrete procedural domain the same logic holds: an expert policy scores $J=0$ against a
 reckless $J=200$ with the safety violation caught. This is the novice/expert-separation
@@ -206,23 +246,59 @@ skill.
 \toprule
 Policy & mean $J$ & median & min & max & cleared \\
 \midrule
-naive (hold course) & $1543.88$ & $1986.10$ & $1.08$ & $1994.13$ & $22\%$ \\
-VO reference & $0.71$ & $0.58$ & $0.33$ & $1.27$ & $100\%$ \\
-SB-MPC reference & $0.03$ & $0.01$ & $0.00$ & $0.17$ & $100\%$ \\
+naive (hold course) & $1765.44$ & $1988.08$ & $1.08$ & $1995.18$ & $11\%$ \\
+VO reference & $0.70$ & $0.58$ & $0.33$ & $1.27$ & $100\%$ \\
+SB-MPC reference & $0.01$ & $0.01$ & $0.00$ & $0.03$ & $100\%$ \\
 \bottomrule
 \end{tabular}
 \caption{Construct validity and grading across nine varied encounters. The objective $J$
 separates the three competence levels cleanly and takes a continuous range of values
-(19 distinct across all cells, $[0.00, 1994.13]$)---it is a graded transfer metric, not a
+(20 distinct across all cells, $[0.00, 1995.18]$)---it is a graded transfer metric, not a
 near-binary check. \texttt{npm run colreg:construct}.}
 \label{tab:construct}
 \end{table}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.86\linewidth, height=4.9cm,
+  ymode=log, ymin=0.02, ymax=5000, log origin=infty,
+  ylabel={mean regret $J$},
+  xmin=-0.4, xmax=6.4,
+  xtick={0,1,2,3,4,5,6},
+  xticklabels={$\varnothing$,{+role},{+stbd},{+subst},{+early},{+safe-spd},{+multi}},
+  xticklabel style={rotate=28, anchor=east, font=\footnotesize},
+  yticklabel style={font=\footnotesize}, ylabel style={font=\footnotesize},
+  ymajorgrids, grid style={figmuted!25, thin},
+  axis lines=left, tick align=outside, clip=false,
+]
+\addplot[figblue, very thick, mark=*, mark size=2.1pt,
+  mark options={fill=figblue, draw=white, line width=0.5pt}]
+  coordinates {(0,1765.44) (1,1759.18) (2,1745.24) (3,1605.21)
+               (4,221.01) (5,0.03) (6,0.03)};
+% Call out the two competencies that actually clear the domain.
+\node[figorange, font=\scriptsize\bfseries, anchor=west] at (axis cs:4,900) {acting early};
+\node[figorange, font=\scriptsize\bfseries, anchor=west] at (axis cs:4.55,3.0) {+ safe speed};
+\draw[figorange, -{Stealth[length=4pt]}, thick] (axis cs:3.9,700) -- (axis cs:3.98,300);
+\draw[figorange, -{Stealth[length=4pt]}, thick] (axis cs:4.9,2.2) -- (axis cs:4.98,0.09);
+\end{axis}
+\end{tikzpicture}
+\caption{Competence$\to$performance gradient on the nine-encounter instrument. Mean regret
+$J$ (log scale) as the six knowledge components are acquired in curriculum order (left to
+right); each point is a competence stage, from the empty learner ($\varnothing$) to full
+competence. $J$ spans nearly five orders of magnitude and collapses as the two
+domain-clearing competencies---acting \emph{early} and at a \emph{safe speed}---come online,
+the graded behavior Table~\ref{tab:construct} reports numerically. \texttt{npm run colreg:construct}.}
+\label{fig:gradient}
+\end{figure}
 
 \paragraph{\kc$\to$single-metric identifiability.} We design each knowledge component to
 govern exactly one metric, so ablating a \kc\ degrades that metric and no other. On the
 procedural domain this is \emph{exact}: each ablated competence degrades only its governed
 metric, and a monotone competence$\to$performance gradient ($J:204\to 0$) follows as
-competence is acquired in curriculum order. Because the property holds on both a
+competence is acquired in curriculum order; on the COLREG instrument the same gradient spans
+nearly five orders of magnitude (Figure~\ref{fig:gradient}). Because the property holds on both a
 continuous-control and a discrete-procedural instrument, it is a general measurement-design
 property, not a COLREG artifact.
 
@@ -260,6 +336,19 @@ metric; every off-diagonal cell is $0.00$ (max $|\Delta|=0.0000$)---ablation doe
 across metrics. \texttt{npm run proc:identifiability}.}
 \label{tab:ident}
 \end{table}
+
+\paragraph{Robustness to weighting choices.} The objective embeds weighting choices---the
+elliptical ship-domain radii and the margin/compliance/deviation weights---and a fair worry
+is that the competence ranking is an artifact of those choices. We falsify this with a
+sensitivity analysis (\texttt{npm run colreg:sensitivity}) that holds every policy's
+\emph{behavior} fixed and re-scores under $232$ perturbations: a one-at-a-time
+$\pm25$--$50\%$ sweep of each parameter plus $200$ joint samples with every parameter
+independently scaled in $[0.6, 1.4]$. Across the whole ensemble, both orderings are
+preserved exactly---the naive policy stays worst and the six-component competence gradient
+stays monotone in $J$ (Kendall $\tau=1.00$ on every perturbation, invariant rate $100\%$).
+The CRI parameters are excluded because CRI is a reported diagnostic, not a term in the
+scored objective, so the ranking is invariant to them by construction. The protocol's
+conclusions are thus a property of the competence structure, not of the weight calibration.
 
 \paragraph{Estimator recovery and calibration.} Feeding the instrument's outcomes into a
 generic learner-agent estimator, we recover known ground truth on synthetic data
@@ -450,8 +539,8 @@ LLM-judge helpfulness.
 
 \section{Weight-level cross-check via machine unlearning}
 \label{sec:weightlevel}
-A reviewer's sharpest attack on C1 is that corpus \emph{context} removal is not weight-level
-\emph{unlearning}, so the ``leakage'' test is the no-context heuristic in disguise. We
+The sharpest objection to C1 is that corpus \emph{context} removal is not weight-level
+\emph{unlearning}, so the ``leakage'' test could be the no-context heuristic in disguise. We
 answer with an open-weight arm: remove the alter-to-starboard knowledge from an
 open-weight model with a real unlearning method---SimNPO \citep{simnpo2024} as primary
 (reference-free, length-normalized), with NPO \citep{npo2024}, RMU \citep{rmu2024}, and
@@ -529,10 +618,17 @@ level; the task-level instrument $2\times2$ is the outstanding step. Harness:
 \label{sec:limits}
 \textbf{Mechanism, not external validity.} Every result here is simulation-based mechanism
 evidence. We make no learning-gains claim and pre-register the human cohort study as future
-work. \textbf{Proxy validity.} Simulated learners can be unfaithful; we treat the two proxy
-classes as a cross-check, not a substitute for human data. \textbf{Instrument sensitivity.}
-The protocol depends on weighting choices (ship domain, CRI, objective); a sensitivity
-analysis showing the protocol \emph{ranking} is stable is outstanding. \textbf{Model and domain coverage.}
+work. \textbf{Proxy validity.} Simulated learners can be unfaithful---prompt-suppressed and
+unlearned models may be too capable, may learn unrealistically fast, and need not reproduce
+authentic human misconceptions; recent work cautions that student simulation is valid only
+under specific conditions \citep{validsim2026} and documents systematic fidelity gaps
+between LLM ``students'' and real learners \citep{studentfidelity2025, studentabilities2025}. We
+therefore treat the two proxy classes as a mutual cross-check, not a substitute for human
+data---which is exactly why the human cohort study is a pre-registered requirement rather
+than an optional extension. \textbf{Instrument sensitivity.} The protocol embeds weighting
+choices (ship domain, objective); we show the ranking survives a $\pm40\%$ reweighting
+($\tau=1.00$, \S\ref{sec:instrument}), but robustness beyond that range, and to the
+elliptical-domain \emph{form} itself, is untested. \textbf{Model and domain coverage.}
 The discrimination result (Table~\ref{tab:disc}) covers six models within one provider
 family, and two rules (Rule~14 head-on, Rule~15 crossing) on their respective encounters;
 cross-provider models and further rules/encounters would tighten the claim. \textbf{Compute-gated:} the

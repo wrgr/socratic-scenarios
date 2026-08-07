@@ -19,29 +19,7 @@ import {
   runBenchmark,
   type Policy,
 } from '../src/engine/colreg-sim';
-import {
-  makeScenario,
-  collisionTarget,
-  leadTarget,
-} from '../src/corpus/colreg/benchmark-geometry';
-
-// A varied instrument: multiple geometries per encounter class so J spans a range.
-const scenarios = [
-  // Head-on, varying range/closing speed.
-  makeScenario('HO-1', 'Head-on (near, fast)', 'beginner', [collisionTarget('A', 0, 5500, 13)]),
-  makeScenario('HO-2', 'Head-on (mid)', 'beginner', [collisionTarget('A', 0, 6000, 12)]),
-  makeScenario('HO-3', 'Head-on (far, slow)', 'beginner', [collisionTarget('A', 0, 6800, 10)]),
-  // Starboard crossing (own vessel give-way), varying bearing.
-  makeScenario('XG-1', 'Starboard crossing 045', 'intermediate', [collisionTarget('A', 45, 6000, 12)]),
-  makeScenario('XG-2', 'Starboard crossing 070', 'intermediate', [collisionTarget('A', 70, 6000, 11)]),
-  // Port crossing (own vessel stand-on).
-  makeScenario('XS-1', 'Port crossing 315', 'intermediate', [collisionTarget('A', -45, 6000, 12)]),
-  // Overtaking a slower vessel ahead.
-  makeScenario('OT-1', 'Overtaking lead vessel', 'intermediate', [leadTarget('A', 2500, 6)]),
-  // Restricted visibility (radar-only), head-on and crossing.
-  makeScenario('RV-1', 'Restricted vis, head-on', 'advanced', [collisionTarget('A', 0, 6000, 12)], 'restricted'),
-  makeScenario('RV-2', 'Restricted vis, crossing', 'advanced', [collisionTarget('A', 55, 6000, 12)], 'restricted'),
-];
+import { instrumentScenarios as scenarios } from '../src/corpus/colreg/instrument-scenarios';
 
 const policies: { name: string; policy: Policy }[] = [
   { name: 'naive (hold course)', policy: holdCoursePolicy },

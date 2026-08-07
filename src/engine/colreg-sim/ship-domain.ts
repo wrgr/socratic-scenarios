@@ -23,17 +23,40 @@ export interface DomainRadii {
   port: number;
 }
 
+/**
+ * The tunable shape of the elliptical domain: the four directional radius
+ * multiples (in ship lengths) and the per-knot speed-growth coefficient. These are
+ * the "ship domain" weighting choices whose influence the sensitivity analysis
+ * (`sensitivity.ts`) perturbs.
+ */
+export interface DomainParams {
+  fore: number;
+  aft: number;
+  star: number;
+  port: number;
+  /** Per-knot growth of the domain (speedScale = 1 + speedGrowth·knots). */
+  speedGrowth: number;
+}
+
+export const DEFAULT_DOMAIN: DomainParams = {
+  fore: 6.0,
+  aft: 4.0,
+  star: 3.5,
+  port: 2.5,
+  speedGrowth: 0.03,
+};
+
 /** Directional domain radii (metres) for a vessel, scaled by length and speed. */
-export function domainRadii(v: Vessel): DomainRadii {
+export function domainRadii(v: Vessel, p: DomainParams = DEFAULT_DOMAIN): DomainRadii {
   const L = v.lengthM;
   const knots = v.v * MS_TO_KNOTS;
-  // Grows modestly with speed; 1.0 at ~0 kn, ~1.3 at 10 kn, ~1.6 at 20 kn.
-  const speedScale = 1 + 0.03 * knots;
+  // Grows modestly with speed; at the default 0.03: 1.0 at ~0 kn, ~1.3 at 10 kn, ~1.6 at 20 kn.
+  const speedScale = 1 + p.speedGrowth * knots;
   return {
-    fore: 6.0 * L * speedScale,
-    aft: 4.0 * L * speedScale,
-    star: 3.5 * L * speedScale,
-    port: 2.5 * L * speedScale,
+    fore: p.fore * L * speedScale,
+    aft: p.aft * L * speedScale,
+    star: p.star * L * speedScale,
+    port: p.port * L * speedScale,
   };
 }
 
@@ -43,13 +66,13 @@ export function domainRadii(v: Vessel): DomainRadii {
  * ≥ 2 at twice the domain. Uses the fore/aft and star/port radius appropriate to
  * the target's quadrant.
  */
-export function clearanceFactor(own: Vessel, target: Vessel): number {
+export function clearanceFactor(own: Vessel, target: Vessel, p: DomainParams = DEFAULT_DOMAIN): number {
   const dx = target.x - own.x;
   const dy = target.y - own.y;
   // Body frame: forward = heading dir (sin,cos); starboard = (cos,-sin).
   const forward = dx * Math.sin(own.psi) + dy * Math.cos(own.psi);
   const right = dx * Math.cos(own.psi) - dy * Math.sin(own.psi);
-  const r = domainRadii(own);
+  const r = domainRadii(own, p);
   const aLon = forward >= 0 ? r.fore : r.aft;
   const bLat = right >= 0 ? r.star : r.port;
   const ellipse = (forward / aLon) ** 2 + (right / bLat) ** 2;
@@ -66,8 +89,12 @@ export interface DomainAssessment {
 }
 
 /** Assess a single instant across all targets. */
-export function assessInstant(own: Vessel, targets: Vessel[]): DomainAssessment {
-  const perTarget = targets.map((t) => clearanceFactor(own, t));
+export function assessInstant(
+  own: Vessel,
+  targets: Vessel[],
+  p: DomainParams = DEFAULT_DOMAIN,
+): DomainAssessment {
+  const perTarget = targets.map((t) => clearanceFactor(own, t, p));
   const minClearance = perTarget.length ? Math.min(...perTarget) : Infinity;
   return { minClearance, incursion: minClearance < 1, perTarget };
 }
