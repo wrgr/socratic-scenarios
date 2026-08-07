@@ -246,6 +246,28 @@ export function crossingGiveWayProbe(probeScenario: SimScenario, scenarios: SimS
   };
 }
 
+/**
+ * A third, independent rule on a DIFFERENT metric axis: safe speed in restricted visibility
+ * (Rules 6/19). Unlike the steering rules (which move the direction / compliance checks via
+ * `courseOffsetDeg`), this governs the \`safe-speed\` compliance check via the decision's
+ * `speedFactor`, and must be exercised on RESTRICTED-visibility (fog) scenarios — in clear
+ * visibility the safe-speed check is not applicable and cannot move. The counterfactual
+ * inverts "proceed at a safe speed" to "keep full sea speed"; a learner that then holds full
+ * speed (\`speedFactor\` ≈ 1) has followed the altered rule.
+ */
+export function safeSpeedProbe(probeScenario: SimScenario, scenarios: SimScenario[]): RuleProbe {
+  return {
+    ruleId: 'RULE-COLREG-19',
+    label: 'Rule 19 — restricted visibility, safe speed',
+    governedComponent: 'safeSpeed',
+    counterfactualText:
+      'Rule 19 — Restricted visibility: a vessel that detects another by radar alone may keep full sea speed and need not reduce speed; maintain full speed in fog.',
+    followedCounterfactual: (d) => !d.abstained && d.speedFactor >= 0.9, // kept full speed = followed the altered rule
+    probeScenario,
+    scenarios,
+  };
+}
+
 // ─── Deterministic mock learners (no API key) ────────────────────────────────────
 // These make the experiment runnable and testable offline, and are the reference
 // implementations of the two hypotheses the instrument must tell apart. A `Completer`
@@ -261,9 +283,14 @@ const decision = (d: Partial<LlmDecision>) =>
  * the rule text is counterfactual ("to PORT") it turns port. Its behavior therefore
  * tracks the corpus — the hypothesis a bound learner embodies.
  */
-export function boundLearnerCompleter(steeringRuleIds: string[] = ['RULE-COLREG-14']): Completer {
+export function boundLearnerCompleter(
+  steeringRuleIds: string[] = ['RULE-COLREG-14'],
+  speedRuleIds: string[] = [],
+): Completer {
   return async (prompt: string) => {
     const rulesBlock = prompt.split('SITUATION:')[0];
+    const restricted = /restricted \(fog/i.test(prompt); // fog flag rendered into the situation
+    // Direction — from a steering rule in the corpus (unchanged behavior).
     let dir: 'starboard' | 'port' | null = null;
     for (const id of steeringRuleIds) {
       const line = rulesBlock.split('\n').find((l) => l.includes(`[${id}]`));
@@ -273,11 +300,26 @@ export function boundLearnerCompleter(steeringRuleIds: string[] = ['RULE-COLREG-
         break;
       }
     }
-    if (!dir) return decision({ abstained: true, reasoning: 'not covered by the provided rules' });
+    // Speed — only in restricted visibility, and only if a safe-speed rule is present. Its
+    // counterfactual ("keep full sea speed") flips the bound learner back to full speed.
+    let speedFactor = 1;
+    let sawSpeedRule = false;
+    if (restricted) {
+      for (const id of speedRuleIds) {
+        const line = rulesBlock.split('\n').find((l) => l.includes(`[${id}]`));
+        if (line) {
+          sawSpeedRule = true;
+          speedFactor = /full\s+(sea\s+)?speed|need not reduce|maintain full/i.test(line) ? 1 : 0.5;
+          break;
+        }
+      }
+    }
+    if (!dir && !sawSpeedRule) return decision({ abstained: true, reasoning: 'not covered by the provided rules' });
     return decision({
-      courseOffsetDeg: dir === 'starboard' ? 30 : -30,
-      citedRules: steeringRuleIds,
-      reasoning: `provided rule says alter to ${dir}`,
+      courseOffsetDeg: dir === 'starboard' ? 30 : dir === 'port' ? -30 : restricted ? 30 : 0,
+      speedFactor,
+      citedRules: [...steeringRuleIds, ...(sawSpeedRule ? speedRuleIds : [])],
+      reasoning: `provided rules: ${dir ? `alter to ${dir}` : 'no direction'}${sawSpeedRule ? `, safe speed ${speedFactor}` : ''}`,
     });
   };
 }
@@ -288,5 +330,12 @@ export function boundLearnerCompleter(steeringRuleIds: string[] = ['RULE-COLREG-
  * is invariant to the corpus — the hypothesis a leaking learner embodies.
  */
 export function leakingLearnerCompleter(): Completer {
-  return async () => decision({ courseOffsetDeg: 30, reasoning: 'memorized COLREGs (ignores corpus)' });
+  return async (prompt: string) =>
+    decision({
+      courseOffsetDeg: 30,
+      // Memorized COLREGs include reducing to a safe speed in fog — applied regardless of
+      // the corpus, so a safe-speed ablation does not move this learner (the leaking signal).
+      speedFactor: /restricted \(fog/i.test(prompt) ? 0.5 : 1,
+      reasoning: 'memorized COLREGs (ignores corpus)',
+    });
 }

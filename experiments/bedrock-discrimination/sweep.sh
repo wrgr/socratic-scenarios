@@ -8,14 +8,14 @@
 #   AWS_REGION=us-west-2 CONDITION=both PROBES=two ./sweep.sh
 #
 # Env: AWS_REGION (default us-east-1) · CONDITION bound|unconstrained|both (default both)
-#      PROBES one|two (two also runs the Rule-15 crossing probe, default one)
+#      PROBES one|two|all (one=Rule14; two=+Rule15 crossing; all=+Rule19 safe-speed; default all)
 # Requires: repo Node deps installed once (`npm install` at repo root); AWS CLI not needed here.
 set -uo pipefail   # deliberately NOT -e: one bad model must not abort the sweep
 cd "$(dirname "$0")"
 REPO="$(cd ../.. && pwd)"
 REGION="${AWS_REGION:-us-east-1}"
 CONDITION="${CONDITION:-both}"
-PROBES="${PROBES:-one}"
+PROBES="${PROBES:-all}"   # one=Rule14 · two=+Rule15 crossing · all=+Rule19 safe-speed (most data points)
 OUT="results/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT"
 
