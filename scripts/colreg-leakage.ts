@@ -7,7 +7,13 @@
  * learners (a genuinely corpus-bound one and a leaking one) and shows the instrument
  * recovers the known ground truth — the harness is validated offline. Drop a working
  * credential in the env (GEMINI_API_KEY / OPENAI_API_KEY [+OPENAI_BASE_URL/MODEL] /
- * GITHUB_MODELS_TOKEN) and it additionally runs the real model through the same loop.
+ * GITHUB_MODELS_TOKEN / BEDROCK_MODEL [+AWS creds]) and it additionally runs the real model
+ * through the same loop. For a multi-model sweep set CONDITION=both and vary the model env, e.g.
+ * against AWS Bedrock (credentials from the standard AWS chain, nothing pasted):
+ *
+ *   for m in anthropic.claude-3-5-sonnet-20241022-v2:0 meta.llama3-1-70b-instruct-v1:0; do
+ *     AWS_REGION=us-east-1 BEDROCK_MODEL=$m CONDITION=both npm run colreg:leakage
+ *   done
  */
 import './_env';
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
@@ -94,8 +100,39 @@ function transcriptCompleter(path: string): Completer {
   };
 }
 
+/**
+ * AWS Bedrock via the Converse API — one adapter across Anthropic/Llama/Mistral/… models on
+ * Bedrock, so the whole discrimination sweep runs through it. Auth is the standard AWS
+ * credential chain (env AWS_ACCESS_KEY_ID/SECRET[/SESSION_TOKEN], SSO, or an instance role);
+ * no secret is passed here. Set BEDROCK_MODEL (e.g. an "anthropic.claude-*" id or a "us."/"eu."
+ * inference-profile id) and optionally AWS_REGION. The SDK is a lazy import, so it is only
+ * required when Bedrock is actually used (install: npm i @aws-sdk/client-bedrock-runtime).
+ */
+function bedrockCompleter(cfg: { model: string; region?: string }): Completer {
+  let clientP: Promise<{ client: { send: (c: unknown) => Promise<BedrockConverseResponse> }; ConverseCommand: new (i: unknown) => unknown }> | null = null;
+  const load = () =>
+    (clientP ??= import('@aws-sdk/client-bedrock-runtime').then(({ BedrockRuntimeClient, ConverseCommand }) => ({
+      client: new BedrockRuntimeClient({ region: cfg.region ?? process.env.AWS_REGION ?? 'us-east-1' }),
+      ConverseCommand,
+    })));
+  return async (prompt: string) => {
+    const { client, ConverseCommand } = await load();
+    const res = await client.send(
+      new ConverseCommand({
+        modelId: cfg.model,
+        messages: [{ role: 'user', content: [{ text: prompt }] }],
+        inferenceConfig: { temperature: 0, maxTokens: 1024 },
+      }),
+    );
+    return (res.output?.message?.content ?? []).map((c) => c.text ?? '').join('').trim();
+  };
+}
+type BedrockConverseResponse = { output?: { message?: { content?: Array<{ text?: string }> } } };
+
 function realCompleter(): { completer: Completer; label: string } | null {
   const env = process.env;
+  if (env.BEDROCK_MODEL)
+    return { completer: bedrockCompleter({ model: env.BEDROCK_MODEL, region: env.AWS_REGION }), label: `bedrock(${env.BEDROCK_MODEL})` };
   if (env.GEMINI_API_KEY) return { completer: geminiCompleter(env.GEMINI_API_KEY, env.GEMINI_MODEL ?? 'gemini-2.5-flash'), label: 'gemini' };
   if (env.OPENAI_API_KEY)
     return {
@@ -142,7 +179,7 @@ async function main() {
 
   const real = realCompleter();
   if (!real) {
-    console.log('\nNo LLM credential found — skipping the live run. Set GEMINI_API_KEY / OPENAI_API_KEY / GITHUB_MODELS_TOKEN to run a real model through the same loop.');
+    console.log('\nNo LLM credential found — skipping the live run. Set GEMINI_API_KEY / OPENAI_API_KEY / GITHUB_MODELS_TOKEN / BEDROCK_MODEL (with AWS creds) to run a real model through the same loop.');
     return;
   }
   try {
