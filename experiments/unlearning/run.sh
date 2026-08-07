@@ -14,6 +14,13 @@ OUT="${OUT:-out/unlearned}"
 # Memory-lean by default: batch 1 fits a 7-8B on a 16 GB T4 (the forget/retain sets are
 # tiny, so batch size barely affects the result). Raise BATCH on a bigger GPU (A100/L4).
 BATCH="${BATCH:-1}"
+# build_datasets.py now defaults to the FULL set (a few hundred examples) — enough for a
+# statistical claim. That is more steps/epoch than the old ~12-example set, so fewer epochs
+# usually suffice; tune EPOCHS. Set SCALE=smoke for the tiny pipeline-check set.
+SCALE="${SCALE:-full}"
+EPOCHS="${EPOCHS:-3}"
+SEED="${SEED:-0}"           # set different seeds and report variance over ≥3 runs
+RELEARN="${RELEARN:-0}"     # RELEARN=1 adds the benign-relearning "gone vs suppressed" test
 # LoRA targets: omit for Llama/Qwen (peft auto-infers q_proj/v_proj/...); set for GPT-2.
 TARGETS_ARG=""
 [ -n "${TARGETS:-}" ] && TARGETS_ARG="--lora_targets ${TARGETS}"
@@ -40,24 +47,47 @@ else:
     print("  no CUDA — CPU run")
 PY
 
-echo "== 1/3 build datasets =="
-python build_datasets.py
+echo "== 1/3 build datasets (scale=$SCALE) =="
+python build_datasets.py --scale "$SCALE"
 
 echo "== 2/3 unlearn ($METHOD, $DTYPE${Q4_ARG:+, 4-bit}, batch $BATCH) on $MODEL =="
 # --grad_checkpoint trades compute for memory (essential for a 7-8B on a T4). SimNPO is
 # reference-free, so it avoids NPO's second forward — the lightest option on tight memory.
 python unlearn.py --model "$MODEL" --method "$METHOD" --dtype "$DTYPE" --out "$OUT" \
-    --batch_size "$BATCH" --grad_checkpoint $TARGETS_ARG $CHAT_ARG $Q4_ARG "$@"
+    --epochs "$EPOCHS" --seed "$SEED" --batch_size "$BATCH" --grad_checkpoint $TARGETS_ARG $CHAT_ARG $Q4_ARG "$@"
 
 echo "== 3/3 audit removal =="
 python audit.py --model "$MODEL" --adapter "$OUT" --dtype "$DTYPE" $CHAT_AUDIT $Q4_ARG
 
+if [ "$RELEARN" = "1" ]; then
+    echo "== 3b/3 benign-relearning test (gone vs suppressed) =="
+    python relearn.py --model "$MODEL" --adapter "$OUT" --dtype "$DTYPE" --seed "$SEED" $CHAT_AUDIT $Q4_ARG
+fi
+
+REPO_ROOT="$(cd ../.. && pwd)"
 cat <<EOF
 
-Next — score the base vs unlearned model on the reference-optimal instrument (the 2x2
-in docs/novelty-and-positioning.md §8). In one shell:
-  python serve.py --model "$MODEL" --dtype "$DTYPE" $Q4_ARG            --port 8000     # BASE
-  python serve.py --model "$MODEL" --dtype "$DTYPE" $Q4_ARG --adapter "$OUT" --port 8001   # UNLEARNED
-In another, for each server, with and without the corpus:
-  OPENAI_API_KEY=x OPENAI_BASE_URL=http://localhost:8000/v1 OPENAI_MODEL=local npm run colreg:leakage
+Next — score base vs unlearned on the reference-optimal instrument (the 2x2 in
+docs/novelty-and-positioning.md §8). No server / port needed: the prompt set is static, so
+dump it once, generate completions offline, and replay each transcript through the scorer.
+A single run reports metricWith (corpus present) and metricWithout (ablated) = the 2x2 columns.
+
+  # 1) dump the deterministic prompt set once (from the repo root)
+  cd "$REPO_ROOT"
+  LEAKAGE_DUMP=prompts.jsonl npm run colreg:leakage
+
+  # 2) generate completions with each model (from this dir; add --load_4bit if you trained 4-bit)
+  cd experiments/unlearning
+  python score_offline.py --model "$MODEL" --dtype "$DTYPE" $Q4_ARG \\
+      --prompts "$REPO_ROOT/prompts.jsonl" --out completions-base.jsonl
+  python score_offline.py --model "$MODEL" --dtype "$DTYPE" $Q4_ARG --adapter "$OUT" \\
+      --prompts "$REPO_ROOT/prompts.jsonl" --out completions-unlearned.jsonl
+
+  # 3) replay each transcript through the instrument
+  cd "$REPO_ROOT"
+  LEAKAGE_REPLAY=experiments/unlearning/completions-base.jsonl      npm run colreg:leakage   # BASE row
+  LEAKAGE_REPLAY=experiments/unlearning/completions-unlearned.jsonl npm run colreg:leakage   # UNLEARNED row
+
+(serve.py is still available if you prefer a live OpenAI-compatible endpoint, but the offline
+flow above needs no port and saves a reproducible transcript.)
 EOF

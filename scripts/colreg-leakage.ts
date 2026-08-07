@@ -10,6 +10,7 @@
  * GITHUB_MODELS_TOKEN) and it additionally runs the real model through the same loop.
  */
 import './_env';
+import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import {
   runLeakageExperiment,
   starboardProbe,
@@ -50,6 +51,49 @@ const cfg: LeakageConfig = {
   closedBookScenario: scenarios[0],
 };
 
+// ─── Offline scoring (no HTTP server / port) ──────────────────────────────────────────
+// The leakage prompt set is fully determined by the static scenario/corpus config — the
+// loop never branches on model output — so a real run can be split into three portless
+// phases: (1) DUMP the exact prompts, (2) generate completions offline with the model
+// (experiments/unlearning/score_offline.py), (3) REPLAY the transcript through the same
+// scorer. This replaces serve.py + the notebook's server/port dance with a saved transcript.
+
+/** Phase 1: record every prompt asked (deduped, one JSON object per line). Returns a stub
+ * decision (`{}`) — enough for parseDecision to accept so the run walks the WHOLE prompt
+ * set; the resulting report is meaningless and discarded. */
+function recordingCompleter(path: string): Completer {
+  const seen = new Set<string>();
+  writeFileSync(path, ''); // truncate any prior dump so stale prompts can't leak in
+  return async (prompt: string) => {
+    if (!seen.has(prompt)) {
+      seen.add(prompt);
+      appendFileSync(path, JSON.stringify({ prompt }) + '\n');
+    }
+    return '{}';
+  };
+}
+
+/** Phase 3: serve completions from a {prompt, completion} JSONL; throw loudly on a miss. */
+function transcriptCompleter(path: string): Completer {
+  const map = new Map<string, string>();
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    if (!line.trim()) continue;
+    const rec = JSON.parse(line) as { prompt: string; completion?: string };
+    map.set(rec.prompt, rec.completion ?? '');
+  }
+  return async (prompt: string) => {
+    const hit = map.get(prompt);
+    if (hit === undefined) {
+      throw new Error(
+        `transcriptCompleter: no cached completion for a prompt — the transcript is stale or ` +
+          `incomplete. Re-dump (LEAKAGE_DUMP) and regenerate. Prompt starts: ` +
+          JSON.stringify(prompt.slice(0, 80)),
+      );
+    }
+    return hit;
+  };
+}
+
 function realCompleter(): { completer: Completer; label: string } | null {
   const env = process.env;
   if (env.GEMINI_API_KEY) return { completer: geminiCompleter(env.GEMINI_API_KEY, env.GEMINI_MODEL ?? 'gemini-2.5-flash'), label: 'gemini' };
@@ -77,6 +121,21 @@ function print(report: LeakageReport) {
 }
 
 async function main() {
+  // Offline phase 1 — dump the deterministic prompt set for an out-of-process generator.
+  if (process.env.LEAKAGE_DUMP) {
+    const path = process.env.LEAKAGE_DUMP;
+    await runLeakageExperiment(recordingCompleter(path), 'dump', cfg); // report discarded
+    console.log(`Dumped the leakage prompt set (bound condition) to ${path}.`);
+    console.log('Next: generate completions offline, then re-run with LEAKAGE_REPLAY=<transcript>.');
+    return;
+  }
+  // Offline phase 3 — score a pre-generated {prompt, completion} transcript (no server).
+  if (process.env.LEAKAGE_REPLAY) {
+    const path = process.env.LEAKAGE_REPLAY;
+    print(await runLeakageExperiment(transcriptCompleter(path), `offline(${path})`, cfg));
+    return;
+  }
+
   console.log('Deterministic dry-run (no key needed) — the instrument must recover the known ground truth:');
   print(await runLeakageExperiment(boundLearnerCompleter(), 'mock: corpus-bound learner', cfg));
   print(await runLeakageExperiment(leakingLearnerCompleter(), 'mock: leaking learner', cfg));

@@ -16,10 +16,12 @@ that model on the **reference-optimal control-task instrument**. See
 
 | File | Role |
 |---|---|
-| `build_datasets.py` | Forget set (alter-to-starboard, many phrasings/QA), retain set (other COLREG knowledge), and held-out audit probes. Pure stdlib. |
+| `build_datasets.py` | Forget set (alter-to-starboard, many phrasings/QA), retain set (other COLREG knowledge), and held-out audit probes — **generated combinatorially** (`--scale full` = a few hundred each by default; `--scale smoke` = a dozen for the CPU checks). Pure stdlib. |
 | `unlearn.py` | LoRA unlearning: **SimNPO** (Fan 2024, arXiv:2410.07163) primary — reference-free, length-normalized NPO with a better forget/utility tradeoff — plus **NPO** (Zhang 2024, arXiv:2404.05868) and **gradient-ascent** (Jang 2023, arXiv:2210.01504) baselines. Reference policy (NPO only) = adapter disabled. Retain term preserves other knowledge. |
-| `audit.py` | Removal audit (Lynch 2024 spirit): forget-set NLL ↑, retain-set NLL ~flat, forget-probe keyword rate ↓, base vs unlearned. |
-| `serve.py` | Minimal OpenAI-compatible server so the existing TS scorer (`openAiCompatCompleter` → `npm run colreg:leakage`) scores the model **unchanged**. |
+| `audit.py` | Removal audit (Lynch 2024 spirit): forget-set NLL ↑, retain-set NLL, and each forget-probe answer **classified** survived / wrong-direction / degenerate / abstained (a bare keyword-drop launders model damage into apparent forgetting), plus retain-probe **coherence** (free generation, not just teacher-forced NLL) and a **survived-rate by probe type** (direct vs paraphrase / jailbreak / indirect — high on non-direct ⇒ suppressed, not gone). Base vs unlearned. |
+| `relearn.py` | **Benign-relearning test** (Hu 2406.13356; Deeb & Roger 2410.08827): re-teach the unlearned model on a few forget examples for a few steps and re-audit. Fast recovery ⇒ the fact was *suppressed*, not removed. Run via `RELEARN=1 ./run.sh`. |
+| `serve.py` | Minimal OpenAI-compatible server so the existing TS scorer (`openAiCompatCompleter` → `npm run colreg:leakage`) scores the model **unchanged**. Optional — the offline path below needs no server. |
+| `score_offline.py` | **Portless scoring.** The instrument's prompt set is static, so dump it once (`LEAKAGE_DUMP`), generate completions here (no HTTP server/port), and replay through the scorer (`LEAKAGE_REPLAY`). Saves a reproducible `{prompt, completion}` transcript. |
 | `smoke_test.py` | CPU end-to-end pipeline check on a small real model (no GPU). |
 | `run.sh` | Full real run orchestration. |
 | `colab.ipynb` | One-tap **Google Colab** runner (GPU) — clone → install → unlearn → audit → score. |
@@ -28,12 +30,12 @@ that model on the **reference-optimal control-task instrument**. See
 
 **No GPU locally?** Launch the notebook in Google Colab — one click:
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/wrgr/socratic-scenarios/blob/claude/publishing-strategy-angle-yp7vor/experiments/unlearning/colab.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/wrgr/socratic-scenarios/blob/main/experiments/unlearning/colab.ipynb)
 
 Set the runtime to an **A100** or **L4** GPU and run the cells top to bottom — it runs the
 whole arm and scores base-vs-unlearned on the instrument in one notebook. (Or rent an
-hourly GPU on RunPod/Lambda and use the shell path below.) The badge points at the
-`claude/publishing-strategy-angle-yp7vor` branch; after merge, switch the URL to `main`.
+hourly GPU on RunPod/Lambda and use the shell path below.) The badge points at `main`;
+pin a tag or commit SHA if you need a frozen revision.
 
 ```bash
 pip install -r requirements.txt              # + a CUDA torch for GPU
@@ -83,10 +85,17 @@ unlearning failed / left latent knowledge — and the same instrument flags it
   starboard→right synonym) — while retain knowledge stays coherent. See **Result** below.
   (SimNPO is the primary method for the GPU instrument run; NPO is the CPU-tractable
   baseline that produced the numbers below.)
-- **Needs a GPU:** scoring the base/unlearned model on the reference-optimal **instrument**
-  (the 2×2 regret / compliance) with the primary SimNPO arm at 7-8B scale — this is what
-  turns behavioral *suppression* into a *semantic-removal* claim; the audit-level result is
-  here, the task-level result is the GPU step.
+- **Run on GPU (`run.sh`, Qwen2.5-3B-Instruct, SimNPO, bfloat16):** the audit signature
+  reproduces at larger scale — forget-target NLL 5.5→33.9 (↑) while retain-set NLL is
+  preserved (3.5→0.26), so the forget/retain separation holds across model size and
+  hardware. On this shorter 3B run the lexical direction-cue moved only modestly (5/6→4/6)
+  with some generation degradation, so the teacher-forced NLL separation is the cleaner
+  audit signal here. See **Result — GPU run** below.
+- **Remaining step (no longer hardware-gated):** scoring the base/unlearned model on the
+  reference-optimal **instrument** (the 2×2 regret / compliance) via `serve.py` →
+  `npm run colreg:leakage` — this is what turns behavioral *suppression* into a
+  *semantic-removal* claim. The audit-level result is now in hand on both CPU and GPU; the
+  task-level 2×2 is the outstanding piece.
 
 ## Result — CPU run (Qwen2.5-1.5B-Instruct, SimNPO primary + NPO baseline, chat-consistent)
 
@@ -124,6 +133,34 @@ model, CPU, 72 steps — a demonstration, not a study. This is the weight-level 
 to the context-level leakage result (`src/engine/colreg-sim/leakage.ts`), and the
 objective-audit direction over dialogue-scored unlearning (Song et al. 2026).
 
+## Result — GPU run (Qwen2.5-3B-Instruct, SimNPO, bfloat16)
+
+The same SimNPO recipe on a larger model, run on GPU (`run.sh`, ~95 steps, batch 1). The
+audit-level pattern reproduces across scale and hardware:
+
+| metric | base | **SimNPO** (unlearned) | target |
+|---|---|---|---|
+| forget-set mean NLL | 5.512 | **33.861** | ↑ |
+| retain-set mean NLL | 3.517 | 0.263 | preserved (not raised) |
+| forget-probe direction-cue rate (`starboard`/`right`) | 5/6 = 0.83 | 4/6 = 0.67 | ↓ |
+
+The forget-target likelihood collapses (NLL 5.5→33.9) — the robust cross-scale signal.
+**Honest read on the other two rows** (which is why the audit was hardened, below):
+- *Retain NLL is teacher-forced.* It stays low (3.5→0.26), but some **free** generations
+  degrade — including on retain topics (e.g. `Keep瞭眼瞭Constant`) — so "retain preserved"
+  from NLL alone overstates utility. `audit.py` now also reports retain-probe **coherence**.
+- *The direction-cue barely moved* (5/6→4/6 is a one-probe change on n=6, within noise), and
+  some unlearned answers are `左 (Zuo)` = **left** (the *wrong* way) or garbled. A bare
+  keyword-drop scores both as "forgotten" — laundering model **damage** into apparent removal.
+  `audit.py` now classifies each answer *survived / wrong-direction / degenerate / abstained*
+  so a broken model can't read as a clean unlearn.
+
+Net: on this shorter 3B run the forget-NLL collapse is solid; the behavioral/utility claims
+are weaker than at 1.5B and need a larger-n rerun (datasets/probes now generate in the
+hundreds — `--scale full`). As on CPU, this is behavioral **suppression** audited at the
+weight level — the task-level instrument 2×2 is still the outstanding step that settles
+semantic **removal** (now portless: `LEAKAGE_DUMP` → `score_offline.py` → `LEAKAGE_REPLAY`).
+
 ## Troubleshooting
 
 - **`ImportError: Found an incompatible version of torchao ... only versions above 0.16.0`**
@@ -134,14 +171,33 @@ objective-audit direction over dialogue-scored unlearning (Song et al. 2026).
 ## Caveats (carry into the paper)
 
 - **Unlearning ≠ deletion.** Verify removal with more than one probe and test relearning
-  (Lynch 2402.16835; Hu 2406.13356; Deeb & Roger 2410.08827). For a *stable* novice that
-  resists benign relearning, use the robust utility-preserving recipe of Fan 2025
-  (arXiv:2509.02820). `audit.py` is a start, not a proof — and note that unlearning-eval
-  validity is itself contested (arXiv:2503.06991; 2506.00688), so report probes, not a
-  single number.
+  (Lynch 2402.16835; Hu 2406.13356; Deeb & Roger 2410.08827). The harness now does both:
+  `audit.py` runs paraphrase / jailbreak / indirect probes (survived-rate by type — high on
+  non-direct ⇒ suppressed on the trained phrasing, not gone), and `relearn.py` runs the
+  benign-relearning test. For a *stable* novice that resists relearning, use the robust
+  utility-preserving recipe of Fan 2025 (arXiv:2509.02820). Even so, unlearning-eval validity
+  is itself contested (arXiv:2503.06991; 2506.00688) — report the probe battery, not a single
+  number.
+- **Single run ≠ a result.** One unlearn is one sample. Set `--seed` (SEED in `run.sh`) and
+  report mean ± spread over ≥3 seeds, and — since the CPU run showed the collapse is
+  method-agnostic — ideally over SimNPO / NPO / GA (`METHOD=`), not SimNPO alone.
+- **2×2 confounds, and why two of them don't bite here.** (a) The instrument scores a *task
+  outcome* — the simulated maneuver's rule-compliance — not a text probe, so it is not merely
+  re-detecting the lexical suppression the audit measures. (b) It renders the **full** rule
+  corpus (deterministic), not a RAG top-k, so a null in the "corpus present" cell is not a
+  retrieval miss. (c) The one that does bite: a *damaged* model fails the instrument for the
+  wrong reason — which is exactly why the damage-aware audit (below) must be clean before the
+  2×2 is trusted.
 - GA is deliberately aggressive (it also raises retain NLL — visible in the smoke); SimNPO
   (primary) and NPO + the retain term are the utility-preserving default. SimNPO is
   reference-free and length-normalized. Tune `--beta`, `--gamma` (SimNPO margin),
   `--retain_weight`.
+- **Off-language / garbled output = damage, not forgetting.** On Qwen (a heavily bilingual
+  model) over-aggressive unlearning makes generations fall back to dominant-language priors
+  (`左`, `瞭`) or repeat — the targeted English pathway is damaged, not the fact cleanly
+  removed. `audit.py` scores these as `degenerate`/`wrong`, never as a removal success. If you
+  see them, the recipe is too hot: lower `--lr`/`--epochs`, raise `--retain_weight`, enlarge
+  the retain set, or add KL regularization to the retain term.
 - Report the removal-audit numbers alongside the instrument numbers, or a reviewer can't
-  tell "unlearned" from "prompted to act dumb."
+  tell "unlearned" from "prompted to act dumb" — and report the **answer breakdown**
+  (survived/wrong/degenerate/abstained) + retain coherence, not a single keyword rate.

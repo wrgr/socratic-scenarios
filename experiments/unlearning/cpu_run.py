@@ -37,7 +37,7 @@ def run(cmd, capture=False):
 
 
 def main():
-    run([sys.executable, "build_datasets.py"])
+    run([sys.executable, "build_datasets.py", "--scale", "smoke"])  # tiny set keeps the CPU run tractable
     run([sys.executable, "unlearn.py", "--model", MODEL, "--method", METHOD,
          "--epochs", "12", "--max_steps", STEPS, "--batch_size", "1", "--lr", LR,
          "--beta", BETA, "--lora_r", "16", "--retain_weight", "1.0", "--chat",

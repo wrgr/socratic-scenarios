@@ -350,14 +350,27 @@ primary **SimNPO** method strongly **suppresses** the alter-to-starboard behavio
 forget-target NLL **4.6 → 92**, held-out direction-cue rate **5/6 → 0/6** (robust to the
 starboard→right synonym) — while retain knowledge (lookout, safe speed, restricted
 visibility) stays coherent. The **NPO** baseline gives the same qualitative collapse
-(**4.6 → 41**, **5/6 → 0/6**), so the suppression is method-agnostic. Honest scope: this is behavioral/target
-suppression + teacher-forced NLL, **not** verified semantic *removal* — that is precisely
-what the task-level instrument settles (below). It is the weight-level counterpart to the
-context-level leakage result, and the objective-audit direction over dialogue-scored
-unlearning (Song et al. 2026). **Remaining GPU step:** score the base/unlearned model on
-the reference-optimal *instrument* (the 2×2 regret/compliance) with the primary SimNPO arm
-at 7-8B scale — the scoring side is already built (`serve.py` → `openAiCompatCompleter` →
-`npm run colreg:leakage`) and a one-tap Colab notebook (`colab.ipynb`) runs it end to end.
+(**4.6 → 41**, **5/6 → 0/6**), so the suppression is method-agnostic. The same SimNPO recipe
+now **reproduces the forget-target NLL collapse on GPU at larger scale** (Qwen2.5-3B-Instruct,
+bf16): forget-set NLL **5.5 → 33.9** — the robust cross-scale signal. The other two rows are
+weaker at 3B and were the reason the audit was hardened: retain NLL is *teacher-forced*
+(**3.5 → 0.26**) but free generation degrades (off-language/repetitive), so it overstates
+utility (now also report retain **coherence**); and the direction-cue barely moved
+(**5/6 → 4/6**, n=6, within noise) with some answers turning the *wrong* way or garbling —
+so `audit.py` now classifies each answer survived/wrong/degenerate/abstained rather than
+counting one keyword, and the forget/retain and probe sets are generated in the hundreds. The
+audit is also hardened for the rerun along the axes a single number misses: **paraphrase /
+jailbreak / indirect** probes (survived-rate by type — high on non-direct ⇒ suppressed, not
+gone), a **benign-relearning** test (`relearn.py`: do a few steps restore the behavior?), and
+**seed/method variance** (`--seed`, `METHOD=`) rather than a single run. Honest scope: this is
+behavioral/target suppression + teacher-forced NLL, **not** verified semantic *removal* — that
+is precisely what the task-level instrument settles (below). It is the weight-level counterpart
+to the context-level leakage result, and the objective-audit direction over dialogue-scored
+unlearning (Song et al. 2026). **Remaining step (no longer hardware-gated):** score the
+base/unlearned model on the reference-optimal *instrument* (the 2×2 regret/compliance) via
+`serve.py` → `openAiCompatCompleter` → `npm run colreg:leakage` — the scoring side is already
+built and a one-tap Colab notebook (`colab.ipynb`) runs it end to end. The audit-level result
+is now in hand on both CPU (1.5B) and GPU (3B); the task-level 2×2 is the outstanding piece.
 See `experiments/unlearning/README.md`.
 
 ---
