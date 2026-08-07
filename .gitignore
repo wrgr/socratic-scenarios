@@ -235,3 +235,4 @@ local-sources/*
 experiments/unlearning/out/
 experiments/unlearning/data/
 experiments/unlearning/results/
+experiments/bedrock-discrimination/results/
