@@ -32,6 +32,8 @@ SEED="${SEED:-0}"
 RELEARN="${RELEARN:-0}"
 LOAD_4BIT="${LOAD_4BIT:-0}"
 BATCH="${BATCH:-1}"
+LR="${LR:-1e-4}"                       # lower (5e-5) if unlearned generations degrade
+RETAIN_WEIGHT="${RETAIN_WEIGHT:-1.0}"  # raise (2-4) to protect fluency / retain knowledge
 SCORE="${SCORE:-1}"
 SKIP_SETUP="${SKIP_SETUP:-0}"
 
@@ -71,6 +73,7 @@ fi
 echo "== arm: build -> unlearn -> audit${RELEARN:+ (+relearn)} =="
 MODEL="$MODEL" METHOD="$METHOD" DTYPE="$DTYPE" SCALE="$SCALE" EPOCHS="$EPOCHS" \
     SEED="$SEED" RELEARN="$RELEARN" LOAD_4BIT="$LOAD_4BIT" BATCH="$BATCH" OUT="$OUT" \
+    LR="$LR" RETAIN_WEIGHT="$RETAIN_WEIGHT" \
     bash run.sh | tee "$RESULTS_DIR/unlearn-audit.txt"
 
 cp -f "$OUT/unlearn_config.json" "$RESULTS_DIR/" 2>/dev/null || true

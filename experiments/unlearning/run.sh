@@ -21,6 +21,11 @@ SCALE="${SCALE:-full}"
 EPOCHS="${EPOCHS:-3}"
 SEED="${SEED:-0}"           # set different seeds and report variance over ≥3 runs
 RELEARN="${RELEARN:-0}"     # RELEARN=1 adds the benign-relearning "gone vs suppressed" test
+# Tuning the forget/utility trade-off. If unlearned generations degrade (off-language /
+# garbled — the Qwen "Chinese fallback"), the recipe is too hot: LOWER lr / EPOCHS and RAISE
+# retain_weight. Goal: forget-NLL up while retain-probe coherence stays high.
+LR="${LR:-1e-4}"                     # AdamW LR; try 5e-5 if the model is being damaged
+RETAIN_WEIGHT="${RETAIN_WEIGHT:-1.0}"  # weight on the retain (utility) term; try 2-4 to protect fluency
 # LoRA targets: omit for Llama/Qwen (peft auto-infers q_proj/v_proj/...); set for GPT-2.
 TARGETS_ARG=""
 [ -n "${TARGETS:-}" ] && TARGETS_ARG="--lora_targets ${TARGETS}"
@@ -50,11 +55,12 @@ PY
 echo "== 1/3 build datasets (scale=$SCALE) =="
 python build_datasets.py --scale "$SCALE"
 
-echo "== 2/3 unlearn ($METHOD, $DTYPE${Q4_ARG:+, 4-bit}, batch $BATCH) on $MODEL =="
+echo "== 2/3 unlearn ($METHOD, $DTYPE${Q4_ARG:+, 4-bit}, batch $BATCH, lr $LR, retain_w $RETAIN_WEIGHT, epochs $EPOCHS) on $MODEL =="
 # --grad_checkpoint trades compute for memory (essential for a 7-8B on a T4). SimNPO is
 # reference-free, so it avoids NPO's second forward — the lightest option on tight memory.
 python unlearn.py --model "$MODEL" --method "$METHOD" --dtype "$DTYPE" --out "$OUT" \
-    --epochs "$EPOCHS" --seed "$SEED" --batch_size "$BATCH" --grad_checkpoint $TARGETS_ARG $CHAT_ARG $Q4_ARG "$@"
+    --epochs "$EPOCHS" --seed "$SEED" --lr "$LR" --retain_weight "$RETAIN_WEIGHT" \
+    --batch_size "$BATCH" --grad_checkpoint $TARGETS_ARG $CHAT_ARG $Q4_ARG "$@"
 
 echo "== 3/3 audit removal =="
 python audit.py --model "$MODEL" --adapter "$OUT" --dtype "$DTYPE" $CHAT_AUDIT $Q4_ARG
