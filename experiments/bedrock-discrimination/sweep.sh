@@ -19,23 +19,30 @@ PROBES="${PROBES:-one}"
 OUT="results/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT"
 
+# Model list → a plain file (portable: no bash-4 `mapfile`, no arrays → works on macOS bash 3.2).
+LIST="$OUT/models.list"
 if [ "$#" -gt 0 ]; then
-  MODELS=("$@")                                   # explicit ids on the command line
+  printf '%s\n' "$@" > "$LIST"                     # explicit ids on the command line
 elif [ "${AUTO:-1}" = "1" ]; then
   # DEFAULT: auto-select one small/medium/large per provider from what's enabled in your
   # account (no curating). Set AUTO=0 to use models.txt instead. Needs the AWS CLI.
   echo "auto-selecting provider × size matrix from your account (AUTO=0 → use models.txt)…" >&2
-  mapfile -t MODELS < <( cd "$REPO" && AWS_REGION="$REGION" PROVIDERS="${PROVIDERS:-Anthropic,Meta,Amazon}" \
-      npx tsx experiments/bedrock-discrimination/pick-models.ts )
-  [ "${#MODELS[@]}" -eq 0 ] && { echo "auto-select returned no models (see messages above)." >&2; exit 3; }
+  ( cd "$REPO" && AWS_REGION="$REGION" PROVIDERS="${PROVIDERS:-Anthropic,Meta,Amazon}" \
+      npx tsx experiments/bedrock-discrimination/pick-models.ts ) > "$LIST" || true
 else
-  mapfile -t MODELS < <(grep -vE '^\s*(#|$)' models.txt | awk '{print $1}')  # AUTO=0 override
+  grep -vE '^[[:space:]]*(#|$)' models.txt | awk '{print $1}' > "$LIST"   # AUTO=0 override (BSD-grep safe)
 fi
 
-echo "region=$REGION  condition=$CONDITION  probes=$PROBES  models=${#MODELS[@]}  ->  $OUT"
+nmodels="$(awk 'NF' "$LIST" | wc -l | tr -d '[:space:]')"
+if [ "${nmodels:-0}" = "0" ]; then
+  echo "No models to sweep (see messages above)." >&2; exit 3
+fi
+
+echo "region=$REGION  condition=$CONDITION  probes=$PROBES  models=$nmodels  ->  $OUT"
 summary="$OUT/summary.txt"; : > "$summary"
 
-for m in "${MODELS[@]}"; do
+while IFS= read -r m; do
+  [ -n "$m" ] || continue
   slug="$(printf '%s' "$m" | tr '/:.' '___')"
   log="$OUT/$slug.txt"
   echo "== $m =="
@@ -52,7 +59,7 @@ for m in "${MODELS[@]}"; do
   else
     printf '?     %-52s (inspect %s)\n' "$m" "$log" | tee -a "$summary"
   fi
-done
+done < "$LIST"
 
 echo
 echo "==== summary (${OUT}/summary.txt) ===="
