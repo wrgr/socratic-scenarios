@@ -1,0 +1,134 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{parskip}
+
+\title{\textbf{Can We Trust an AI Tutor That's Supposed to Use Only the Rulebook?}\\[4pt]
+\large A plain-language companion to the paper}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{quote}
+\small\emph{This is a high-school-level retelling of the technical paper, written so we can
+check that the argument actually holds together. It is a companion, not the paper of record;
+every claim here is stated more carefully (and hedged) in \texttt{main.tex}.}
+\end{quote}
+
+\section*{The problem in one paragraph}
+
+Imagine an AI tutor that is only supposed to teach from an approved rulebook---say, the rules
+that stop ships from colliding. Two things can go wrong, and both are hard to see from the
+outside. (1)~\textbf{The tutor cheats.} Instead of using the rulebook, it just leans on
+whatever the underlying language model already memorized from the internet. It sounds right,
+but it isn't really using \emph{your} rules---so if your rules change, or the model's memory
+is wrong, you won't know. (2)~\textbf{The rulebook has holes.} Maybe a rule is missing or
+worded badly, and you can't tell which one. Normally you'd find out by running an expensive
+study with real students. We wanted a cheap ``test bench'' that answers both questions
+\emph{before} involving any people.
+
+\section*{Idea 1: a test with a right answer (the ``Transfer Instrument'')}
+
+Multiple-choice quizzes are a weak way to measure a tutor, because a fluent-sounding answer
+can still be wrong in practice. So instead we drop the learner into a \textbf{realistic task
+that has a measurable best move}: steering a ship to avoid a collision. For any situation,
+a standard piece of autopilot software computes a strong ``reference'' move. We then score
+the learner by \textbf{how far its decision lands from that reference move}. Small distance =
+good; large distance = bad. We call that distance \emph{regret}. Unlike a quiz score, regret
+is smooth---it can tell ``slightly off'' from ``about to crash.''
+
+The clever part: we build the rulebook so that \textbf{each rule controls exactly one part of
+the score}. Remove the ``turn to starboard'' rule and \emph{only} the ``did you turn the
+right way'' part of the score gets worse; nothing else moves. We check this actually holds
+(it's not automatic---if the scoring terms were tangled, removing one rule would smear across
+several). That one-rule-$\to$-one-number property is what makes the next idea work.
+
+\section*{Idea 2: run the same test backwards (the ``Corpus Diagnosis'')}
+
+Here's the key move, and the thing worth double-checking: \textbf{the diagnosis is not a
+second tool. It is the exact same test, run in reverse.}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Which rule is missing?} If the learner keeps failing one specific part of the
+  score, and that part is the one a particular rule controls, then \emph{that} rule is the
+  hole in your rulebook. The test that measures learning, read backwards, points at the gap.
+  \item \textbf{Is the tutor cheating?} Take a rule \emph{out} of the rulebook and re-run the
+  test. If the score gets worse, the tutor was genuinely relying on that rule---good. If the
+  score \emph{doesn't budge}, the tutor already ``knew'' the answer from its own memory and
+  never needed your rulebook---that's a leak.
+\end{itemize}
+
+Same simulator, same score. One direction grades learning; the other direction audits the
+rulebook and catches cheating. That's why the paper insists it is \emph{one} instrument, not
+two.
+
+\section*{The catch, and why unlearning is not optional}
+
+The cheating test has a soft spot, and it's the honest heart of the paper. When we remove a
+rule from the \emph{prompt} and the score doesn't move, we \emph{conclude} the model was using
+its own memory. But maybe the model just got confused by a now-incomplete prompt. Removing
+text from a prompt doesn't \emph{prove} the knowledge was baked into the model's brain.
+
+The only way to close that gap is to actually \textbf{erase the rule from the model's brain}
+and check that our test notices. There's a real technique for this---``machine
+unlearning''---that surgically removes one fact from an open-weight model's weights. If, after
+erasing ``turn to starboard,'' the model now fails the steering test \emph{even with no
+rulebook at all}, and then \emph{recovers} once we hand it the rulebook, that proves two
+things at once: the knowledge really was in the weights, and \textbf{our test can tell}. So
+the unlearning experiment isn't a bonus chapter---it's what makes the cheating detector
+trustworthy. Take it away and the leak-detection claim is just a hunch.
+
+(Status, honestly: we've done the surgery and confirmed the erasure ``took''---the model stops
+producing the rule. The final step---scoring the erased model on the full steering test---is
+the one big experiment still to run, because it needs a GPU.)
+
+\section*{The dress rehearsal: two kinds of fake students}
+
+Before testing a tutoring method on real people, we rehearse it on two kinds of
+\emph{simulated} students, both scored on the same steering test:
+\begin{enumerate}[leftmargin=1.4em]
+  \item a \textbf{dial-a-skill} student, where we turn competence up or down directly, and
+  \item the \textbf{brain-erased} student from the unlearning experiment above.
+\end{enumerate}
+If a teaching method can't move the needle on these controllable stand-ins, it probably isn't
+worth an expensive human trial. Two different kinds of fake student agreeing is a stronger
+check than either alone.
+
+\section*{What we are \emph{not} claiming (the honest part)}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{This is a test bench, not proof that students learn more.} Everything is
+  simulation. The real human study is written down as the next step, not skipped.
+  \item \textbf{The evidence here is small on purpose.} We show the machinery works on
+  \emph{two} ship rules and \emph{six} models from \emph{one} company. That's a demonstration,
+  not a benchmark; a convincing claim needs many more rules and models, which the released
+  code is built to run.
+  \item \textbf{Cleanly pulling one rule out may not always work.} We \emph{designed} our
+  rulebook so each rule controls exactly one thing. Real rulebooks are messier---rules overlap
+  and lean on each other---so this ``one rule, one number'' cleanliness might not hold for a
+  corpus we didn't build ourselves. When rules are tangled, the diagnosis gets coarser (it
+  points at a \emph{group} of rules, not one).
+\end{itemize}
+
+\section*{Five checks (does the logic survive a plain retelling?)}
+
+\begin{enumerate}[leftmargin=1.4em]
+  \item The score is a \emph{distance from an expert's move}, so ``better'' is a measurable
+  quantity, not a vibe. \hfill[measurement]
+  \item Each rule moves exactly one part of that score---verified, not assumed. \hfill[identifiability]
+  \item Running that same score backwards finds missing rules \emph{and} catches cheating.
+  \hfill[one tool, two uses]
+  \item ``Cheating'' means the score ignores the rulebook---which is only believable if we can
+  show the test reacts when knowledge is truly erased from the weights. \hfill[why unlearning is load-bearing]
+  \item We rehearse on controllable fake students before spending on real ones. \hfill[pre-trial screen]
+\end{enumerate}
+
+If any of these five feels like a leap, that's exactly where the technical paper needs to work
+harder---and where more experiments (more rules, more models, the final erased-model score)
+would change ``plausible'' into ``demonstrated.''
+
+\end{document}
