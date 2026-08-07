@@ -21,6 +21,7 @@ import {
   runLeakageExperiment,
   starboardProbe,
   crossingGiveWayProbe,
+  safeSpeedProbe,
   boundLearnerCompleter,
   leakingLearnerCompleter,
   geminiCompleter,
@@ -33,6 +34,7 @@ import {
 } from '../src/engine/colreg-sim';
 import { colregDomain } from '../src/corpus/colreg';
 import { collisionTarget, makeScenario } from '../src/corpus/colreg/benchmark-geometry';
+import { restrictedBenchmark } from '../src/corpus/colreg/restricted';
 
 const headOn = (id: string, range: number, speedKn: number) =>
   makeScenario(id, 'Head-on', 'beginner', [collisionTarget('A', 0, range, speedKn)]);
@@ -45,10 +47,17 @@ const crossing = (id: string, bearingDeg: number, speedKn: number) =>
   makeScenario(id, 'Starboard crossing', 'intermediate', [collisionTarget('A', bearingDeg, 6000, speedKn)]);
 const crossingScenarios = [crossing('XG-1', 45, 12), crossing('XG-2', 60, 11), crossing('XG-3', 70, 12)];
 
+// Third rule (PROBES=all): Rule 19 safe speed, on the forward-of-beam fog cases — a
+// DIFFERENT metric axis (speedFactor, not turn direction), so a genuinely independent probe.
+const fogScenarios = restrictedBenchmark.filter((s) => ['RV-01', 'RV-02', 'RV-03'].includes(s.id));
+
+const twoRuleProbes = [starboardProbe(scenarios[0]), crossingGiveWayProbe(crossingScenarios[0], crossingScenarios)];
 const probes =
-  process.env.PROBES === 'two'
-    ? [starboardProbe(scenarios[0]), crossingGiveWayProbe(crossingScenarios[0], crossingScenarios)]
-    : [starboardProbe(scenarios[0])];
+  process.env.PROBES === 'all'
+    ? [...twoRuleProbes, safeSpeedProbe(fogScenarios[0], fogScenarios)]
+    : process.env.PROBES === 'two'
+      ? twoRuleProbes
+      : [starboardProbe(scenarios[0])];
 
 const cfg: LeakageConfig = {
   corpusNodes: colregDomain.nodes,
@@ -174,7 +183,7 @@ async function main() {
   }
 
   console.log('Deterministic dry-run (no key needed) — the instrument must recover the known ground truth:');
-  print(await runLeakageExperiment(boundLearnerCompleter(), 'mock: corpus-bound learner', cfg));
+  print(await runLeakageExperiment(boundLearnerCompleter(['RULE-COLREG-14'], ['RULE-COLREG-19']), 'mock: corpus-bound learner', cfg));
   print(await runLeakageExperiment(leakingLearnerCompleter(), 'mock: leaking learner', cfg));
 
   const real = realCompleter();

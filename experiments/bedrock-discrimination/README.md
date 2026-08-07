@@ -50,7 +50,9 @@ AWS_REGION=us-east-1 npx tsx pick-models.ts     # prints the chosen matrix
 Each model's full report → `results/<timestamp>/<model>.txt`; a one-line verdict per model →
 `results/<timestamp>/summary.txt`. Env knobs: `AWS_REGION` (default `us-east-1`), `PROVIDERS`
 (default `Anthropic,Meta,Amazon`), `CONDITION` (`bound|unconstrained|both`, default `both` —
-the two rows each model gets), `PROBES` (`one|two`; `two` adds the Rule-15 crossing probe).
+the two rows each model gets), `PROBES` (`one`=Rule 14 · `two`=+Rule 15 crossing · `all`=+Rule 19
+safe-speed; **default `all`** — so each model yields verdicts on 3 rules across 2 metric axes
+(turn direction *and* speed), the biggest data-points-per-model multiplier).
 
 **Manual override** (if you'd rather pin exact ids): `AUTO=0 ./sweep.sh` uses `models.txt`, or
 pass ids directly: `./sweep.sh us.amazon.nova-pro-v1:0 us.meta.llama3-1-70b-instruct-v1:0`.

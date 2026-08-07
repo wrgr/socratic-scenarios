@@ -104,6 +104,7 @@ export {
   runLeakageExperiment,
   starboardProbe,
   crossingGiveWayProbe,
+  safeSpeedProbe,
   boundLearnerCompleter,
   leakingLearnerCompleter,
   type RuleProbe,

@@ -649,10 +649,13 @@ choices (ship domain, objective); we show the ranking survives a $\pm40\%$ rewei
 elliptical-domain \emph{form} itself, is untested. \textbf{Small evidence base --- illustrative, not a benchmark.}
 The numbers here demonstrate that the \emph{method} behaves as designed; they are not a
 validity claim at scale. The discrimination result (Table~\ref{tab:disc}) covers six models
-within \emph{one} provider family; the ablation and unlearning results turn on \emph{two}
-rules (Rule~14 head-on, Rule~15 crossing) and a single unlearned model family. A persuasive
-claim needs cross-provider models and many more rules/encounters---which is why we release the
-harness (\texttt{experiment.sh}) built to run exactly that sweep, and report these as worked
+within \emph{one} provider family, and reports the head-on rule; the released harness now
+exercises \emph{three} rules across \emph{two} metric axes---turn direction (Rule~14 head-on,
+Rule~15 crossing) and, on a restricted-visibility subset, speed (Rule~6/19 safe speed, scored
+through the decision's speed rather than its heading)---and the unlearning arm turns on a
+single rule and model family. A persuasive claim still needs cross-provider models and many
+more rules/encounters---which is why we release the harness (\texttt{experiment.sh}, and a
+Bedrock provider$\times$size sweep) built to run exactly that, and report these as worked
 examples rather than a leaderboard. \textbf{Single-rule decomposability may not generalize.}
 \kc$\to$single-metric identifiability and clean per-rule ablation are properties we
 \emph{design into} a governed corpus and \emph{verify} per instrument
