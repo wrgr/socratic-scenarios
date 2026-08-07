@@ -20,10 +20,16 @@ OUT="results/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT"
 
 if [ "$#" -gt 0 ]; then
-  MODELS=("$@")
+  MODELS=("$@")                                   # explicit ids on the command line
+elif [ "${AUTO:-1}" = "1" ]; then
+  # DEFAULT: auto-select one small/medium/large per provider from what's enabled in your
+  # account (no curating). Set AUTO=0 to use models.txt instead. Needs the AWS CLI.
+  echo "auto-selecting provider × size matrix from your account (AUTO=0 → use models.txt)…" >&2
+  mapfile -t MODELS < <( cd "$REPO" && AWS_REGION="$REGION" PROVIDERS="${PROVIDERS:-Anthropic,Meta,Amazon}" \
+      npx tsx experiments/bedrock-discrimination/pick-models.ts )
+  [ "${#MODELS[@]}" -eq 0 ] && { echo "auto-select returned no models (see messages above)." >&2; exit 3; }
 else
-  # column 1 of every non-comment, non-blank line of models.txt
-  mapfile -t MODELS < <(grep -vE '^\s*(#|$)' models.txt | awk '{print $1}')
+  mapfile -t MODELS < <(grep -vE '^\s*(#|$)' models.txt | awk '{print $1}')  # AUTO=0 override
 fi
 
 echo "region=$REGION  condition=$CONDITION  probes=$PROBES  models=${#MODELS[@]}  ->  $OUT"
