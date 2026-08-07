@@ -11,6 +11,9 @@
  */
 import { execFileSync } from 'node:child_process';
 
+// Never crash with a stack trace if the reader (e.g. sweep.sh) closes stdout early.
+process.stdout.on('error', (e: NodeJS.ErrnoException) => { if (e.code === 'EPIPE') process.exit(0); throw e; });
+
 export type FM = {
   modelId: string;
   modelArn?: string;
