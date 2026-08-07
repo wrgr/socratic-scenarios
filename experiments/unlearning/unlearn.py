@@ -30,6 +30,7 @@ GPU strongly recommended for a real 7-8B run; CPU works for the tiny-model smoke
 import argparse
 import json
 import os
+import random
 
 import torch
 from torch.utils.data import DataLoader
@@ -37,6 +38,20 @@ from transformers import AutoTokenizer
 from peft import LoraConfig, get_peft_model
 
 from _model import load_base, DTYPES  # shared base loader + dtype map (see _model.py)
+
+
+def set_seed(seed):
+    """Seed python/torch (and CUDA) so a run is reproducible and multi-seed variance can be
+    reported — a single unlearning run is one sample, not an error bar."""
+    random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    try:
+        import numpy as np
+        np.random.seed(seed)
+    except ImportError:
+        pass
 
 # float32 keeps the CPU smoke test exact; use bfloat16 for a real GPU run (a 7-8B model in
 # float32 will not fit on a single 24GB GPU).
@@ -116,6 +131,7 @@ def main():
                     help="comma-separated LoRA target modules (default: peft auto-infer; "
                          "use 'c_attn' for GPT-2, omit for Llama/Qwen)")
     ap.add_argument("--max_steps", type=int, default=0, help="cap steps (0 = no cap)")
+    ap.add_argument("--seed", type=int, default=0, help="RNG seed (report variance over ≥3 seeds)")
     ap.add_argument("--chat", action="store_true",
                     help="wrap examples in the tokenizer chat template (use for INSTRUCT "
                          "models; omit for base models like GPT-2/distilgpt2)")
@@ -129,6 +145,7 @@ def main():
                     help="QLoRA: load the base in 4-bit NF4 (bitsandbytes). Fits a 7-8B "
                          "model + LoRA on a 16 GB T4. GPU only; compute dtype = bfloat16.")
     args = ap.parse_args()
+    set_seed(args.seed)
 
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:

@@ -485,6 +485,18 @@ and the NLL teacher-forced. Scoring the base-vs.-unlearned model on the full reg
 instrument---the step that turns suppression into an instrument-level removal result and fills
 the corpus-recovery cell of the $2\times2$---is the immediate next step, alongside a larger-$n$
 rerun (the forget/retain and probe sets are now generated in the hundreds rather than a dozen).
+For that rerun the removal audit is hardened along the axes a single keyword rate misses
+\citep{lynch2024}: held-out \emph{paraphrase}, \emph{jailbreak}, and \emph{indirect} probes
+(a removal that holds only on the trained phrasing is suppression, and the audit reports a
+survived-rate per probe type), a \emph{benign-relearning} test (do a few steps of fine-tuning
+restore the behavior---gone vs.\ merely suppressed), and seed/method variance rather than a
+single run. Two would-be $2\times2$ confounds do not bite here: the instrument scores a
+\emph{task outcome} (simulated-maneuver rule-compliance), not a text probe, so it is not
+re-detecting the lexical suppression; and it renders the full rule corpus, not a retrieved
+top-$k$, so a null in the corpus-present cell is not a retrieval miss. The confound that does
+bite---a \emph{damaged} model failing the instrument for the wrong reason---is why the
+damage-aware audit (off-language / incoherent generations scored as damage, not forgetting)
+must be clean before the $2\times2$ is trusted.
 
 \begin{table}[t]
 \centering

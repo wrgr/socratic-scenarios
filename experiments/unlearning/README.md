@@ -18,7 +18,8 @@ that model on the **reference-optimal control-task instrument**. See
 |---|---|
 | `build_datasets.py` | Forget set (alter-to-starboard, many phrasings/QA), retain set (other COLREG knowledge), and held-out audit probes — **generated combinatorially** (`--scale full` = a few hundred each by default; `--scale smoke` = a dozen for the CPU checks). Pure stdlib. |
 | `unlearn.py` | LoRA unlearning: **SimNPO** (Fan 2024, arXiv:2410.07163) primary — reference-free, length-normalized NPO with a better forget/utility tradeoff — plus **NPO** (Zhang 2024, arXiv:2404.05868) and **gradient-ascent** (Jang 2023, arXiv:2210.01504) baselines. Reference policy (NPO only) = adapter disabled. Retain term preserves other knowledge. |
-| `audit.py` | Removal audit (Lynch 2024 spirit): forget-set NLL ↑, retain-set NLL, and each forget-probe answer **classified** survived / wrong-direction / degenerate / abstained (a bare keyword-drop launders model damage into apparent forgetting), plus retain-probe **coherence** (free generation, not just teacher-forced NLL). Base vs unlearned. |
+| `audit.py` | Removal audit (Lynch 2024 spirit): forget-set NLL ↑, retain-set NLL, and each forget-probe answer **classified** survived / wrong-direction / degenerate / abstained (a bare keyword-drop launders model damage into apparent forgetting), plus retain-probe **coherence** (free generation, not just teacher-forced NLL) and a **survived-rate by probe type** (direct vs paraphrase / jailbreak / indirect — high on non-direct ⇒ suppressed, not gone). Base vs unlearned. |
+| `relearn.py` | **Benign-relearning test** (Hu 2406.13356; Deeb & Roger 2410.08827): re-teach the unlearned model on a few forget examples for a few steps and re-audit. Fast recovery ⇒ the fact was *suppressed*, not removed. Run via `RELEARN=1 ./run.sh`. |
 | `serve.py` | Minimal OpenAI-compatible server so the existing TS scorer (`openAiCompatCompleter` → `npm run colreg:leakage`) scores the model **unchanged**. Optional — the offline path below needs no server. |
 | `score_offline.py` | **Portless scoring.** The instrument's prompt set is static, so dump it once (`LEAKAGE_DUMP`), generate completions here (no HTTP server/port), and replay through the scorer (`LEAKAGE_REPLAY`). Saves a reproducible `{prompt, completion}` transcript. |
 | `smoke_test.py` | CPU end-to-end pipeline check on a small real model (no GPU). |
@@ -170,11 +171,23 @@ semantic **removal** (now portless: `LEAKAGE_DUMP` → `score_offline.py` → `L
 ## Caveats (carry into the paper)
 
 - **Unlearning ≠ deletion.** Verify removal with more than one probe and test relearning
-  (Lynch 2402.16835; Hu 2406.13356; Deeb & Roger 2410.08827). For a *stable* novice that
-  resists benign relearning, use the robust utility-preserving recipe of Fan 2025
-  (arXiv:2509.02820). `audit.py` is a start, not a proof — and note that unlearning-eval
-  validity is itself contested (arXiv:2503.06991; 2506.00688), so report probes, not a
-  single number.
+  (Lynch 2402.16835; Hu 2406.13356; Deeb & Roger 2410.08827). The harness now does both:
+  `audit.py` runs paraphrase / jailbreak / indirect probes (survived-rate by type — high on
+  non-direct ⇒ suppressed on the trained phrasing, not gone), and `relearn.py` runs the
+  benign-relearning test. For a *stable* novice that resists relearning, use the robust
+  utility-preserving recipe of Fan 2025 (arXiv:2509.02820). Even so, unlearning-eval validity
+  is itself contested (arXiv:2503.06991; 2506.00688) — report the probe battery, not a single
+  number.
+- **Single run ≠ a result.** One unlearn is one sample. Set `--seed` (SEED in `run.sh`) and
+  report mean ± spread over ≥3 seeds, and — since the CPU run showed the collapse is
+  method-agnostic — ideally over SimNPO / NPO / GA (`METHOD=`), not SimNPO alone.
+- **2×2 confounds, and why two of them don't bite here.** (a) The instrument scores a *task
+  outcome* — the simulated maneuver's rule-compliance — not a text probe, so it is not merely
+  re-detecting the lexical suppression the audit measures. (b) It renders the **full** rule
+  corpus (deterministic), not a RAG top-k, so a null in the "corpus present" cell is not a
+  retrieval miss. (c) The one that does bite: a *damaged* model fails the instrument for the
+  wrong reason — which is exactly why the damage-aware audit (below) must be clean before the
+  2×2 is trusted.
 - GA is deliberately aggressive (it also raises retain NLL — visible in the smoke); SimNPO
   (primary) and NPO + the retain term are the utility-preserving default. SimNPO is
   reference-free and length-normalized. Tune `--beta`, `--gamma` (SimNPO margin),

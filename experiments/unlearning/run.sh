@@ -19,6 +19,8 @@ BATCH="${BATCH:-1}"
 # usually suffice; tune EPOCHS. Set SCALE=smoke for the tiny pipeline-check set.
 SCALE="${SCALE:-full}"
 EPOCHS="${EPOCHS:-3}"
+SEED="${SEED:-0}"           # set different seeds and report variance over ≥3 runs
+RELEARN="${RELEARN:-0}"     # RELEARN=1 adds the benign-relearning "gone vs suppressed" test
 # LoRA targets: omit for Llama/Qwen (peft auto-infers q_proj/v_proj/...); set for GPT-2.
 TARGETS_ARG=""
 [ -n "${TARGETS:-}" ] && TARGETS_ARG="--lora_targets ${TARGETS}"
@@ -52,10 +54,15 @@ echo "== 2/3 unlearn ($METHOD, $DTYPE${Q4_ARG:+, 4-bit}, batch $BATCH) on $MODEL
 # --grad_checkpoint trades compute for memory (essential for a 7-8B on a T4). SimNPO is
 # reference-free, so it avoids NPO's second forward — the lightest option on tight memory.
 python unlearn.py --model "$MODEL" --method "$METHOD" --dtype "$DTYPE" --out "$OUT" \
-    --epochs "$EPOCHS" --batch_size "$BATCH" --grad_checkpoint $TARGETS_ARG $CHAT_ARG $Q4_ARG "$@"
+    --epochs "$EPOCHS" --seed "$SEED" --batch_size "$BATCH" --grad_checkpoint $TARGETS_ARG $CHAT_ARG $Q4_ARG "$@"
 
 echo "== 3/3 audit removal =="
 python audit.py --model "$MODEL" --adapter "$OUT" --dtype "$DTYPE" $CHAT_AUDIT $Q4_ARG
+
+if [ "$RELEARN" = "1" ]; then
+    echo "== 3b/3 benign-relearning test (gone vs suppressed) =="
+    python relearn.py --model "$MODEL" --adapter "$OUT" --dtype "$DTYPE" --seed "$SEED" $CHAT_AUDIT $Q4_ARG
+fi
 
 REPO_ROOT="$(cd ../.. && pwd)"
 cat <<EOF

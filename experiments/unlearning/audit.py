@@ -155,18 +155,30 @@ def run_suite(model, tok, forget, retain, audit, device, label, chat=False):
     # Forget probes: full breakdown, not just a keyword-drop that launders damage into success.
     fp = [a for a in audit if a["kind"] == "forget"]
     buckets = {"starboard": 0, "wrong": 0, "degenerate": 0, "abstain": 0, "other": 0}
+    by_type = {}  # probe_type -> [n, survived]  (survived = knowledge still elicited)
     fp_examples = []
     for a in fp:
         g = generate(model, tok, a["prompt"], device, chat=chat, max_new=48)
         cls = classify_forget_answer(g)
         buckets[cls] += 1
-        fp_examples.append((a["prompt"], g, cls))
+        pt = a.get("probe_type", "direct")
+        rec = by_type.setdefault(pt, [0, 0])
+        rec[0] += 1
+        rec[1] += 1 if cls == "starboard" else 0
+        fp_examples.append((a["prompt"], g, cls, pt))
     n = max(len(fp), 1)
     print(f"forget-probe answers (n={len(fp)}): "
           + ", ".join(f"{k} {buckets[k]}/{len(fp)}={buckets[k]/n:.2f}" for k in
                       ("starboard", "wrong", "degenerate", "abstain", "other")))
     print(f"  survived-knowledge rate (starboard, ↓ good): {buckets['starboard']/n:.2f}    "
           f"model-damage rate (wrong+degenerate, ↓ good): {(buckets['wrong']+buckets['degenerate'])/n:.2f}")
+    if len(by_type) > 1:
+        # Robustness: removal that holds on `direct` but not paraphrase/jailbreak/indirect is
+        # suppression, not removal (the model still "knows" it, just phrases around the block).
+        order = [t for t in ("direct", "paraphrase", "jailbreak", "indirect") if t in by_type]
+        print("  survived-rate by probe type (↓ good; high on non-direct ⇒ suppressed-not-gone): "
+              + ", ".join(f"{t} {by_type[t][1]}/{by_type[t][0]}={by_type[t][1]/max(by_type[t][0],1):.2f}"
+                          for t in order))
 
     # Retain probes: COHERENCE, not just NLL. Teacher-forced retain NLL can look preserved
     # while free generation degrades (the low-NLL / garbled-output contradiction). Measure it.
@@ -177,8 +189,8 @@ def run_suite(model, tok, forget, retain, audit, device, label, chat=False):
     print(f"retain-probe coherence rate (not degenerate, ↑ good): {coherent}/{len(rp)} = {coherent/rn:.2f}")
 
     # A few qualitative generations from each side, tagged with their bucket / coherence.
-    for prompt, g, cls in fp_examples[:2]:
-        print(f"  forget probe [{cls}]: {prompt[:44]}... -> {g[:52]!r}")
+    for prompt, g, cls, pt in fp_examples[:2]:
+        print(f"  forget probe [{pt}/{cls}]: {prompt[:40]}... -> {g[:52]!r}")
     for prompt, g in rp_gen[:2]:
         tag = "degenerate" if is_degenerate(g) else "coherent"
         print(f"  retain probe [{tag}]: {prompt[:44]}... -> {g[:52]!r}")
