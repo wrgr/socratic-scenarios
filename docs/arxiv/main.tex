@@ -589,9 +589,29 @@ garbled answers, we now classify each probe answer as survived / wrong-direction
 abstained so model \emph{damage} cannot masquerade as forgetting. All of this establishes
 behavioral \emph{suppression}, not yet verified semantic \emph{removal}: the probe is lexical
 and the NLL teacher-forced. Scoring the base-vs.-unlearned model on the full regret
-instrument---the step that turns suppression into an instrument-level removal result and fills
-the corpus-recovery cell of the $2\times2$---is the immediate next step, alongside a larger-$n$
-rerun (the forget/retain and probe sets are now generated in the hundreds rather than a dozen).
+instrument---the step that turns suppression into an instrument-level result and fills the
+corpus-recovery cell of the $2\times2$---yields a first, illustrative result (below), which a
+larger-$n$, better-tuned rerun should sharpen (the forget/retain and probe sets are now
+generated in the hundreds rather than a dozen).
+
+\paragraph{First instrument-scoring result: unlearning can \emph{invert} a safety rule, not erase it.}
+On the head-on instrument (corpus present vs.\ ablated), the base Qwen2.5-3B turns to starboard
+on all $8/8$ scored prompts and scores compliance penalty $0.00$ whether or not the corpus
+carries the rule---the knowledge is in its weights (verdict \textsc{leaking}, the contamination
+baseline). The unlearned model instead turns to \emph{port}---the wrong way---on $6/8$, driving
+the penalty to $0.36$ with the corpus and $0.54$ without (regret $0.6$ vs.\ $0.9$; verdict
+\textsc{inconclusive}). The generations are coherent JSON, not garbled, so this is not the
+fluency damage the audit flagged but a distinct, more dangerous failure: because the head-on
+turn is essentially binary, the default SimNPO objective (push down ``starboard'') moves the
+mass onto ``port,'' \emph{inverting} the rule rather than removing it. The forget-target NLL
+audit calls this success ($5.5\to33.9$); the control-task instrument calls it a wrong-way
+steamer---the sharpest vindication of the thesis (an objective outcome catches what a likelihood
+audit cannot) and a caution that naive weight-level unlearning of a safety rule can yield
+\emph{confident non-compliance}. A clean \textsc{corpus-bound} cell (abstain/hold without the
+corpus, recover with it) requires steering the fallback away from that inversion: we retain
+COLREG's own prohibition on a head-on port turn (Rule~14) in the retain set so the post-forget
+default is to hold or reduce speed. This is a single default-recipe run, reported as
+illustrative, not a tuned result.
 For that rerun the removal audit is hardened along the axes a single keyword rate misses
 \citep{lynch2024}: held-out \emph{paraphrase}, \emph{jailbreak}, and \emph{indirect} probes
 (a removal that holds only on the trained phrasing is suppression, and the audit reports a
@@ -663,10 +683,10 @@ examples rather than a leaderboard. \textbf{Single-rule decomposability may not 
 entangled, redundant, or jointly govern one outcome. Where a single rule cannot be cleanly
 isolated, the localization degrades to a coarser attribution and the leakage test to a
 group-level one; how far clean decomposition extends beyond corpora we constructed is open.
-\textbf{Compute-gated:} the
-audit-level unlearning result is in hand (CPU and GPU; Table~\ref{tab:unlearn}), but the
-instrument-scoring step of the open-weight arm (Section~\ref{sec:weightlevel})---which settles
-\emph{removal}---remains to be run.
+\textbf{Unlearning is one tuned-recipe run.} A first instrument-scoring result is in hand
+(Section~\ref{sec:weightlevel}) and is informative---it shows the default recipe \emph{inverts}
+the rule rather than removing it---but a clean \textsc{corpus-bound} cell, seed/method variance,
+and the relearning battery are outstanding; we report the single run as illustrative.
 
 \section{Conclusion}
 We have described an in-silico instrument that lets a designer falsify the mechanism of a

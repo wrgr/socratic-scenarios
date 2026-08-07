@@ -215,6 +215,13 @@ semantic **removal** (now portless: `LEAKAGE_DUMP` → `score_offline.py` → `L
   (primary) and NPO + the retain term are the utility-preserving default. SimNPO is
   reference-free and length-normalized. Tune `--beta`, `--gamma` (SimNPO margin),
   `--retain_weight`.
+- **Inversion, not erasure (the default recipe's real failure).** The head-on turn is ~binary,
+  so naively suppressing "alter to starboard" pushes the mass onto "port" — the unlearned model
+  turns the **wrong way** (observed: 6/8 port on the instrument, coherent JSON, not garbled). A
+  forget-NLL audit calls this success; the task instrument catches the wrong-way turns. Mitigation
+  (now default): the retain set carries COLREG's own **prohibition on a head-on port turn**
+  (`ANTI_INVERSION_RETAIN` in `build_datasets.py`), so the post-forget fallback is hold/reduce
+  speed, not the opposite turn. Pair with a gentler recipe (`LR=5e-5 RETAIN_WEIGHT=3 EPOCHS=2`).
 - **Off-language / garbled output = damage, not forgetting.** On Qwen (a heavily bilingual
   model) over-aggressive unlearning makes generations fall back to dominant-language priors
   (`左`, `瞭`) or repeat — the targeted English pathway is damaged, not the fact cleanly
