@@ -42,7 +42,10 @@ MODEL=Qwen/Qwen2.5-7B-Instruct SCALE=full SEED=0 RELEARN=1 ./experiment.sh # lar
 and writes **all** outputs to `results/<model>_<method>_s<seed>_<timestamp>/` — `run.log` (full
 transcript), `unlearn-audit.txt`, `leakage-{base,unlearned}.txt` (the 2×2), `completions-*.jsonl`
 (reproducible transcripts), `unlearn_config.json`, `pip-versions.txt`, and the datasets. Same env
-knobs as `run.sh` plus `SCORE=0` (audit only) and `SKIP_SETUP=1` (skip pip/npm). Sweep seeds/methods:
+knobs as `run.sh` — including **`LR`** and **`RETAIN_WEIGHT`** to tune the forget/utility
+trade-off (if unlearned output degrades into garbled/off-language text, lower `LR` to `5e-5` and
+raise `RETAIN_WEIGHT` to `2`–`4`) — plus `SCORE=0` (audit only) and `SKIP_SETUP=1` (skip pip/npm).
+Sweep seeds/methods:
 
 ```bash
 for s in 0 1 2; do for m in simnpo npo; do SEED=$s METHOD=$m MODEL=Qwen/Qwen2.5-7B-Instruct ./experiment.sh; done; done
