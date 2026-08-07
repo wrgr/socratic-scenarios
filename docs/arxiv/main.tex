@@ -468,17 +468,23 @@ half (Table~\ref{tab:unlearn}). On CPU, the primary method SimNPO on Qwen2.5-1.5
 model that knows the rule---drives the forget-target NLL from $4.6$ to $92$ and the held-out
 direction-cue rate (robust to the starboard$\to$right synonym) from $5/6$ to $0/6$ while
 retain knowledge stays coherent; the NPO baseline produces the same qualitative collapse
-($4.6\to41$, $5/6\to0/6$), so the suppression is method-agnostic. The same SimNPO recipe
-reproduces the audit signature on GPU at larger scale (Qwen2.5-3B-Instruct, \texttt{bfloat16}):
-the forget-target NLL rises $5.5\to33.9$ while the retain-set NLL is preserved ($3.5\to0.26$),
-so the forget/retain separation holds across model size and hardware. On this shorter $3$B run
-the lexical direction-cue moved only modestly ($5/6\to4/6$) with some generation degradation---a
-reminder that the teacher-forced NLL separation is a cleaner audit signal than a two-word probe.
-All of this establishes behavioral \emph{suppression}, not yet verified semantic \emph{removal}:
-the probe is lexical and the NLL teacher-forced. Scoring the base-vs.-unlearned model on the
-full regret instrument---the step that turns suppression into an instrument-level removal result
-and fills the corpus-recovery cell of the $2\times2$---is the immediate next step; with the GPU
-audit now in hand it reduces to serving each model with and without the corpus.
+($4.6\to41$, $5/6\to0/6$), so the suppression is method-agnostic. On GPU at larger scale
+(Qwen2.5-3B-Instruct, \texttt{bfloat16}) the \emph{forget-target NLL collapse reproduces}
+($5.5\to33.9$), which is the robust cross-scale signal; the behavioral and utility readings,
+however, are weaker there and carry two honest caveats. First, the ``retain preserved''
+reading is teacher-forced (retain NLL $3.5\to0.26$): some \emph{free} generations---including
+on retain topics---degrade into off-language or repetitive output (the model falls back to its
+dominant-language priors when the targeted English pathway is damaged), so low retain NLL
+overstates preserved utility; we therefore also track free-generation coherence, not NLL alone.
+Second, the held-out direction-cue moved only modestly ($5/6\to4/6$)---a single-probe change on
+$n{=}6$ that is within noise---and because a bare keyword-drop also credits wrong-direction and
+garbled answers, we now classify each probe answer as survived / wrong-direction / degenerate /
+abstained so model \emph{damage} cannot masquerade as forgetting. All of this establishes
+behavioral \emph{suppression}, not yet verified semantic \emph{removal}: the probe is lexical
+and the NLL teacher-forced. Scoring the base-vs.-unlearned model on the full regret
+instrument---the step that turns suppression into an instrument-level removal result and fills
+the corpus-recovery cell of the $2\times2$---is the immediate next step, alongside a larger-$n$
+rerun (the forget/retain and probe sets are now generated in the hundreds rather than a dozen).
 
 \begin{table}[t]
 \centering
@@ -489,18 +495,21 @@ audit now in hand it reduces to serving each model with and without the corpus.
 \cmidrule(lr){2-3}\cmidrule(lr){4-5}
 Audit metric & base & unlearned & base & unlearned \\
 \midrule
-Forget-target NLL ($\uparrow$)    & 4.6 & 92.0 & 5.5 & 33.9 \\
-Retain-set NLL (preserved)        & 3.2 & 0.18 & 3.5 & 0.26 \\
-Direction-cue rate ($\downarrow$) & 5/6 & 0/6  & 5/6 & 4/6  \\
+Forget-target NLL ($\uparrow$)         & 4.6 & 92.0 & 5.5 & 33.9 \\
+Retain-set NLL, teacher-forced         & 3.2 & 0.18 & 3.5 & 0.26 \\
+Direction-cue rate ($\downarrow$)      & 5/6 & 0/6  & 5/6 & 4/6  \\
 \bottomrule
 \end{tabular}
 \caption{Removal-audit signature of SimNPO unlearning of the alter-to-starboard rule, on a
 1.5B model (CPU) and a 3B model (GPU, \texttt{bfloat16}). The forget-target likelihood
-collapses (NLL $\uparrow$) while retain knowledge is preserved (retain NLL stays low) at both
-scales. The lexical direction-cue rate drops sharply at 1.5B but only modestly on the shorter
-3B run, where generations also degrade---the NLL separation is the cleaner signal. This is
-behavioral suppression audited at the weight level; the task-level instrument $2\times2$ is
-the outstanding step. Harness: \texttt{experiments/unlearning}.}
+collapses (NLL $\uparrow$) at both scales---the robust signal. Retain-set NLL is
+\emph{teacher-forced}: it stays low at 3B but free generation there degrades (off-language /
+repetitive), so it overstates preserved utility. The direction-cue rate drops sharply at 1.5B
+but only modestly at 3B ($n{=}6$, within noise), and a bare keyword-drop can credit
+wrong-direction or garbled answers as ``forgotten''---the harness now scores survived /
+wrong-direction / degenerate / abstained instead. Behavioral suppression audited at the weight
+level; the task-level instrument $2\times2$ is the outstanding step. Harness:
+\texttt{experiments/unlearning}.}
 \label{tab:unlearn}
 \end{table}
 

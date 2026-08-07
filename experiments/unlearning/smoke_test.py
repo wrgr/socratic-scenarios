@@ -39,7 +39,7 @@ def forget_nlls(audit_out):
 
 
 def main():
-    run([sys.executable, "build_datasets.py"])
+    run([sys.executable, "build_datasets.py", "--scale", "smoke"])  # tiny set — pipeline check, not a study
 
     # Gradient ascent is the unambiguous directional demonstrator (NPO is gentle by
     # design). On a tiny random model it must clearly raise the forget-set NLL.

@@ -351,11 +351,14 @@ forget-target NLL **4.6 → 92**, held-out direction-cue rate **5/6 → 0/6** (r
 starboard→right synonym) — while retain knowledge (lookout, safe speed, restricted
 visibility) stays coherent. The **NPO** baseline gives the same qualitative collapse
 (**4.6 → 41**, **5/6 → 0/6**), so the suppression is method-agnostic. The same SimNPO recipe
-now **reproduces the audit signature on GPU at larger scale** (Qwen2.5-3B-Instruct, bf16):
-forget-set NLL **5.5 → 33.9** with retain-set NLL **preserved (3.5 → 0.26)** — the
-forget/retain separation holds across model size and hardware; on this shorter 3B run the
-lexical direction-cue moved only modestly (**5/6 → 4/6**) with some generation degradation,
-so the teacher-forced NLL separation is the cleaner audit signal there. Honest scope: this is
+now **reproduces the forget-target NLL collapse on GPU at larger scale** (Qwen2.5-3B-Instruct,
+bf16): forget-set NLL **5.5 → 33.9** — the robust cross-scale signal. The other two rows are
+weaker at 3B and were the reason the audit was hardened: retain NLL is *teacher-forced*
+(**3.5 → 0.26**) but free generation degrades (off-language/repetitive), so it overstates
+utility (now also report retain **coherence**); and the direction-cue barely moved
+(**5/6 → 4/6**, n=6, within noise) with some answers turning the *wrong* way or garbling —
+so `audit.py` now classifies each answer survived/wrong/degenerate/abstained rather than
+counting one keyword, and the forget/retain and probe sets are generated in the hundreds. Honest scope: this is
 behavioral/target suppression + teacher-forced NLL, **not** verified semantic *removal* — that
 is precisely what the task-level instrument settles (below). It is the weight-level counterpart
 to the context-level leakage result, and the objective-audit direction over dialogue-scored
