@@ -53,8 +53,9 @@ while IFS= read -r m; do
     reason="$(grep -m1 'Live LLM call failed' "$log" | sed 's/.*failed: //' | cut -c1-90)"
     printf 'SKIP  %-52s %s\n' "$m" "$reason" | tee -a "$summary"
   elif grep -q 'provider: bedrock' "$log"; then
-    # verdict lines after the two mock ones (dry-run) are the live bound/unconstrained results
-    verdicts="$(grep -oE 'VERDICT: [A-Z-]+' "$log" | tail -n +3 | sed 's/VERDICT: //' | paste -sd'/' -)"
+    # collect ONLY the model's live verdicts — the scorer also prints offline mock verdicts
+    # (2 mocks x N rules) before the live run, so a fixed skip is wrong under PROBES=all.
+    verdicts="$(awk '/provider: /{live=($0 !~ /mock/)} live && /VERDICT: /{sub(/.*VERDICT: /,""); printf "%s/",$0}' "$log" | sed 's:/$::')"
     printf 'OK    %-52s %s\n' "$m" "${verdicts:-(ran)}" | tee -a "$summary"
   else
     printf '?     %-52s (inspect %s)\n' "$m" "$log" | tee -a "$summary"

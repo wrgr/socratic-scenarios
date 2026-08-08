@@ -23,6 +23,9 @@ export type FM = {
   modelLifecycle?: { status?: string };
 };
 export type Pick = { provider: string; size: string; name: string; id: string; score: number };
+/** Returns true if `id` is actually invokable by this account (a 1-token Converse succeeds).
+ * Injected so selection is unit-testable offline; omitted → every candidate assumed invokable. */
+export type ProbeFn = (id: string) => boolean;
 
 /** Rough "B-equivalent" size so a provider's models sort small→large. Explicit parameter
  * counts win (70b, 8x7b, 405b); otherwise a keyword tier (haiku<sonnet<opus, micro<lite<pro). */
@@ -53,28 +56,61 @@ export function invocationId(m: FM, profilesByArn: Map<string, string>): string 
   return null;
 }
 
-export function selectMatrix(models: FM[], profilesByArn: Map<string, string>, providers: string[]): Pick[] {
+type Cand = { m: FM; id: string; score: number };
+
+export function selectMatrix(
+  models: FM[],
+  profilesByArn: Map<string, string>,
+  providers: string[],
+  probe?: ProbeFn,
+): Pick[] {
+  // Memoize the probe: each id is Converse-tested at most once across all providers/slots.
+  const memo = new Map<string, boolean>();
+  const ok = (id: string): boolean => {
+    if (!probe) return true;
+    if (!memo.has(id)) memo.set(id, probe(id));
+    return memo.get(id)!;
+  };
+
   const out: Pick[] = [];
   for (const prov of providers) {
-    const cand = models
+    const cand: Cand[] = models
       .filter((m) => (m.providerName ?? '').toLowerCase().includes(prov.toLowerCase()))
       .filter((m) => (m.modelLifecycle?.status ?? 'ACTIVE') === 'ACTIVE')
       .map((m) => ({ m, id: invocationId(m, profilesByArn), score: sizeScore(m.modelName ?? m.modelId) }))
-      .filter((x): x is { m: FM; id: string; score: number } => !!x.id && Number.isFinite(x.score));
+      .filter((x): x is Cand => !!x.id && Number.isFinite(x.score));
+    if (!cand.length) continue;
 
-    // Dedup models that land in the same size bucket, keeping the newest (ids encode date/version).
-    const byScore = new Map<number, { m: FM; id: string; score: number }>();
-    for (const x of cand) {
-      const cur = byScore.get(x.score);
-      if (!cur || x.id > cur.id) byScore.set(x.score, x);
+    // Group by size score; within a group sort NEWEST-FIRST (id string desc, since ids encode
+    // date/version) so a slot tries the latest model and, if it's not invokable, the prior one.
+    const groups = new Map<number, Cand[]>();
+    for (const x of cand) (groups.get(x.score) ?? groups.set(x.score, []).get(x.score)!).push(x);
+    const scores = [...groups.keys()].sort((a, b) => a - b);
+    for (const s of scores) groups.get(s)!.sort((a, b) => (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+
+    // Slots map to the low / middle / high size groups (fewer groups → fewer slots).
+    const n = scores.length;
+    const slots =
+      n <= 1 ? [{ label: 'only', i: 0 }]
+      : n === 2 ? [{ label: 'small', i: 0 }, { label: 'large', i: n - 1 }]
+      : [{ label: 'small', i: 0 }, { label: 'medium', i: Math.floor((n - 1) / 2) }, { label: 'large', i: n - 1 }];
+
+    // For each slot, take the newest INVOKABLE model in its group; if the whole group is
+    // un-invokable (or already used), walk to the nearest neighbouring group outward.
+    const used = new Set<string>();
+    for (const { label, i } of slots) {
+      let pick: Cand | undefined;
+      for (let d = 0; d < n && !pick; d++)
+        for (const j of [i - d, i + d]) {
+          if (j < 0 || j >= n || (d > 0 && j === i)) continue;
+          pick = groups.get(scores[j])!.find((x) => ok(x.id) && !used.has(x.id));
+          if (pick) break;
+        }
+      if (pick) {
+        used.add(pick.id);
+        out.push({ provider: prov, size: label, name: pick.m.modelName ?? pick.m.modelId, id: pick.id, score: pick.score });
+      }
     }
-    const uniq = [...byScore.values()].sort((a, b) => a.score - b.score);
-    if (!uniq.length) continue;
-
-    const idx = uniq.length <= 3 ? uniq.map((_, i) => i) : [0, Math.floor((uniq.length - 1) / 2), uniq.length - 1];
-    const picks = [...new Set(idx)].map((i) => uniq[i]);
-    const labels = picks.length === 1 ? ['only'] : picks.length === 2 ? ['small', 'large'] : ['small', 'medium', 'large'];
-    picks.forEach((p, i) => out.push({ provider: prov, size: labels[i] ?? `pick${i}`, name: p.m.modelName ?? p.m.modelId, id: p.id, score: p.score }));
   }
   return out;
 }
@@ -82,6 +118,26 @@ export function selectMatrix(models: FM[], profilesByArn: Map<string, string>, p
 function awsJson(args: string[], region: string): Record<string, unknown> {
   const raw = execFileSync('aws', ['bedrock', ...args, '--region', region, '--output', 'json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   return JSON.parse(raw);
+}
+
+/** Real availability test: a 1-token Converse call. A profile can be *listed* yet not invokable
+ * ("… not available for this account"), so this is the only reliable "can I use it" signal — and
+ * Converse is exactly how the scorer calls models, so passing here means the sweep can use it. */
+function converseProbe(region: string): ProbeFn {
+  const messages = JSON.stringify([{ role: 'user', content: [{ text: 'ping' }] }]);
+  return (id: string): boolean => {
+    try {
+      execFileSync(
+        'aws',
+        ['bedrock-runtime', 'converse', '--model-id', id, '--messages', messages,
+         '--inference-config', 'maxTokens=1', '--region', region, '--output', 'json'],
+        { stdio: ['ignore', 'ignore', 'ignore'] },
+      );
+      return true;
+    } catch {
+      return false; // AccessDenied / not-available / unsupported → treat as un-invokable
+    }
+  };
 }
 
 function main() {
@@ -99,9 +155,10 @@ function main() {
   const profilesByArn = new Map<string, string>();
   try {
     const profs = (awsJson(['list-inference-profiles'], region).inferenceProfileSummaries as Array<{ inferenceProfileId: string; models?: Array<{ modelArn?: string }> }>) ?? [];
-    // Prefer a `global.` cross-region profile over a regional (`us.`/`eu.`/…) one: the newest
-    // Claude models (Sonnet/Opus 5) are invokable via `global.` but their regional profile id
-    // resolves to a model the account can't call ("… is not available for this account").
+    // For one model with several profiles, prefer a `global.` cross-region profile over a regional
+    // (`us.`/`eu.`/…) one: `global.` routes across all supported regions, so it's the most likely
+    // to actually resolve. (Whether the account can invoke it at all is decided later by the probe,
+    // not the id shape — a listed profile is not proof of access.)
     const profRank = (id: string) => (id.startsWith('global.') ? 3 : /^(us|eu|apac|ap)\./.test(id) ? 2 : 1);
     for (const p of profs)
       for (const mm of p.models ?? []) {
@@ -113,10 +170,15 @@ function main() {
     /* inference profiles optional / may be unauthorized — fall back to on-demand ids */
   }
 
-  const picks = selectMatrix(models, profilesByArn, providers);
+  // Probe candidates for real invokability (PROBE=0 to skip → picks the newest id blindly, which
+  // may then SKIP in the sweep). Probing walks each size group newest→older until one answers.
+  const probe = process.env.PROBE === '0' ? undefined : converseProbe(region);
+  if (probe) console.error('probing candidates with a 1-token Converse call (PROBE=0 to skip)…');
+  const picks = selectMatrix(models, profilesByArn, providers, probe);
   if (!picks.length) {
     console.error('pick-models: no invokable text models matched the requested providers in ' + region + '.');
     console.error('Enable model access (Bedrock console → Model access) or widen PROVIDERS, then retry.');
+    console.error('(If PROBE is on, every candidate failed its Converse test — check bedrock:InvokeModel / bedrock:Converse.)');
     process.exit(3);
   }
   console.error(`Auto-selected ${picks.length} models in ${region} (provider × size):`);
@@ -139,11 +201,13 @@ function selfTest() {
     fm('amazon.nova-lite-v1:0', 'Amazon', 'Nova Lite'),
     fm('amazon.nova-pro-v1:0', 'Amazon', 'Nova Pro'),
   ];
-  const picks = selectMatrix(models, new Map(), ['Anthropic', 'Meta', 'Amazon']);
-  const got = picks.map((p) => `${p.provider}/${p.size}=${p.id}`).join('\n');
-  const expect = [
+  const render = (ps: Pick[]) => ps.map((p) => `${p.provider}/${p.size}=${p.id}`).join('\n');
+
+  // Scenario A — no probe: every candidate assumed invokable, newest per size group wins.
+  const gotA = render(selectMatrix(models, new Map(), ['Anthropic', 'Meta', 'Amazon']));
+  const expectA = [
     'Anthropic/small=anthropic.claude-3-5-haiku-20241022-v1:0',
-    'Anthropic/medium=anthropic.claude-3-5-sonnet-20241022-v2:0', // newest sonnet, dedup by score
+    'Anthropic/medium=anthropic.claude-3-5-sonnet-20241022-v2:0', // newest sonnet in its group
     'Anthropic/large=anthropic.claude-3-opus-20240229-v1:0',
     'Meta/small=meta.llama3-1-8b-instruct-v1:0',
     'Meta/medium=meta.llama3-1-70b-instruct-v1:0',
@@ -152,9 +216,32 @@ function selfTest() {
     'Amazon/medium=amazon.nova-lite-v1:0',
     'Amazon/large=amazon.nova-pro-v1:0',
   ].join('\n');
-  console.log(got);
-  console.log(got === expect ? 'SELFTEST: PASS' : 'SELFTEST: FAIL\n--- expected ---\n' + expect);
-  process.exit(got === expect ? 0 : 1);
+
+  // Scenario B — mirrors this account: Sonnet 5 / Opus 5 are LISTED but not invokable, so the
+  // probe rejects them and the picker must fall back to the newest 4.x that answers.
+  const antModels: FM[] = [
+    fm('anthropic.claude-haiku-4-5-20251001-v1:0', 'Anthropic', 'Claude Haiku 4.5'),
+    fm('anthropic.claude-sonnet-4-5-20250929-v1:0', 'Anthropic', 'Claude Sonnet 4.5'),
+    fm('anthropic.claude-sonnet-5', 'Anthropic', 'Claude Sonnet 5'),
+    fm('anthropic.claude-opus-4-8', 'Anthropic', 'Claude Opus 4.8'),
+    fm('anthropic.claude-opus-5', 'Anthropic', 'Claude Opus 5'),
+  ];
+  const blocked = new Set(['anthropic.claude-sonnet-5', 'anthropic.claude-opus-5']);
+  const probe: ProbeFn = (id) => !blocked.has(id);
+  const gotB = render(selectMatrix(antModels, new Map(), ['Anthropic'], probe));
+  const expectB = [
+    'Anthropic/small=anthropic.claude-haiku-4-5-20251001-v1:0',
+    'Anthropic/medium=anthropic.claude-sonnet-4-5-20250929-v1:0', // sonnet-5 rejected → newest 4.x
+    'Anthropic/large=anthropic.claude-opus-4-8',                   // opus-5 rejected → opus 4.8
+  ].join('\n');
+
+  const passA = gotA === expectA, passB = gotB === expectB;
+  console.log(gotA);
+  if (!passA) console.log('--- A expected ---\n' + expectA);
+  console.log('--- probe fallback ---\n' + gotB);
+  if (!passB) console.log('--- B expected ---\n' + expectB);
+  console.log(passA && passB ? 'SELFTEST: PASS' : 'SELFTEST: FAIL');
+  process.exit(passA && passB ? 0 : 1);
 }
 
 if (process.env.SELFTEST === '1') selfTest();

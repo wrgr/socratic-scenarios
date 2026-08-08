@@ -27,11 +27,14 @@ miss. In the AWS console:
 Verify from the box: `aws bedrock list-foundation-models --region us-east-1` should list models
 (not an AccessDenied). `./list-available.sh` prints them grouped by provider.
 
-> Newer models (e.g. Claude 4/5) are invoked through cross-region **inference-profile** ids with
-> a `global.` or `us.` / `eu.` / `apac.` prefix — the *newest* Claude (Sonnet 5, Opus 5) are
-> invokable only via the **`global.`** profile, so the picker prefers it (a `us.` profile for
-> those resolves to a model the account can't call). You still enable them under *Model access*;
-> the picker uses the profile id automatically.
+> Newer models (e.g. Claude 4/5) are invoked through cross-region **inference-profile** ids with a
+> `global.` or `us.` / `eu.` / `apac.` prefix; the picker prefers the `global.` profile when a model
+> has several. But a profile being *listed* is **not** proof your account can call it — the newest
+> models (e.g. Sonnet 5 / Opus 5) often appear in `list-inference-profiles` yet return "not available
+> for this account" on invoke. So the picker **probes** each candidate with a 1-token Converse call
+> and, within a size group, walks newest→older until one actually answers — so the "large" Anthropic
+> slot lands on the newest Opus you *can* call, not a listed-but-blocked one. Set `PROBE=0` to skip
+> probing (picks the newest id blindly, which may then SKIP in the sweep).
 
 ## 2. Run
 
