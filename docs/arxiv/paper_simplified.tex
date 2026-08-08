@@ -82,9 +82,25 @@ things at once: the knowledge really was in the weights, and \textbf{our test ca
 the unlearning experiment isn't a bonus chapter---it's what makes the cheating detector
 trustworthy. Take it away and the leak-detection claim is just a hunch.
 
-(Status, honestly: we've done the surgery and confirmed the erasure ``took''---the model stops
-producing the rule. The final step---scoring the erased model on the full steering test---is
-the one big experiment still to run, because it needs a GPU.)
+(Status, honestly: we ran the surgery on a GPU and it produced a surprise that is better than a
+tidy confirmation. Erasing ``turn to starboard'' \emph{gently} makes the model stop \emph{saying}
+the rule---it even quits citing ``Rule 14'' and starts naming other rules---so every text-based
+``did we forget it?'' score reports success. But when we run the actual steering test, the ship
+still turns to starboard, exactly as before. In other words: the model changed what it
+\emph{says}, not what it \emph{does}. The text scores were fooled; our steering test was not.
+That is the whole thesis in miniature---the test measures the \emph{decision}, and the decision
+never budged. A ``benign relearning'' check (a few normal training steps) confirms the fact was
+only \emph{hidden}, not truly gone: the model's memory of the rule springs right back, while the
+steering decision stays put the entire time.)
+
+(Two footnotes, kept honest. If instead we erase \emph{aggressively}, we get the opposite
+failure: the ship starts turning the \emph{wrong} way---the test catches that too, which is the
+point. And there's a real limit: because \emph{every} big model already knows ``head-on
+$\to$ starboard'' from its own training, erasing it can't make the test flip from
+``corpus-bound'' to ``gone''---there's no room to move. To show that clean flip, the next
+experiment teaches a model a made-up rule no model could already know---a fictional strait with
+its own strict speed limit---then erases \emph{that}, where the test has room to register the
+change.)
 
 \section*{The dress rehearsal: two kinds of fake students}
 
@@ -128,7 +144,7 @@ check than either alone.
 \end{enumerate}
 
 If any of these five feels like a leap, that's exactly where the technical paper needs to work
-harder---and where more experiments (more rules, more models, the final erased-model score)
-would change ``plausible'' into ``demonstrated.''
+harder---and where more experiments (more rules, more models, the made-up-rule erasure that
+gives the test room to flip) would change ``plausible'' into ``demonstrated.''
 
 \end{document}
