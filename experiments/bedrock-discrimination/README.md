@@ -27,8 +27,10 @@ miss. In the AWS console:
 Verify from the box: `aws bedrock list-foundation-models --region us-east-1` should list models
 (not an AccessDenied). `./list-available.sh` prints them grouped by provider.
 
-> Newer models (e.g. Claude 4) are invoked through cross-region **inference-profile** ids with
-> a `us.` / `eu.` / `apac.` prefix. You still enable them the same way under *Model access*;
+> Newer models (e.g. Claude 4/5) are invoked through cross-region **inference-profile** ids with
+> a `global.` or `us.` / `eu.` / `apac.` prefix — the *newest* Claude (Sonnet 5, Opus 5) are
+> invokable only via the **`global.`** profile, so the picker prefers it (a `us.` profile for
+> those resolves to a model the account can't call). You still enable them under *Model access*;
 > the picker uses the profile id automatically.
 
 ## 2. Run
