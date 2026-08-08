@@ -27,8 +27,11 @@ elif [ "${AUTO:-1}" = "1" ]; then
   # DEFAULT: auto-select one small/medium/large per provider from what's enabled in your
   # account (no curating). Set AUTO=0 to use models.txt instead. Needs the AWS CLI.
   echo "auto-selecting provider × size matrix from your account (AUTO=0 → use models.txt)…" >&2
+  pick_start="$(date +%s)"
   ( cd "$REPO" && AWS_REGION="$REGION" PROVIDERS="${PROVIDERS:-Anthropic,Meta,Amazon}" \
       npx tsx experiments/bedrock-discrimination/pick-models.ts ) > "$LIST" || true
+  pick_secs="$(( $(date +%s) - pick_start ))"
+  echo "…picked in ${pick_secs}s (includes Converse probing; PROBE=0 to skip)" >&2
 else
   grep -vE '^[[:space:]]*(#|$)' models.txt | awk '{print $1}' > "$LIST"   # AUTO=0 override (BSD-grep safe)
 fi
@@ -40,27 +43,35 @@ fi
 
 echo "region=$REGION  condition=$CONDITION  probes=$PROBES  models=$nmodels  ->  $OUT"
 summary="$OUT/summary.txt"; : > "$summary"
+sweep_start="$(date +%s)"   # whole-sweep wall clock (seconds; BSD/GNU date both OK)
 
 while IFS= read -r m; do
   [ -n "$m" ] || continue
   slug="$(printf '%s' "$m" | tr '/:.' '___')"
   log="$OUT/$slug.txt"
   echo "== $m =="
+  m_start="$(date +%s)"     # per-model wall clock
   ( cd "$REPO" && AWS_REGION="$REGION" BEDROCK_MODEL="$m" CONDITION="$CONDITION" PROBES="$PROBES" \
       npm run --silent colreg:leakage ) > "$log" 2>&1 || true
+  secs="$(( $(date +%s) - m_start ))"
+  echo "   -> ${secs}s"
 
   if grep -q "Live LLM call failed" "$log"; then
     reason="$(grep -m1 'Live LLM call failed' "$log" | sed 's/.*failed: //' | cut -c1-90)"
-    printf 'SKIP  %-52s %s\n' "$m" "$reason" | tee -a "$summary"
+    printf 'SKIP  %-52s %4ss  %s\n' "$m" "$secs" "$reason" | tee -a "$summary"
   elif grep -q 'provider: bedrock' "$log"; then
     # collect ONLY the model's live verdicts — the scorer also prints offline mock verdicts
     # (2 mocks x N rules) before the live run, so a fixed skip is wrong under PROBES=all.
     verdicts="$(awk '/provider: /{live=($0 !~ /mock/)} live && /VERDICT: /{sub(/.*VERDICT: /,""); printf "%s/",$0}' "$log" | sed 's:/$::')"
-    printf 'OK    %-52s %s\n' "$m" "${verdicts:-(ran)}" | tee -a "$summary"
+    printf 'OK    %-52s %4ss  %s\n' "$m" "$secs" "${verdicts:-(ran)}" | tee -a "$summary"
   else
-    printf '?     %-52s (inspect %s)\n' "$m" "$log" | tee -a "$summary"
+    printf '?     %-52s %4ss  (inspect %s)\n' "$m" "$secs" "$log" | tee -a "$summary"
   fi
 done < "$LIST"
+
+total="$(( $(date +%s) - sweep_start ))"
+printf 'TOTAL %-52s %4ss  (%s models%s)\n' '' "$total" "$nmodels" \
+  "${pick_secs:+, +${pick_secs}s picking}" | tee -a "$summary"
 
 echo
 echo "==== summary (${OUT}/summary.txt) ===="
