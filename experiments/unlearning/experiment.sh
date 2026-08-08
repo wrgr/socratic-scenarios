@@ -100,6 +100,29 @@ if [ "$SCORE" = "1" ]; then
     score_model unlearned --adapter "$OUT" # unlearned row (adapter on)
 fi
 
+# 3) Consolidated single-block report (easy to copy-paste / send back).
+SUMMARY="$RESULTS_DIR/SUMMARY.txt"
+{
+    echo "==================== UNLEARNING RUN REPORT ===================="
+    echo; echo "----- CONFIG (hyperparameters) -----"; cat "$RESULTS_DIR/unlearn_config.json" 2>/dev/null
+    echo; echo "----- REMOVAL AUDIT -----"
+    sed -n '/=== BASE (not unlearned) ===/,$p' "$RESULTS_DIR/unlearn-audit.txt" 2>/dev/null \
+        || tail -n 40 "$RESULTS_DIR/unlearn-audit.txt" 2>/dev/null
+    if [ "$SCORE" = "1" ]; then
+        echo; echo "----- 2x2 . BASE -----";      cat "$RESULTS_DIR/leakage-base.txt" 2>/dev/null
+        echo; echo "----- 2x2 . UNLEARNED -----";  cat "$RESULTS_DIR/leakage-unlearned.txt" 2>/dev/null
+        echo; echo "----- UNLEARNED completions (first 8; coherence / inversion check) -----"
+        python - "$RESULTS_DIR/completions-unlearned.jsonl" <<'PY' 2>/dev/null || true
+import json, sys
+for i, l in enumerate(open(sys.argv[1])):
+    if i >= 8: break
+    print('  * ' + repr(json.loads(l).get('completion', ''))[:130])
+PY
+    fi
+    echo; echo "==================== END REPORT ===================="
+} > "$SUMMARY"
+
 echo "== done $(date -u +%FT%TZ) =="
-echo "artifacts:"
-ls -la "$RESULTS_DIR"
+echo; echo "===== consolidated report ($SUMMARY) — copy from here ====="
+cat "$SUMMARY"
+echo; echo "artifacts in: $RESULTS_DIR"
