@@ -99,7 +99,16 @@ function main() {
   const profilesByArn = new Map<string, string>();
   try {
     const profs = (awsJson(['list-inference-profiles'], region).inferenceProfileSummaries as Array<{ inferenceProfileId: string; models?: Array<{ modelArn?: string }> }>) ?? [];
-    for (const p of profs) for (const mm of p.models ?? []) if (mm.modelArn && !profilesByArn.has(mm.modelArn)) profilesByArn.set(mm.modelArn, p.inferenceProfileId);
+    // Prefer a `global.` cross-region profile over a regional (`us.`/`eu.`/…) one: the newest
+    // Claude models (Sonnet/Opus 5) are invokable via `global.` but their regional profile id
+    // resolves to a model the account can't call ("… is not available for this account").
+    const profRank = (id: string) => (id.startsWith('global.') ? 3 : /^(us|eu|apac|ap)\./.test(id) ? 2 : 1);
+    for (const p of profs)
+      for (const mm of p.models ?? []) {
+        if (!mm.modelArn) continue;
+        const cur = profilesByArn.get(mm.modelArn);
+        if (!cur || profRank(p.inferenceProfileId) > profRank(cur)) profilesByArn.set(mm.modelArn, p.inferenceProfileId);
+      }
   } catch {
     /* inference profiles optional / may be unauthorized — fall back to on-demand ids */
   }
