@@ -97,6 +97,10 @@ const SUBSTANTIAL = 20 * DEG; // "readily apparent" alteration
 const ACTION_DETECT = 5 * DEG; // threshold to say a maneuver has begun
 const EARLY_TCPA = 6 * 60; // s — action taken with less TCPA than this is "late"
 const SAFE_SPEED_FACTOR = 0.75; // restricted-vis speed must drop below this × v0
+// Xylos jurisdiction: "bare steerage" is stricter than a generic safe-speed reduction — a
+// vessel must drop to ≤ this × v0. A generic fog reduction (~0.5) FAILS this, so the check has
+// dynamic range a memorized rule lacks: only a model that read the Xylos rule complies.
+const XYLOS_STEERAGE_FACTOR = 0.4;
 
 /** Index of the highest-risk target at t0. */
 export function primaryTarget(scenario: SimScenario): number {
@@ -125,6 +129,7 @@ export function scoreCompliance(scenario: SimScenario, traj: Trajectory): Compli
   const turnedPort = netHeading < -ACTION_DETECT;
   const minSpeed = Math.min(...traj.map((s) => s.own.v));
   const speedReduced = minSpeed <= SAFE_SPEED_FACTOR * own0.v;
+  const minSpeedFactor = own0.v > 0 ? minSpeed / own0.v : 1; // realized fraction of initial speed
   const acted = Math.abs(netHeading) > ACTION_DETECT || minSpeed < 0.95 * own0.v;
 
   // When did the maneuver begin, and what was TCPA then?
@@ -148,7 +153,7 @@ export function scoreCompliance(scenario: SimScenario, traj: Trajectory): Compli
   const restricted: boolean = scenario.visibility === ('restricted' as Visibility);
   const substantialAction = Math.abs(netHeading) >= SUBSTANTIAL || speedReduced;
   const checks: RuleCheck[] = restricted
-    ? restrictedChecks({ cls, acted, turnedPort, turnedToward: cls.targetOnStarboard ? turnedStarboard : turnedPort, substantialAction, speedReduced, tcpaAtAction })
+    ? restrictedChecks({ cls, acted, turnedPort, turnedToward: cls.targetOnStarboard ? turnedStarboard : turnedPort, substantialAction, speedReduced, tcpaAtAction, xylos: scenario.jurisdiction === 'xylos', minSpeedFactor })
     : [];
 
   if (restricted) {
@@ -255,6 +260,10 @@ interface RestrictedInputs {
   substantialAction: boolean;
   speedReduced: boolean;
   tcpaAtAction: number;
+  /** Xylos jurisdiction: adds the stricter bare-steerage speed check. */
+  xylos?: boolean;
+  /** Realized min speed as a fraction of initial speed (for the Xylos steerage check). */
+  minSpeedFactor?: number;
 }
 
 /**
@@ -268,12 +277,29 @@ interface RestrictedInputs {
  * (diagnose.ts) localizes the same competence axes under either visibility.
  */
 function restrictedChecks(inp: RestrictedInputs): RuleCheck[] {
-  const { cls, acted, turnedPort, turnedToward, substantialAction, speedReduced, tcpaAtAction } = inp;
+  const { cls, acted, turnedPort, turnedToward, substantialAction, speedReduced, tcpaAtAction, xylos, minSpeedFactor } = inp;
   const forwardOfBeam = Math.abs(cls.relBearing) < 90 * DEG;
   const isOvertaking = cls.encounter === 'overtaking';
   const side = cls.targetOnStarboard ? 'starboard' : 'port';
 
+  // Xylos jurisdiction only: a stricter "bare steerage" speed rule (≤ XYLOS_STEERAGE_FACTOR × v0).
+  // Corpus-only — no pretraining support — so a model that reduces to a *generic* safe speed (~0.5)
+  // FAILS it. This gives the leakage instrument the dynamic range that memorized COLREG rules lack.
+  const xylosChecks: RuleCheck[] = xylos
+    ? [{
+        id: 'xylos-steerage',
+        label: 'Xylos: reduce to bare steerage in restricted visibility',
+        applicable: true,
+        pass: (minSpeedFactor ?? 1) <= XYLOS_STEERAGE_FACTOR,
+        detail: (minSpeedFactor ?? 1) <= XYLOS_STEERAGE_FACTOR
+          ? 'Reduced to bare steerage, as the Xylos Strait rule requires.'
+          : 'Did not reduce to bare steerage — a generic safe-speed reduction is insufficient in the Xylos Strait.',
+        weight: 0.4,
+      }]
+    : [];
+
   return [
+    ...xylosChecks,
     // Rule 19(d): a detected risk of collision must draw substantial avoiding action.
     {
       id: 'take-action',

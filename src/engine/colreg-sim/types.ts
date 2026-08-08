@@ -65,6 +65,15 @@ export interface SimScenario {
   ownship: Vessel;
   targets: Vessel[];
   visibility: Visibility;
+  /**
+   * Optional jurisdiction tag. A jurisdiction can impose a corpus-only rule with NO
+   * pretraining support (e.g. `'xylos'` = the fictional Xylos Strait, which requires bare
+   * steerage in restricted visibility, stricter than the generic safe-speed rule). Such a
+   * rule gives the leakage instrument the dynamic range that a memorized COLREG rule cannot:
+   * a model that has never seen it can only comply by reading the corpus. `undefined` = the
+   * standard COLREG regime (no extra rule).
+   */
+  jurisdiction?: 'xylos';
   /** Simulation horizon, seconds. */
   horizonS: number;
   /** Integration timestep, seconds. */

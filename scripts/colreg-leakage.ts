@@ -22,6 +22,7 @@ import {
   starboardProbe,
   crossingGiveWayProbe,
   safeSpeedProbe,
+  xylosSpeedProbe,
   boundLearnerCompleter,
   leakingLearnerCompleter,
   geminiCompleter,
@@ -32,6 +33,7 @@ import {
   type LeakageConfig,
   type LeakageReport,
 } from '../src/engine/colreg-sim';
+import type { AJPNode } from '../src/types/ajp';
 import { colregDomain } from '../src/corpus/colreg';
 import { collisionTarget, makeScenario } from '../src/corpus/colreg/benchmark-geometry';
 import { restrictedBenchmark } from '../src/corpus/colreg/restricted';
@@ -51,20 +53,44 @@ const crossingScenarios = [crossing('XG-1', 45, 12), crossing('XG-2', 60, 11), c
 // DIFFERENT metric axis (speedFactor, not turn direction), so a genuinely independent probe.
 const fogScenarios = restrictedBenchmark.filter((s) => ['RV-01', 'RV-02', 'RV-03'].includes(s.id));
 
+// PROBES=xylos: a CORPUS-ONLY rule with no pretraining support — the fictional Xylos Strait
+// requires bare steerage in restricted visibility (stricter than the generic safe-speed rule).
+// This is the one probe designed to read CORPUS-BOUND on a real model (the threshold is not
+// memorizable), giving the instrument the dynamic range the standard, universally-leaked rules
+// lack. Same fog geometry, tagged `jurisdiction:'xylos'` so the stricter compliance check applies.
+const xylosFogScenarios = fogScenarios.map((s) => ({ ...s, id: s.id.replace(/^RV/, 'XY'), jurisdiction: 'xylos' as const }));
+const xylosRuleNode: AJPNode = {
+  id: 'RULE-XYLOS-SPEED',
+  type: 'TheoryReference',
+  content:
+    'Xylos Strait local rule — Restricted visibility: within the Xylos Strait a power-driven vessel shall reduce to bare steerage way (no more than one third of full sea speed) until the visibility clears; a generic safe-speed reduction is insufficient here.',
+  confidence: 'High',
+  source: 'Xylos Strait Port Authority (fictional corpus-only rule; no COLREG/pretraining source)',
+};
+
 const twoRuleProbes = [starboardProbe(scenarios[0]), crossingGiveWayProbe(crossingScenarios[0], crossingScenarios)];
-const probes =
-  process.env.PROBES === 'all'
+const isXylos = process.env.PROBES === 'xylos';
+const probes = isXylos
+  ? [xylosSpeedProbe(xylosFogScenarios[0], xylosFogScenarios)]
+  : process.env.PROBES === 'all'
     ? [...twoRuleProbes, safeSpeedProbe(fogScenarios[0], fogScenarios)]
     : process.env.PROBES === 'two'
       ? twoRuleProbes
       : [starboardProbe(scenarios[0])];
 
-const cfg: LeakageConfig = {
-  corpusNodes: colregDomain.nodes,
-  scenarios,
-  probes,
-  closedBookScenario: scenarios[0],
-};
+const cfg: LeakageConfig = isXylos
+  ? {
+      corpusNodes: [...colregDomain.nodes, xylosRuleNode],
+      scenarios: xylosFogScenarios,
+      probes,
+      closedBookScenario: xylosFogScenarios[0],
+    }
+  : {
+      corpusNodes: colregDomain.nodes,
+      scenarios,
+      probes,
+      closedBookScenario: scenarios[0],
+    };
 
 // ─── Offline scoring (no HTTP server / port) ──────────────────────────────────────────
 // The leakage prompt set is fully determined by the static scenario/corpus config — the
@@ -183,7 +209,9 @@ async function main() {
   }
 
   console.log('Deterministic dry-run (no key needed) — the instrument must recover the known ground truth:');
-  print(await runLeakageExperiment(boundLearnerCompleter(['RULE-COLREG-14'], ['RULE-COLREG-19']), 'mock: corpus-bound learner', cfg));
+  // The bound learner reads whichever rules the mode's corpus provides (Rule 14 steering, Rule 19
+  // generic safe-speed, and — under PROBES=xylos — the corpus-only Xylos bare-steerage rule).
+  print(await runLeakageExperiment(boundLearnerCompleter(['RULE-COLREG-14'], ['RULE-COLREG-19'], ['RULE-XYLOS-SPEED']), 'mock: corpus-bound learner', cfg));
   print(await runLeakageExperiment(leakingLearnerCompleter(), 'mock: leaking learner', cfg));
 
   const real = realCompleter();
