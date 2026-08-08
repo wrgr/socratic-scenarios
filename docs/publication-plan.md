@@ -12,6 +12,15 @@ This is the execution layer under [`docs/novelty-and-positioning.md`](novelty-an
 which remains the authoritative prior-art scan and contribution analysis. Read that first;
 this document says *what to ship, in what order, and what still has to be built.*
 
+> **Scope note — this plan is the *single collapsed flagship* view.** It deliberately folds
+> several contributions into one paper to protect the methods claim from a systems-paper
+> rejection. [`docs/paper-portfolio.md`](paper-portfolio.md) takes the opposite, *fan-out* view —
+> the full menu of separable papers (P1 flagship, P2 position, P3 adaptive-retrieval mechanism,
+> P4 systems/demo, P5 applied functional result, optional Pβ unlearning-audit and P6 benchmark).
+> The two are intentionally in tension, not contradictory: this doc plans P1; the portfolio plans
+> the program. If the fan-out is adopted, P1 here stays C1+C2 only and the rest cite it. P3's
+> novelty is specced in [`docs/p3-adaptive-retrieval-concept.md`](p3-adaptive-retrieval-concept.md).
+
 > **Evidence status carries through unchanged.** Every result is **simulation-based
 > mechanism evidence**, not human external validity. The paper is a methods/measurement
 > contribution and must gate all learning-gains claims as pre-registered future work.
