@@ -30,8 +30,10 @@ Verify from the box: `aws bedrock list-foundation-models --region us-east-1` sho
 > Newer models (e.g. Claude 4/5) are invoked through cross-region **inference-profile** ids with
 > a `global.` or `us.` / `eu.` / `apac.` prefix — the *newest* Claude (Sonnet 5, Opus 5) are
 > invokable only via the **`global.`** profile, so the picker prefers it (a `us.` profile for
-> those resolves to a model the account can't call). You still enable them under *Model access*;
-> the picker uses the profile id automatically.
+> those resolves to a model the account can't call). Among ids of the same scope it also prefers a
+> **versioned** id (`…-20251001-v1:0`) over a bare unversioned alias, since the alias is what tends
+> to SKIP as "not available". You still enable them under *Model access*; the picker uses the
+> profile id automatically.
 
 ## 2. Run
 

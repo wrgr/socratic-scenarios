@@ -99,15 +99,21 @@ function main() {
   const profilesByArn = new Map<string, string>();
   try {
     const profs = (awsJson(['list-inference-profiles'], region).inferenceProfileSummaries as Array<{ inferenceProfileId: string; models?: Array<{ modelArn?: string }> }>) ?? [];
-    // Prefer a `global.` cross-region profile over a regional (`us.`/`eu.`/…) one: the newest
-    // Claude models (Sonnet/Opus 5) are invokable via `global.` but their regional profile id
-    // resolves to a model the account can't call ("… is not available for this account").
-    const profRank = (id: string) => (id.startsWith('global.') ? 3 : /^(us|eu|apac|ap)\./.test(id) ? 2 : 1);
+    // Rank candidate profile ids for the same model. Two independent preferences, summed:
+    //  (a) scope: `global.` cross-region beats a regional (`us.`/`eu.`/…) profile — the newest
+    //      Claude (Sonnet/Opus 5) are invokable via `global.` but their regional id resolves to a
+    //      model the account can't call ("… is not available for this account").
+    //  (b) versioned: an id carrying a date/version tag (`…-20251001-v1:0`, `…-v2:0`) beats a bare
+    //      unversioned alias — the bare alias is what has been SKIPping as "not available", while
+    //      the versioned sibling invokes. Weight scope 10× so it dominates when both differ.
+    const profScore = (id: string) =>
+      (id.startsWith('global.') ? 30 : /^(us|eu|apac|ap)\./.test(id) ? 20 : 10) +
+      (/\d{6,}|-v\d+(?::\d+)?\b/.test(id) ? 1 : 0);
     for (const p of profs)
       for (const mm of p.models ?? []) {
         if (!mm.modelArn) continue;
         const cur = profilesByArn.get(mm.modelArn);
-        if (!cur || profRank(p.inferenceProfileId) > profRank(cur)) profilesByArn.set(mm.modelArn, p.inferenceProfileId);
+        if (!cur || profScore(p.inferenceProfileId) > profScore(cur)) profilesByArn.set(mm.modelArn, p.inferenceProfileId);
       }
   } catch {
     /* inference profiles optional / may be unauthorized — fall back to on-demand ids */
