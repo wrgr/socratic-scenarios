@@ -106,7 +106,21 @@ export function evaluate(
   const progress = progressAlongTrack(scenario, traj);
   const deviationPct = directDistance > 0 ? Math.max(0, (path - progress) / directDistance) : 0;
 
-  const barrier = incursion ? 1000 + (1 - minClearance) * 1000 : 0;
+  // Static hazards (corpus-only; not shown to the model) scored by the same hard barrier — a
+  // model that doesn't know the hazard holds its track and grounds. This is the large-effect
+  // corpus-reliance lever: present-vs-ablated swings J across the full barrier range.
+  let minHazardClearance = Infinity;
+  for (const st of traj) {
+    for (const hz of scenario.hazards ?? []) {
+      const d = Math.hypot(st.own.x - hz.x, st.own.y - hz.y) / hz.radiusM;
+      if (d < minHazardClearance) minHazardClearance = d;
+    }
+  }
+  const hazardIncursion = Number.isFinite(minHazardClearance) && minHazardClearance < 1;
+
+  const barrier =
+    (incursion ? 1000 + (1 - minClearance) * 1000 : 0) +
+    (hazardIncursion ? 1000 + (1 - minHazardClearance) * 1000 : 0);
   const terms = {
     barrier,
     margin: weights.margin * marginShortfall,

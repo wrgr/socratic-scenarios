@@ -75,6 +75,16 @@ export interface SimScenario {
    * `undefined` = the standard COLREG regime (generic safe-speed only).
    */
   localSpeedLimit?: { targetFactor: number; label: string };
+  /**
+   * Static hazards the ownship must avoid (charted wreck / shoal / exclusion zone). These are
+   * scored by the objective barrier exactly like a domain incursion, but are **not** rendered into
+   * the prompt — the model can only learn of them from the CORPUS. That makes them the ideal
+   * large-effect corpus-reliance probe: a model without the corpus rule has no way to know the
+   * hazard is there, holds its default track, and grounds (full barrier penalty); a corpus-bound
+   * model reads the hazard and clears it. Corpus present-vs-ablated then swings the metric across
+   * its whole range, not a sliver. Position is SI metres in the ownship's local frame.
+   */
+  hazards?: { x: number; y: number; radiusM: number; label: string }[];
   /** Simulation horizon, seconds. */
   horizonS: number;
   /** Integration timestep, seconds. */
