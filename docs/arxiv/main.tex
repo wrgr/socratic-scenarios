@@ -636,17 +636,19 @@ which reads clean here ($0.10$, coherence $0.91$).
 State it plainly: because Rule~14 is already leaking at baseline---every pretrained model knows
 it---the $2\times2$ \emph{cannot} exhibit a clean \textsc{corpus-bound}\,$\to$\,\textsc{gone}
 transition under unlearning; both cells read \textsc{leaking} regardless of what the weights do.
-To demonstrate the instrument detecting an unlearning-\emph{induced} policy change, the target
-rule must be \emph{corpus-bound at baseline} (high ablation-delta)---which no pretrained COLREG
-rule is. The designed next experiment therefore introduces a \emph{corpus-only} rule with no
-pretraining support: a fictional-jurisdiction stricter-speed rule on the already-instrumented
-speed axis---e.g.\ ``in the Xylos Strait under restricted visibility, reduce to bare
-steerage''---a novel numeric threshold a model cannot know from priors, and deliberately
-\emph{not} a safety inversion. A model taught only this rule should read \textsc{corpus-bound}
-(it follows the corpus) against a prior-driven model that ignores it; unlearning it should then
-move the $2\times2$ cell \textsc{corpus-bound}\,$\to$\,\textsc{gone}. We present this as the
-designed next experiment (implementation in \texttt{experiments/unlearning} plus the
-instrument's speed probe), not a completed result.
+To demonstrate the instrument detecting weight-level knowledge, the target rule must be
+\emph{corpus-bound at baseline} (high ablation-delta)---which no pretrained COLREG rule is. The
+fix is a \emph{corpus-only} fact with no pretraining support, scored at \emph{full} effect by the
+objective barrier: a \textbf{charted hazard} on the ownship's track that is scored by the
+simulator but \emph{not shown to the model}, so it can be known only from the corpus. A model that
+reads the corpus alters to clear; one that does not holds its track and grounds---a full-barrier
+swing (reference learners: corpus-reliance $0.93$ / regret-$\delta\approx2000$ when bound versus
+$0.00$ when leaking), and no safety-refusal confound since avoiding a charted danger is plainly
+sensible. We then \emph{validate by construction}: teach the hazard into the weights along a
+gradient (LoRA-$\alpha$ and training checkpoints) and show corpus-reliance falls monotonically to
+$0$ as the fact is memorized---the known-groups dose-response that a single cell cannot provide
+(implementation in \texttt{experiments/unlearning}, \texttt{PROBES=hazard}). We present this as
+the designed next experiment, not a completed result.
 
 \begin{table}[t]
 \centering

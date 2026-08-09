@@ -127,7 +127,7 @@ def main():
                     help="also save a checkpoint adapter every N steps (0 = off) — gives the "
                          "checkpoint gradient for the dose-response curve (DOSE_RESPONSE.md).")
     ap.add_argument("--sft_file", default=None,
-                    help="teach-set JSONL for --method sft (default <data>/xylos_teach.jsonl).")
+                    help="teach-set JSONL for --method sft (default <data>/hazard_teach.jsonl).")
     ap.add_argument("--beta", type=float, default=0.1)             # NPO/SimNPO temperature
     ap.add_argument("--gamma", type=float, default=0.0)            # SimNPO reward margin
     ap.add_argument("--retain_weight", type=float, default=1.0)
@@ -193,7 +193,7 @@ def main():
     # TEACH mode (--method sft): plain supervised fine-tuning on the teach set, no forget term —
     # injects a rule for the dose-response. Reuses the same loader/LoRA/save; forget file ignored.
     if args.method == "sft":
-        teach_path = args.sft_file or os.path.join(args.data, "xylos_teach.jsonl")
+        teach_path = args.sft_file or os.path.join(args.data, "hazard_teach.jsonl")
         loader = make_loader(load_jsonl(teach_path), tok, args.batch_size, True, args.chat)
         step = 0
         for epoch in range(args.epochs):

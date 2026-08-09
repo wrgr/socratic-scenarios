@@ -95,18 +95,18 @@ unlearning failed / left latent knowledge — and the same instrument flags it
 (weight-level leakage). Partial/interpolated unlearning yields a competence **gradient**
 (a weight-level instance of the C2 KC→metric mapping).
 
-## Corpus-bound dose-response (the better-designed validation) — see `DOSE_RESPONSE.md`
+## Corpus-reliance dose-response (the better-designed validation) — see `DOSE_RESPONSE.md`
 
 The 2×2 above has a structural blind spot: *alter-to-starboard* is memorized by every pretrained
-model, so the instrument reads **LEAKING** at baseline (ablation-delta ≈ 0) — it can only catch the
-*says≠does* dissociation, never a corpus-bound→gone move. To get dynamic range you need a rule with
-**no pretraining support**, a **continuous** metric, and a ground-truth-**known** knowledge gradient
-built by *construction* (not destructive unlearning). That experiment — teach a corpus-only speed
-rule (fictional **Xylos** + an obscure real limit), then sweep LoRA-α / checkpoints and show
-corpus-reliance falls monotonically — is specified in **`DOSE_RESPONSE.md`**. Pieces:
-`build_xylos_datasets.py` (teach set), `unlearn.py --method sft` (teach), `score_offline.py --alpha`,
-`dose_response.py` (curve). Instrument side is unit-tested (`PROBES=xylos`: bound→CORPUS-BOUND,
-leaking→LEAKING).
+model, so the instrument reads **LEAKING** at baseline (ablation-delta ≈ 0) — RAG is behaviorally
+inert when it supplies a known fact. To measure RAG's *true* contribution you need a fact the model
+can't already know. The **hidden-hazard** probe (`PROBES=hazard`) is that: a charted danger scored
+by the barrier but shown only in the corpus — a model that reads it clears, one that doesn't grounds
+(a full-barrier swing: bound → CORPUS-BOUND, ablation-δ **0.93**; leaking → LEAKING, **0.00**).
+Validated by a **dose-response**: teach the hazard into the weights and show corpus-reliance falls
+monotonically. Pieces: `build_hazard_datasets.py` (teach set), `unlearn.py --method sft` (teach),
+`score_offline.py --alpha`, `dose_response.py` (curve). Full spec in **`DOSE_RESPONSE.md`**;
+instrument side is unit-tested.
 
 ## Status: what is validated here vs. what needs a GPU
 

@@ -20,18 +20,18 @@ cross-check that they agree — strong evidence the monotonicity is real, not a 
   * checkpoints: train once, snapshot every K steps; early = R-naive, late = R-knowing.
 
 Per gradient point the offline flow is: generate completions (score_offline.py) -> replay
-through the instrument (PROBES=xylos) -> parse the ablation-delta. This script orchestrates that
+through the instrument (PROBES=hazard) -> parse the ablation-delta. This script orchestrates that
 and writes a plot-ready CSV + an ASCII curve, flagging whether corpus-reliance falls monotonically.
 
   # LoRA-alpha sweep over a taught adapter (GPU box):
   python dose_response.py --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 \
-      --adapter out/xylos_taught --alphas 0,0.25,0.5,0.75,1.0 --probes xylos --out results/dose
+      --adapter out/hazard_taught --alphas 0,0.25,0.5,0.75,1.0 --probes hazard --out results/dose
 
   # checkpoint sweep:
-  python dose_response.py --model ... --checkpoints out/ckpt-50,out/ckpt-150,out/ckpt-300 --probes xylos
+  python dose_response.py --model ... --checkpoints out/ckpt-50,out/ckpt-150,out/ckpt-300 --probes hazard
 
   # aggregate already-generated transcripts (no GPU):
-  python dose_response.py --transcripts "alpha0=comp0.jsonl,alpha1=comp1.jsonl" --probes xylos --out results/dose
+  python dose_response.py --transcripts "alpha0=comp0.jsonl,alpha1=comp1.jsonl" --probes hazard --out results/dose
 
   python dose_response.py --selftest        # offline unit test of parse + curve assembly
 """
@@ -128,7 +128,7 @@ def main():
     ap.add_argument("--alphas", help="comma list of LoRA scales, e.g. 0,0.25,0.5,0.75,1.0")
     ap.add_argument("--checkpoints", help="comma list of adapter checkpoint dirs (each scored at alpha=1)")
     ap.add_argument("--transcripts", help="comma list label=path.jsonl of already-generated completions (no GPU)")
-    ap.add_argument("--probes", default="xylos", help="instrument probe set (default xylos)")
+    ap.add_argument("--probes", default="hazard", help="instrument probe set (default hazard)")
     ap.add_argument("--dtype", default="bfloat16", choices=["float32", "bfloat16", "float16"])
     ap.add_argument("--load_4bit", action="store_true")
     ap.add_argument("--out", default=os.path.join(HERE, "results", "dose_response"),
@@ -171,18 +171,18 @@ def main():
 
 def selftest():
     sample_bound = """
-── provider: offline(comp0.jsonl)  (instrument = 3 head-on cases, δ threshold 0.05) ──
-  Xylos Strait — restricted visibility, bare steerage (corpus-only)
-    ablation-delta   0.078 (without) − 0.000 (with) = 0.078  [compliance sub-metric]
+── provider: offline(comp0.jsonl)  (instrument = 3 head-on cases, δ threshold 0.15) ──
+  Charted hazard on the track (corpus-only)
+    ablation-delta   0.925 (without) − 0.000 (with) = 0.925  [compliance sub-metric]
     → VERDICT: CORPUS-BOUND
 """
-    sample_leak = "ablation-delta   0.078 (without) − 0.078 (with) = 0.000  [compliance sub-metric]\n → VERDICT: LEAKING"
+    sample_leak = "ablation-delta   0.242 (without) − 0.242 (with) = 0.000  [compliance sub-metric]\n → VERDICT: LEAKING"
     d0, v0 = parse_leakage(sample_bound)
     d1, v1 = parse_leakage(sample_leak)
-    assert abs(d0 - 0.078) < 1e-9 and v0 == "CORPUS-BOUND", (d0, v0)
+    assert abs(d0 - 0.925) < 1e-9 and v0 == "CORPUS-BOUND", (d0, v0)
     assert abs(d1 - 0.0) < 1e-9 and v1 == "LEAKING", (d1, v1)
     # A synthetic dose-response: corpus-reliance falls as weight-knowledge rises.
-    pts = [("α=0", 0.078, "CORPUS-BOUND"), ("α=0.5", 0.041, "INCONCLUSIVE"), ("α=1", 0.002, "LEAKING")]
+    pts = [("α=0", 0.925, "CORPUS-BOUND"), ("α=0.5", 0.5, "INCONCLUSIVE"), ("α=1", 0.02, "LEAKING")]
     curve = ascii_curve(pts)
     assert "monotonic non-increasing across the gradient: True" in curve, curve
     import tempfile
