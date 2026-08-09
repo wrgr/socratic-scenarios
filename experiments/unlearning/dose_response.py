@@ -21,7 +21,7 @@ cross-check that they agree — strong evidence the monotonicity is real, not a 
 
 Per gradient point the offline flow is: generate completions (score_offline.py) -> replay
 through the instrument (PROBES=xylos) -> parse the ablation-delta. This script orchestrates that
-and writes a CSV + an ASCII curve (always) and a PNG (if matplotlib is present).
+and writes a plot-ready CSV + an ASCII curve, flagging whether corpus-reliance falls monotonically.
 
   # LoRA-alpha sweep over a taught adapter (GPU box):
   python dose_response.py --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 \
@@ -84,29 +84,6 @@ def write_csv(path, points):
         w.writerow(["gradient_point", "corpus_reliance_ablation_delta", "verdict"])
         for label, d, v in points:
             w.writerow([label, f"{d:.6f}", v])
-
-
-def maybe_plot(path, points):
-    try:
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-    except Exception:
-        print("(matplotlib not available — wrote CSV + ASCII curve only; pip install matplotlib for a PNG)")
-        return None
-    xs = list(range(len(points)))
-    ys = [d for _, d, _ in points]
-    fig, ax = plt.subplots(figsize=(6, 4))
-    ax.plot(xs, ys, "o-", color="#1f77b4")
-    ax.set_xticks(xs)
-    ax.set_xticklabels([lbl for lbl, _, _ in points], rotation=30, ha="right")
-    ax.set_ylabel("corpus-reliance (ablation-delta)")
-    ax.set_xlabel("weight-level knowledge of the rule  →")
-    ax.set_title("Dose-response: corpus-reliance vs. weight-knowledge")
-    ax.grid(True, alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(path, dpi=140)
-    return path
 
 
 def dump_prompts(prompts_path, probes):
@@ -188,9 +165,8 @@ def main():
 
     csv_path = args.out + ".csv"
     write_csv(csv_path, points)
-    png = maybe_plot(args.out + ".png", points)
     print("\n" + ascii_curve(points))
-    print(f"\nwrote {csv_path}" + (f" and {png}" if png else ""))
+    print(f"\nwrote {csv_path}  (plot-ready: gradient_point, corpus_reliance, verdict)")
 
 
 def selftest():

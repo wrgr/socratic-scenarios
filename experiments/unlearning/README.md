@@ -95,36 +95,18 @@ unlearning failed / left latent knowledge — and the same instrument flags it
 (weight-level leakage). Partial/interpolated unlearning yields a competence **gradient**
 (a weight-level instance of the C2 KC→metric mapping).
 
-## Corpus-bound arm — the Xylos experiment (`build_xylos_datasets.py`, `PROBES=xylos`)
+## Corpus-bound dose-response (the better-designed validation) — see `DOSE_RESPONSE.md`
 
-The 2×2 above has a structural blind spot: *alter-to-starboard* is memorized by every
-pretrained model, so the instrument reads **LEAKING** at baseline (ablation-delta ≈ 0) and the
-cell **cannot** travel corpus-bound→gone no matter what unlearning does — it can only ever
-catch the *says≠does* dissociation (the model stops **saying** "starboard" while still **turning**
-starboard). The Bedrock sweep confirms this: every frontier model reads LEAKING on standard
-COLREG. To get real dynamic range you need a rule with **no pretraining support**.
-
-The **Xylos Strait** is that rule: a fictional jurisdiction that requires **bare steerage**
-(≤ ⅓ full speed) in restricted visibility — stricter than the generic "safe speed" every model
-knows, and on the **speed** axis (not steering, so no dangerous port-inversion). A model can
-comply only by having read the corpus. The instrument scores it via `PROBES=xylos` (already
-implemented + unit-tested: `src/engine/colreg-sim` `xylos-steerage` check, `xylosSpeedProbe`;
-the mock corpus-bound learner reads CORPUS-BOUND, the leaking learner reads LEAKING).
-
-Three phases (this script builds only the data):
-
-```bash
-python build_xylos_datasets.py                 # xylos_{teach,forget,retain,audit}.jsonl
-# 1. TEACH    — SFT the base model on xylos_teach.jsonl so it becomes corpus-bound on the rule
-# 2. CONFIRM  — score base vs. taught with PROBES=xylos (offline 2×2); taught → CORPUS-BOUND
-# 3. UNLEARN  — forget xylos_forget.jsonl (retain xylos_retain.jsonl); score again → should move
-#               CORPUS-BOUND → gone. Benign relearning tests gone-vs-suppressed as in the primary arm.
-```
-
-`xylos_retain.jsonl` is generic fog/safe-speed seamanship that never states the bare-steerage
-threshold, so removing the Xylos rule need not damage generic restricted-visibility competence.
-The forget target (`xylos_forget.jsonl`) is the taught fact itself — you SFT it in, then remove
-it — the clean TOFU-style inject→unlearn design the primary (pretrained-knowledge) arm can't have.
+The 2×2 above has a structural blind spot: *alter-to-starboard* is memorized by every pretrained
+model, so the instrument reads **LEAKING** at baseline (ablation-delta ≈ 0) — it can only catch the
+*says≠does* dissociation, never a corpus-bound→gone move. To get dynamic range you need a rule with
+**no pretraining support**, a **continuous** metric, and a ground-truth-**known** knowledge gradient
+built by *construction* (not destructive unlearning). That experiment — teach a corpus-only speed
+rule (fictional **Xylos** + an obscure real limit), then sweep LoRA-α / checkpoints and show
+corpus-reliance falls monotonically — is specified in **`DOSE_RESPONSE.md`**. Pieces:
+`build_xylos_datasets.py` (teach set), `unlearn.py --method sft` (teach), `score_offline.py --alpha`,
+`dose_response.py` (curve). Instrument side is unit-tested (`PROBES=xylos`: bound→CORPUS-BOUND,
+leaking→LEAKING).
 
 ## Status: what is validated here vs. what needs a GPU
 

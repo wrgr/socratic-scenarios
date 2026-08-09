@@ -40,13 +40,9 @@ known-groups >> many anecdotal cells. Unlearning becomes at most *one point* (th
 ### Two rules (synthetic first, real as validation)
 
 - **Synthetic — the Xylos Strait** (`build_xylos_datasets.py`; `PROBES=xylos`): a fictional
-  jurisdiction requiring **bare steerage** (≤ ⅓ speed) in restricted visibility. Guaranteed
-  not-pretrained, fully controlled, cheapest. Proves the curve exists.
-- **Real — an obscure posted speed limit** (external-validity check): a genuine local/VTS speed
-  limit on the *same speed axis* (`scenario.localSpeedLimit`), e.g. a specific canal/strait/harbour
-  limit. **Selection procedure (required):** closed-book-probe several candidate limits on the base
-  model; **keep only those the base gets wrong** (else it's already leaked and useless as a
-  corpus-bound target). Report which candidates were screened out — that screening is itself data.
+  jurisdiction requiring **bare steerage** (≤ ⅓ speed) in restricted visibility. Not-pretrained,
+  controlled, cheapest — proves the curve exists.
+- **Real — an obscure posted speed limit** on the same axis — external validity (see "The real leg").
 
 ### Two gradients (cross-checked)
 
@@ -57,29 +53,40 @@ known-groups >> many anecdotal cells. Unlearning becomes at most *one point* (th
   gradient-method artifact. (α-scaling is only *approximately* linear in "knowledge" — the
   checkpoint sweep is the more principled exposure gradient; agreement between them is the point.)
 
-## The run
+## The run (synthetic leg)
 
 ```bash
-# 0. data (already runnable)
-python build_xylos_datasets.py                    # xylos_{teach,forget,retain,audit}.jsonl
+# 0. teach set
+python build_xylos_datasets.py                          # data/xylos_teach.jsonl
 
-# 1. TEACH — SFT the base on xylos_teach.jsonl to inject R.  [needs a thin SFT step — see below]
-#    (produces out/xylos_taught, and/or checkpoints out/ckpt-*)
+# 1. TEACH — SFT the rule in (reuses unlearn.py; --save_every gives the checkpoint gradient)
+python unlearn.py --method sft --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 \
+    --sft_file data/xylos_teach.jsonl --epochs 4 --lr 1e-4 --save_every 20 --out out/xylos_taught
 
-# 2. SWEEP — one command builds the whole curve
+# 2. SWEEP — one command per gradient builds the whole curve
 python dose_response.py --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 \
-    --adapter out/xylos_taught --alphas 0,0.25,0.5,0.75,1.0 --probes xylos \
-    --out results/dose_xylos_alpha
-# and the checkpoint cross-check:
+    --adapter out/xylos_taught --alphas 0,0.25,0.5,0.75,1.0 --probes xylos --out results/dose_alpha
 python dose_response.py --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 \
-    --checkpoints out/ckpt-50,out/ckpt-150,out/ckpt-300,out/ckpt-600 --probes xylos \
-    --out results/dose_xylos_ckpt
-# -> results/*.csv + *.png + an ASCII curve, flagging monotonic non-increasing.
+    --checkpoints out/xylos_taught/ckpt-20,out/xylos_taught/ckpt-60,out/xylos_taught/ckpt-120 \
+    --probes xylos --out results/dose_ckpt
+# -> results/*.csv + an ASCII curve, flagging monotonic non-increasing. Plot from the CSV.
 ```
 
-**Still required: a teach (SFT) step.** `unlearn.py` does forget/retain, not plain injection. The
-teach step is standard next-token SFT on `xylos_teach.jsonl` (LoRA, same `_model.py` loader). It is
-deliberately *not* written here to avoid shipping an untested trainer — ask and it's a thin wrapper.
+## The real leg (external validity)
+
+Same speed axis (`scenario.localSpeedLimit`), a genuine posted limit instead of a fictional one.
+Two ways, cheapest first:
+
+- **Observational (no training).** Pick several real local/VTS/canal speed limits; **closed-book
+  probe the base** on each. It will know some (→ *leaking* group) and not others (→ *corpus-bound*
+  group). Measure corpus-reliance per limit and check it's low where the base knows the number and
+  high where it doesn't. A ready-made known-groups test — no fine-tuning.
+- **Controlled.** Teach one unknown real limit exactly like Xylos and run the α/checkpoint sweep.
+
+**Screening is required either way:** a limit the base already produces closed-book is leaked and
+useless as a corpus-bound target — drop it, and *report which candidates were screened out* (that's
+data). Do not hard-code specific real speed numbers as fact here; take the number from the local
+authority and put it in the corpus — the experiment only needs the base not to already know it.
 
 ## What would refute the instrument (state it up front)
 
