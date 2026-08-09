@@ -45,6 +45,9 @@ The gradient is built by teaching the hazard fact into the weights. The prompt r
 (taught) supply the fact that a wreck is there. As the model memorizes it, it needs the corpus
 less → corpus-reliance → 0.
 
+**In Colab:** open `dose_response_colab.ipynb` (GPU runtime) — it clones the branch, installs deps,
+and runs build → teach → α-sweep → curve end to end. Locally:
+
 ```bash
 # 0. teach set (the location -> hazard fact, many phrasings)
 python build_hazard_datasets.py                         # data/hazard_teach.jsonl
