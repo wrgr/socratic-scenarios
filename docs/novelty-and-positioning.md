@@ -38,7 +38,11 @@ it relied on. No context-attribution method has that weight-level ground truth.
 - The **hidden-hazard probe + dose-response** (`experiments/unlearning`, `PROBES=hazard`) is the
   *validation* that the necessity measure is real (teach a fact in → reliance falls; remove it → rises).
 - The **unlearning arm** is the second, noisier direction of that same weight-level calibration — **supporting evidence, not the headline.**
-- The **localization** half of C1 (§8, Experiment 3 below) is the product demo and is currently under-built — resurrect it.
+- The **localization** half of C1 (§8, Experiment 3) is the product demo (`PROBES=all` corpus-value audit).
+
+> **Experiment register & status — see [`docs/experiment-status.md`](experiment-status.md).** That
+> one page is the canonical "what each experiment is, what we have, what's next," with the critical
+> path. Keep it current; if this box and that page ever disagree on status, the register wins.
 
 Everything below is the detailed prior-art scan and evidence checklist behind this summary; if it
 disagrees with this box, this box wins.
