@@ -58,7 +58,11 @@ const fogScenarios = restrictedBenchmark.filter((s) => ['RV-01', 'RV-02', 'RV-03
 // This is the one probe designed to read CORPUS-BOUND on a real model (the threshold is not
 // memorizable), giving the instrument the dynamic range the standard, universally-leaked rules
 // lack. Same fog geometry, tagged `jurisdiction:'xylos'` so the stricter compliance check applies.
-const xylosFogScenarios = fogScenarios.map((s) => ({ ...s, id: s.id.replace(/^RV/, 'XY'), jurisdiction: 'xylos' as const }));
+const xylosFogScenarios = fogScenarios.map((s) => ({
+  ...s,
+  id: s.id.replace(/^RV/, 'XY'),
+  localSpeedLimit: { targetFactor: 0.33, label: 'Xylos bare steerage' },
+}));
 const xylosRuleNode: AJPNode = {
   id: 'RULE-XYLOS-SPEED',
   type: 'TheoryReference',
@@ -84,6 +88,12 @@ const cfg: LeakageConfig = isXylos
       scenarios: xylosFogScenarios,
       probes,
       closedBookScenario: xylosFogScenarios[0],
+      // The local-speed rule is scored GRADED (severity ∝ how far over the limit), so its
+      // corpus-reliance delta lives on a smaller scale than the binary compliance penalty the
+      // default 0.15 threshold was set for — a bound learner's fallback (generic ~0.5) is only
+      // *partially* over a ~0.33 limit. Calibrate the discrete threshold to the graded scale;
+      // the dose-response reads the CONTINUOUS delta, for which this threshold is only a label.
+      deltaThreshold: 0.05,
     }
   : {
       corpusNodes: colregDomain.nodes,

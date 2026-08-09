@@ -83,6 +83,18 @@ export interface RuleCheck {
   pass: boolean;
   detail: string;
   weight: number;
+  /**
+   * Optional GRADED failure severity in [0,1] (0 = fully compliant, 1 = fully failed). When
+   * present it drives the penalty instead of the binary `pass`, giving a check dynamic range —
+   * e.g. a speed-limit check scores how far *over* the limit the vessel was, not just over/under.
+   * Absent ⇒ the check contributes `pass ? 0 : 1` as before (fully backward-compatible).
+   */
+  severity?: number;
+}
+
+/** A check's contribution to the penalty: graded `severity` if set, else binary pass/fail. */
+function checkSeverity(c: RuleCheck): number {
+  return c.severity !== undefined ? Math.max(0, Math.min(1, c.severity)) : c.pass ? 0 : 1;
 }
 
 export interface ComplianceReport {
@@ -97,10 +109,6 @@ const SUBSTANTIAL = 20 * DEG; // "readily apparent" alteration
 const ACTION_DETECT = 5 * DEG; // threshold to say a maneuver has begun
 const EARLY_TCPA = 6 * 60; // s — action taken with less TCPA than this is "late"
 const SAFE_SPEED_FACTOR = 0.75; // restricted-vis speed must drop below this × v0
-// Xylos jurisdiction: "bare steerage" is stricter than a generic safe-speed reduction — a
-// vessel must drop to ≤ this × v0. A generic fog reduction (~0.5) FAILS this, so the check has
-// dynamic range a memorized rule lacks: only a model that read the Xylos rule complies.
-const XYLOS_STEERAGE_FACTOR = 0.4;
 
 /** Index of the highest-risk target at t0. */
 export function primaryTarget(scenario: SimScenario): number {
@@ -153,13 +161,13 @@ export function scoreCompliance(scenario: SimScenario, traj: Trajectory): Compli
   const restricted: boolean = scenario.visibility === ('restricted' as Visibility);
   const substantialAction = Math.abs(netHeading) >= SUBSTANTIAL || speedReduced;
   const checks: RuleCheck[] = restricted
-    ? restrictedChecks({ cls, acted, turnedPort, turnedToward: cls.targetOnStarboard ? turnedStarboard : turnedPort, substantialAction, speedReduced, tcpaAtAction, xylos: scenario.jurisdiction === 'xylos', minSpeedFactor })
+    ? restrictedChecks({ cls, acted, turnedPort, turnedToward: cls.targetOnStarboard ? turnedStarboard : turnedPort, substantialAction, speedReduced, tcpaAtAction, localSpeedLimit: scenario.localSpeedLimit, minSpeedFactor })
     : [];
 
   if (restricted) {
     const applicable = checks.filter((c) => c.applicable);
     const wSum = applicable.reduce((a, c) => a + c.weight, 0);
-    const wFail = applicable.filter((c) => !c.pass).reduce((a, c) => a + c.weight, 0);
+    const wFail = applicable.reduce((a, c) => a + c.weight * checkSeverity(c), 0);
     return { classification: cls, primaryTargetIndex: idx, checks, penalty: wSum > 0 ? wFail / wSum : 0 };
   }
 
@@ -245,7 +253,7 @@ export function scoreCompliance(scenario: SimScenario, traj: Trajectory): Compli
 
   const applicable = checks.filter((c) => c.applicable);
   const wSum = applicable.reduce((a, c) => a + c.weight, 0);
-  const wFail = applicable.filter((c) => !c.pass).reduce((a, c) => a + c.weight, 0);
+  const wFail = applicable.reduce((a, c) => a + c.weight * checkSeverity(c), 0);
   const penalty = wSum > 0 ? wFail / wSum : 0;
 
   return { classification: cls, primaryTargetIndex: idx, checks, penalty };
@@ -260,9 +268,9 @@ interface RestrictedInputs {
   substantialAction: boolean;
   speedReduced: boolean;
   tcpaAtAction: number;
-  /** Xylos jurisdiction: adds the stricter bare-steerage speed check. */
-  xylos?: boolean;
-  /** Realized min speed as a fraction of initial speed (for the Xylos steerage check). */
+  /** A local speed limit (fictional or obscure-real) that adds a stricter, graded speed check. */
+  localSpeedLimit?: { targetFactor: number; label: string };
+  /** Realized min speed as a fraction of initial speed (for the local-speed-limit check). */
   minSpeedFactor?: number;
 }
 
@@ -277,29 +285,37 @@ interface RestrictedInputs {
  * (diagnose.ts) localizes the same competence axes under either visibility.
  */
 function restrictedChecks(inp: RestrictedInputs): RuleCheck[] {
-  const { cls, acted, turnedPort, turnedToward, substantialAction, speedReduced, tcpaAtAction, xylos, minSpeedFactor } = inp;
+  const { cls, acted, turnedPort, turnedToward, substantialAction, speedReduced, tcpaAtAction, localSpeedLimit, minSpeedFactor } = inp;
   const forwardOfBeam = Math.abs(cls.relBearing) < 90 * DEG;
   const isOvertaking = cls.encounter === 'overtaking';
   const side = cls.targetOnStarboard ? 'starboard' : 'port';
 
-  // Xylos jurisdiction only: a stricter "bare steerage" speed rule (≤ XYLOS_STEERAGE_FACTOR × v0).
-  // Corpus-only — no pretraining support — so a model that reduces to a *generic* safe speed (~0.5)
-  // FAILS it. This gives the leakage instrument the dynamic range that memorized COLREG rules lack.
-  const xylosChecks: RuleCheck[] = xylos
-    ? [{
-        id: 'xylos-steerage',
-        label: 'Xylos: reduce to bare steerage in restricted visibility',
-        applicable: true,
-        pass: (minSpeedFactor ?? 1) <= XYLOS_STEERAGE_FACTOR,
-        detail: (minSpeedFactor ?? 1) <= XYLOS_STEERAGE_FACTOR
-          ? 'Reduced to bare steerage, as the Xylos Strait rule requires.'
-          : 'Did not reduce to bare steerage — a generic safe-speed reduction is insufficient in the Xylos Strait.',
-        weight: 0.4,
-      }]
+  // Local speed limit (corpus-only — a fictional strait or an obscure real port/VTS limit with no
+  // pretraining support). Scored GRADED: severity = how far the realized min speed sat *over* the
+  // limit, normalized by the headroom above it. A generic safe-speed reduction (~0.5) toward a
+  // strict limit (~0.33) is partially non-compliant, not a clean pass — giving the instrument the
+  // continuous dynamic range a binary memorized rule cannot, so corpus-reliance can be graded.
+  const localSpeedChecks: RuleCheck[] = localSpeedLimit
+    ? [(() => {
+        const f = minSpeedFactor ?? 1;
+        const target = localSpeedLimit.targetFactor;
+        const severity = Math.max(0, Math.min(1, (f - target) / Math.max(1e-6, 1 - target)));
+        return {
+          id: 'local-speed-limit',
+          label: `Local limit: reduce to ≤ ${Math.round(target * 100)}% speed (${localSpeedLimit.label})`,
+          applicable: true,
+          pass: severity < 0.5,
+          detail: severity <= 0
+            ? `Met the local speed limit (${localSpeedLimit.label}).`
+            : `Exceeded the local speed limit (${localSpeedLimit.label}); realized ${Math.round(f * 100)}% vs required ≤ ${Math.round(target * 100)}%.`,
+          weight: 0.4,
+          severity,
+        };
+      })()]
     : [];
 
   return [
-    ...xylosChecks,
+    ...localSpeedChecks,
     // Rule 19(d): a detected risk of collision must draw substantial avoiding action.
     {
       id: 'take-action',

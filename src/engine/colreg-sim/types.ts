@@ -66,14 +66,15 @@ export interface SimScenario {
   targets: Vessel[];
   visibility: Visibility;
   /**
-   * Optional jurisdiction tag. A jurisdiction can impose a corpus-only rule with NO
-   * pretraining support (e.g. `'xylos'` = the fictional Xylos Strait, which requires bare
-   * steerage in restricted visibility, stricter than the generic safe-speed rule). Such a
-   * rule gives the leakage instrument the dynamic range that a memorized COLREG rule cannot:
-   * a model that has never seen it can only comply by reading the corpus. `undefined` = the
-   * standard COLREG regime (no extra rule).
+   * Optional LOCAL speed limit imposed by the scenario's jurisdiction — a rule that may have NO
+   * pretraining support (a fictional strait like Xylos, or an obscure real port/VTS limit a
+   * model has not memorized). `targetFactor` is the required speed as a fraction of full sea
+   * speed (e.g. 0.33 = bare steerage). The compliance check scores how far *over* this limit the
+   * vessel was (graded), giving the leakage instrument the dynamic range a memorized COLREG rule
+   * cannot: a model that has never seen the limit can comply only by reading the corpus.
+   * `undefined` = the standard COLREG regime (generic safe-speed only).
    */
-  jurisdiction?: 'xylos';
+  localSpeedLimit?: { targetFactor: number; label: string };
   /** Simulation horizon, seconds. */
   horizonS: number;
   /** Integration timestep, seconds. */

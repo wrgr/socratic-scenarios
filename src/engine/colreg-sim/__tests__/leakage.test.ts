@@ -65,7 +65,7 @@ describe('leakage experiment — the instrument recovers the known ground truth 
 // show a corpus-bound→gone transition.
 describe('leakage — Xylos corpus-only rule gives the instrument dynamic range', () => {
   const fog = restrictedBenchmark.filter((s) => ['RV-01', 'RV-02', 'RV-03'].includes(s.id));
-  const xylosFog = fog.map((s) => ({ ...s, id: s.id.replace(/^RV/, 'XY'), jurisdiction: 'xylos' as const }));
+  const xylosFog = fog.map((s) => ({ ...s, id: s.id.replace(/^RV/, 'XY'), localSpeedLimit: { targetFactor: 0.33, label: 'Xylos bare steerage' } }));
   const xylosNode: AJPNode = {
     id: 'RULE-XYLOS-SPEED',
     type: 'TheoryReference',
@@ -74,11 +74,15 @@ describe('leakage — Xylos corpus-only rule gives the instrument dynamic range'
     confidence: 'High',
     source: 'fictional corpus-only rule',
   };
+  // Graded speed rule → smaller-scale corpus-reliance delta than the binary penalty; the
+  // discrete verdict threshold is calibrated to that scale (the dose-response uses the
+  // continuous delta directly).
   const xylosCfg: LeakageConfig = {
     corpusNodes: [...colregDomain.nodes, xylosNode],
     scenarios: xylosFog,
     probes: [xylosSpeedProbe(xylosFog[0], xylosFog)],
     closedBookScenario: xylosFog[0],
+    deltaThreshold: 0.05,
   };
 
   it('a learner that reads the Xylos rule is judged corpus-bound', async () => {
@@ -90,7 +94,7 @@ describe('leakage — Xylos corpus-only rule gives the instrument dynamic range'
     );
     const p = report.perRule[0];
     // Ablating the corpus-only rule moves the governed speed metric — it cannot be memorized.
-    expect(p.ablationDelta).toBeGreaterThan(0.15);
+    expect(p.ablationDelta).toBeGreaterThan(0.05);
     expect(report.closedBookAbstained).toBe(true);
     expect(p.verdict).toBe('corpus-bound');
   });
@@ -100,8 +104,19 @@ describe('leakage — Xylos corpus-only rule gives the instrument dynamic range'
     // bare steerage, and is invariant to the corpus → no ablation movement.
     const report = await runLeakageExperiment(leakingLearnerCompleter(), 'mock-leaking', xylosCfg);
     const p = report.perRule[0];
-    expect(p.ablationDelta).toBeLessThan(0.15);
+    expect(p.ablationDelta).toBeLessThan(0.05);
     expect(report.closedBookAbstained).toBe(false);
     expect(p.verdict).toBe('leaking');
+  });
+
+  it('corpus-reliance separates bound from leaking on the continuous (graded) delta', async () => {
+    // The dose-response's actual claim: the continuous corpus-reliance is higher for a learner
+    // that must read the rule than for one that ignores the corpus — regardless of any discrete
+    // threshold. This is the quantity the α / checkpoint sweep plots.
+    const bound = (await runLeakageExperiment(
+      boundLearnerCompleter(['RULE-COLREG-14'], ['RULE-COLREG-19'], ['RULE-XYLOS-SPEED']), 'b', xylosCfg,
+    )).perRule[0];
+    const leaking = (await runLeakageExperiment(leakingLearnerCompleter(), 'l', xylosCfg)).perRule[0];
+    expect(bound.ablationDelta).toBeGreaterThan(leaking.ablationDelta + 0.03);
   });
 });
