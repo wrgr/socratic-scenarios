@@ -1,6 +1,6 @@
 # P3 concept — Ephemeral graphs for safety-aware adaptive retrieval
 
-A novelty and design spec for the **P3** paper in [`docs/paper-portfolio.md`](paper-portfolio.md):
+A novelty and design spec for the **P3** paper in [`docs/paper-portfolio.md`](planning/paper-portfolio.md):
 the adaptive-retrieval *mechanism* paper (IR / ML-methods audience). This is to P3 what
 [`docs/novelty-and-positioning.md`](novelty-and-positioning.md) is to the flagship — a place to
 attack the idea *before* spending build effort, not a draft.

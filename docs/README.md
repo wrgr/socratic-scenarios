@@ -4,7 +4,7 @@ Durable project documentation for TeachMe / EDDIE. Prefer updating these in plac
 
 | Doc | Role |
 |---|---|
-| [whitepaper.md](whitepaper.md) | System design paper |
+| [whitepaper.md](planning/whitepaper.md) | System design paper |
 | [references.md](references.md) | Annotated bibliography |
 | [DATA_CATALOG.md](DATA_CATALOG.md) | Data-store map (graph / flow / dense) |
 | [SOURCE_PROVENANCE_AUDIT.md](SOURCE_PROVENANCE_AUDIT.md) | Source evaluation + handling decisions |
