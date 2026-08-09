@@ -71,7 +71,7 @@ export function diagnoseCorpusGaps(
     if (failsCheck(r, ['direction', 'no-port-turn'])) count.starboard += 1;
     if (failsCheck(r, ['substantial'])) count.substantial += 1;
     if (failsCheck(r, ['early'])) count.early += 1;
-    if (failsCheck(r, ['safe-speed', 'local-speed-limit'])) count.safeSpeed += 1;
+    if (failsCheck(r, ['safe-speed'])) count.safeSpeed += 1;
     // coordination: complied yet still hit someone in a multi-ship case.
     if (sc && sc.targets.length > 1 && r.metrics.incursion && r.metrics.compliancePenalty < 0.2) {
       count.coordination += 1;

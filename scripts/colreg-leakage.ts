@@ -22,7 +22,7 @@ import {
   starboardProbe,
   crossingGiveWayProbe,
   safeSpeedProbe,
-  xylosSpeedProbe,
+  hazardProbe,
   boundLearnerCompleter,
   leakingLearnerCompleter,
   geminiCompleter,
@@ -35,7 +35,7 @@ import {
 } from '../src/engine/colreg-sim';
 import type { AJPNode } from '../src/types/ajp';
 import { colregDomain } from '../src/corpus/colreg';
-import { collisionTarget, makeScenario } from '../src/corpus/colreg/benchmark-geometry';
+import { collisionTarget, makeScenario, ownship, kn } from '../src/corpus/colreg/benchmark-geometry';
 import { restrictedBenchmark } from '../src/corpus/colreg/restricted';
 
 const headOn = (id: string, range: number, speedKn: number) =>
@@ -53,47 +53,48 @@ const crossingScenarios = [crossing('XG-1', 45, 12), crossing('XG-2', 60, 11), c
 // DIFFERENT metric axis (speedFactor, not turn direction), so a genuinely independent probe.
 const fogScenarios = restrictedBenchmark.filter((s) => ['RV-01', 'RV-02', 'RV-03'].includes(s.id));
 
-// PROBES=xylos: a CORPUS-ONLY rule with no pretraining support — the fictional Xylos Strait
-// requires bare steerage in restricted visibility (stricter than the generic safe-speed rule).
-// This is the one probe designed to read CORPUS-BOUND on a real model (the threshold is not
-// memorizable), giving the instrument the dynamic range the standard, universally-leaked rules
-// lack. Same fog geometry, tagged `jurisdiction:'xylos'` so the stricter compliance check applies.
-const xylosFogScenarios = fogScenarios.map((s) => ({
-  ...s,
-  id: s.id.replace(/^RV/, 'XY'),
-  localSpeedLimit: { targetFactor: 0.33, label: 'Xylos bare steerage' },
-}));
-const xylosRuleNode: AJPNode = {
-  id: 'RULE-XYLOS-SPEED',
+// PROBES=hazard: THE corpus-reliance probe. A charted hazard sits on the ownship's track; it is
+// scored by the barrier but NOT shown to the model, so it is knowable ONLY from the corpus. A
+// model that read the corpus alters to clear; one that did not holds its default track and grounds
+// — a full-barrier swing (the largest, cleanest corpus-reliance signal, and no dangerous-refusal
+// confound since avoiding a charted danger is plainly sensible). Benign traffic (a distant vessel
+// on the far bow) keeps the scenario a routine transit so the hazard is the only thing in play.
+const HAZARD_PLACE = 'the Kessock Narrows (northbound transit)';
+const hazardScenario = (id: string, hy: number): SimScenario => ({
+  id, label: 'Transit past a charted hazard', description: '', difficulty: 'beginner',
+  location: HAZARD_PLACE, // the query cue; the hazard itself is disclosed only by the corpus
+  ownship: ownship(),
+  targets: [{ id: 'F', label: 'F', x: -9000, y: 9000, psi: Math.PI, v: kn(6), lengthM: 100 }],
+  visibility: 'clear',
+  hazards: [{ x: 0, y: hy, radiusM: 2000, label: 'charted wreck' }],
+  horizonS: 1200, dt: 4, intendedHeading: 0,
+});
+const hazardScenarios = [hazardScenario('HZ-1', 3000), hazardScenario('HZ-2', 2800), hazardScenario('HZ-3', 3200)];
+const hazardRuleNode: AJPNode = {
+  id: 'RULE-HAZARD-01',
   type: 'TheoryReference',
   content:
-    'Xylos Strait local rule — Restricted visibility: within the Xylos Strait a power-driven vessel shall reduce to bare steerage way (no more than one third of full sea speed) until the visibility clears; a generic safe-speed reduction is insufficient here.',
+    `CHARTED HAZARD — in ${HAZARD_PLACE} a wreck lies directly ahead on the track; alter course to starboard by at least 55° to pass well clear before resuming track.`,
   confidence: 'High',
-  source: 'Xylos Strait Port Authority (fictional corpus-only rule; no COLREG/pretraining source)',
+  source: 'Local notice to mariners (corpus-only; the hazard is not shown in the situation).',
 };
 
 const twoRuleProbes = [starboardProbe(scenarios[0]), crossingGiveWayProbe(crossingScenarios[0], crossingScenarios)];
-const isXylos = process.env.PROBES === 'xylos';
-const probes = isXylos
-  ? [xylosSpeedProbe(xylosFogScenarios[0], xylosFogScenarios)]
+const isHazard = process.env.PROBES === 'hazard';
+const probes = isHazard
+  ? [hazardProbe(hazardScenarios[0], hazardScenarios)]
   : process.env.PROBES === 'all'
     ? [...twoRuleProbes, safeSpeedProbe(fogScenarios[0], fogScenarios)]
     : process.env.PROBES === 'two'
       ? twoRuleProbes
       : [starboardProbe(scenarios[0])];
 
-const cfg: LeakageConfig = isXylos
+const cfg: LeakageConfig = isHazard
   ? {
-      corpusNodes: [...colregDomain.nodes, xylosRuleNode],
-      scenarios: xylosFogScenarios,
+      corpusNodes: [...colregDomain.nodes, hazardRuleNode],
+      scenarios: hazardScenarios,
       probes,
-      closedBookScenario: xylosFogScenarios[0],
-      // The local-speed rule is scored GRADED (severity ∝ how far over the limit), so its
-      // corpus-reliance delta lives on a smaller scale than the binary compliance penalty the
-      // default 0.15 threshold was set for — a bound learner's fallback (generic ~0.5) is only
-      // *partially* over a ~0.33 limit. Calibrate the discrete threshold to the graded scale;
-      // the dose-response reads the CONTINUOUS delta, for which this threshold is only a label.
-      deltaThreshold: 0.05,
+      closedBookScenario: hazardScenarios[0],
     }
   : {
       corpusNodes: colregDomain.nodes,
@@ -219,9 +220,13 @@ async function main() {
   }
 
   console.log('Deterministic dry-run (no key needed) — the instrument must recover the known ground truth:');
-  // The bound learner reads whichever rules the mode's corpus provides (Rule 14 steering, Rule 19
-  // generic safe-speed, and — under PROBES=xylos — the corpus-only Xylos bare-steerage rule).
-  print(await runLeakageExperiment(boundLearnerCompleter(['RULE-COLREG-14'], ['RULE-COLREG-19'], ['RULE-XYLOS-SPEED']), 'mock: corpus-bound learner', cfg));
+  // The bound learner reads whichever rules the mode's corpus provides. Under PROBES=hazard it
+  // reads ONLY the charted-hazard rule (a benign transit — no give-way steering to apply), so with
+  // the hazard ablated it holds its track and grounds; otherwise it reads Rule 14 / Rule 19.
+  const boundMock = isHazard
+    ? boundLearnerCompleter([], [], ['RULE-HAZARD-01'])
+    : boundLearnerCompleter(['RULE-COLREG-14'], ['RULE-COLREG-19']);
+  print(await runLeakageExperiment(boundMock, 'mock: corpus-bound learner', cfg));
   print(await runLeakageExperiment(leakingLearnerCompleter(), 'mock: leaking learner', cfg));
 
   const real = realCompleter();

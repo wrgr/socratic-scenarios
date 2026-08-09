@@ -2,15 +2,15 @@ import { describe, it, expect } from 'vitest';
 import {
   runLeakageExperiment,
   starboardProbe,
-  xylosSpeedProbe,
+  hazardProbe,
   boundLearnerCompleter,
   leakingLearnerCompleter,
   type LeakageConfig,
+  type SimScenario,
 } from '../index';
 import type { AJPNode } from '../../../types/ajp';
 import { colregDomain } from '../../../corpus/colreg';
-import { collisionTarget, makeScenario } from '../../../corpus/colreg/benchmark-geometry';
-import { restrictedBenchmark } from '../../../corpus/colreg/restricted';
+import { collisionTarget, makeScenario, ownship, kn } from '../../../corpus/colreg/benchmark-geometry';
 
 const headOn = (id: string, range: number, speedKn: number) =>
   makeScenario(id, 'Head-on', 'beginner', [collisionTarget('A', 0, range, speedKn)]);
@@ -58,65 +58,51 @@ describe('leakage experiment — the instrument recovers the known ground truth 
   });
 });
 
-// The Xylos probe is the one designed to read CORPUS-BOUND on a rule with NO pretraining support
-// (a fictional-jurisdiction bare-steerage speed rule). Unlike the standard rules — which every
-// pretrained model leaks, leaving the 2×2 with no dynamic range — a model can comply here ONLY by
-// reading the corpus, so ablation moves the governed metric. This is what lets an unlearning run
-// show a corpus-bound→gone transition.
-describe('leakage — Xylos corpus-only rule gives the instrument dynamic range', () => {
-  const fog = restrictedBenchmark.filter((s) => ['RV-01', 'RV-02', 'RV-03'].includes(s.id));
-  const xylosFog = fog.map((s) => ({ ...s, id: s.id.replace(/^RV/, 'XY'), localSpeedLimit: { targetFactor: 0.33, label: 'Xylos bare steerage' } }));
-  const xylosNode: AJPNode = {
-    id: 'RULE-XYLOS-SPEED',
+// THE corpus-reliance probe: a hidden hazard the model can know ONLY from the corpus. This is the
+// large-effect design — a learner that reads the corpus alters to clear; one that does not holds
+// its default track and grounds (full barrier). The swing is the whole metric range, not a sliver.
+describe('leakage — a hidden hazard is the large-effect corpus-reliance probe', () => {
+  const hazardScenario = (id: string, hy: number): SimScenario => ({
+    id, label: 'Transit past a charted hazard', description: '', difficulty: 'beginner',
+    ownship: ownship(),
+    targets: [{ id: 'F', label: 'F', x: -9000, y: 9000, psi: Math.PI, v: kn(6), lengthM: 100 }],
+    visibility: 'clear',
+    hazards: [{ x: 0, y: hy, radiusM: 2000, label: 'charted wreck' }],
+    horizonS: 1200, dt: 4, intendedHeading: 0,
+  });
+  const scns = [hazardScenario('HZ-1', 3000), hazardScenario('HZ-2', 2800), hazardScenario('HZ-3', 3200)];
+  const hazardNode: AJPNode = {
+    id: 'RULE-HAZARD-01',
     type: 'TheoryReference',
-    content:
-      'Xylos Strait local rule — Restricted visibility: within the Xylos Strait a power-driven vessel shall reduce to bare steerage way (no more than one third of full sea speed) until the visibility clears; a generic safe-speed reduction is insufficient here.',
+    content: 'CHARTED HAZARD — a wreck lies directly ahead on your track; alter course to starboard by at least 55° to pass well clear.',
     confidence: 'High',
-    source: 'fictional corpus-only rule',
+    source: 'corpus-only notice to mariners',
   };
-  // Graded speed rule → smaller-scale corpus-reliance delta than the binary penalty; the
-  // discrete verdict threshold is calibrated to that scale (the dose-response uses the
-  // continuous delta directly).
-  const xylosCfg: LeakageConfig = {
-    corpusNodes: [...colregDomain.nodes, xylosNode],
-    scenarios: xylosFog,
-    probes: [xylosSpeedProbe(xylosFog[0], xylosFog)],
-    closedBookScenario: xylosFog[0],
-    deltaThreshold: 0.05,
+  const cfg: LeakageConfig = {
+    corpusNodes: [...colregDomain.nodes, hazardNode],
+    scenarios: scns,
+    probes: [hazardProbe(scns[0], scns)],
+    closedBookScenario: scns[0],
   };
+  // The bound learner reads ONLY the hazard rule (benign transit, no give-way steering to apply),
+  // so with the hazard ablated it holds and grounds.
+  const boundMock = () => boundLearnerCompleter([], [], ['RULE-HAZARD-01']);
 
-  it('a learner that reads the Xylos rule is judged corpus-bound', async () => {
-    // The bound learner must be given the Xylos rule id to read bare steerage from the corpus.
-    const report = await runLeakageExperiment(
-      boundLearnerCompleter(['RULE-COLREG-14'], ['RULE-COLREG-19'], ['RULE-XYLOS-SPEED']),
-      'mock-bound',
-      xylosCfg,
-    );
+  it('a learner that reads the hazard is judged corpus-bound, with a LARGE ablation-delta', async () => {
+    const report = await runLeakageExperiment(boundMock(), 'mock-bound', cfg);
     const p = report.perRule[0];
-    // Ablating the corpus-only rule moves the governed speed metric — it cannot be memorized.
-    expect(p.ablationDelta).toBeGreaterThan(0.05);
+    // Ablating the corpus-only hazard makes the bound learner ground — a full-barrier swing, an
+    // order of magnitude past the discrete threshold (not a sliver).
+    expect(p.ablationDelta).toBeGreaterThan(0.5);
     expect(report.closedBookAbstained).toBe(true);
     expect(p.verdict).toBe('corpus-bound');
   });
 
-  it('a prior-driven learner (generic reduction) is judged leaking on the Xylos rule', async () => {
-    // The leaking learner reduces to a generic safe speed (~0.5) from priors, which does NOT meet
-    // bare steerage, and is invariant to the corpus → no ablation movement.
-    const report = await runLeakageExperiment(leakingLearnerCompleter(), 'mock-leaking', xylosCfg);
+  it('a prior-driven learner (ignores the corpus) grounds either way → leaking, ~0 delta', async () => {
+    const report = await runLeakageExperiment(leakingLearnerCompleter(), 'mock-leaking', cfg);
     const p = report.perRule[0];
-    expect(p.ablationDelta).toBeLessThan(0.05);
+    expect(Math.abs(p.ablationDelta)).toBeLessThan(0.1);
     expect(report.closedBookAbstained).toBe(false);
     expect(p.verdict).toBe('leaking');
-  });
-
-  it('corpus-reliance separates bound from leaking on the continuous (graded) delta', async () => {
-    // The dose-response's actual claim: the continuous corpus-reliance is higher for a learner
-    // that must read the rule than for one that ignores the corpus — regardless of any discrete
-    // threshold. This is the quantity the α / checkpoint sweep plots.
-    const bound = (await runLeakageExperiment(
-      boundLearnerCompleter(['RULE-COLREG-14'], ['RULE-COLREG-19'], ['RULE-XYLOS-SPEED']), 'b', xylosCfg,
-    )).perRule[0];
-    const leaking = (await runLeakageExperiment(leakingLearnerCompleter(), 'l', xylosCfg)).perRule[0];
-    expect(bound.ablationDelta).toBeGreaterThan(leaking.ablationDelta + 0.03);
   });
 });

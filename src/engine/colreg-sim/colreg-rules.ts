@@ -137,8 +137,31 @@ export function scoreCompliance(scenario: SimScenario, traj: Trajectory): Compli
   const turnedPort = netHeading < -ACTION_DETECT;
   const minSpeed = Math.min(...traj.map((s) => s.own.v));
   const speedReduced = minSpeed <= SAFE_SPEED_FACTOR * own0.v;
-  const minSpeedFactor = own0.v > 0 ? minSpeed / own0.v : 1; // realized fraction of initial speed
   const acted = Math.abs(netHeading) > ACTION_DETECT || minSpeed < 0.95 * own0.v;
+
+  // Hazard-clearance (corpus-only, both visibilities): did the track clear the charted hazards?
+  // This is the large-effect corpus-reliance check — a model that never read the corpus grounds.
+  // Weight dominates so grounding drives the compliance penalty to ~1, clearing it to ~0.
+  let minHazardClearance = Infinity;
+  for (const s of traj) {
+    for (const hz of scenario.hazards ?? []) {
+      const d = Math.hypot(s.own.x - hz.x, s.own.y - hz.y) / hz.radiusM;
+      if (d < minHazardClearance) minHazardClearance = d;
+    }
+  }
+  const hazardChecks: RuleCheck[] = scenario.hazards?.length
+    ? [{
+        id: 'hazard-clearance',
+        label: 'Clear the charted hazard (corpus-only)',
+        applicable: true,
+        pass: minHazardClearance >= 1,
+        detail: minHazardClearance >= 1
+          ? 'Cleared the charted hazard.'
+          : 'Stood into a charted hazard — grounding.',
+        weight: 2.0, // safety-critical: dominates the penalty when a hazard is in play
+        severity: minHazardClearance >= 1 ? 0 : Math.max(0, Math.min(1, 1 - minHazardClearance)),
+      }]
+    : [];
 
   // When did the maneuver begin, and what was TCPA then?
   let tcpaAtAction = Infinity;
@@ -161,8 +184,8 @@ export function scoreCompliance(scenario: SimScenario, traj: Trajectory): Compli
   const restricted: boolean = scenario.visibility === ('restricted' as Visibility);
   const substantialAction = Math.abs(netHeading) >= SUBSTANTIAL || speedReduced;
   const checks: RuleCheck[] = restricted
-    ? restrictedChecks({ cls, acted, turnedPort, turnedToward: cls.targetOnStarboard ? turnedStarboard : turnedPort, substantialAction, speedReduced, tcpaAtAction, localSpeedLimit: scenario.localSpeedLimit, minSpeedFactor })
-    : [];
+    ? [...hazardChecks, ...restrictedChecks({ cls, acted, turnedPort, turnedToward: cls.targetOnStarboard ? turnedStarboard : turnedPort, substantialAction, speedReduced, tcpaAtAction })]
+    : [...hazardChecks];
 
   if (restricted) {
     const applicable = checks.filter((c) => c.applicable);
@@ -268,10 +291,6 @@ interface RestrictedInputs {
   substantialAction: boolean;
   speedReduced: boolean;
   tcpaAtAction: number;
-  /** A local speed limit (fictional or obscure-real) that adds a stricter, graded speed check. */
-  localSpeedLimit?: { targetFactor: number; label: string };
-  /** Realized min speed as a fraction of initial speed (for the local-speed-limit check). */
-  minSpeedFactor?: number;
 }
 
 /**
@@ -285,37 +304,12 @@ interface RestrictedInputs {
  * (diagnose.ts) localizes the same competence axes under either visibility.
  */
 function restrictedChecks(inp: RestrictedInputs): RuleCheck[] {
-  const { cls, acted, turnedPort, turnedToward, substantialAction, speedReduced, tcpaAtAction, localSpeedLimit, minSpeedFactor } = inp;
+  const { cls, acted, turnedPort, turnedToward, substantialAction, speedReduced, tcpaAtAction } = inp;
   const forwardOfBeam = Math.abs(cls.relBearing) < 90 * DEG;
   const isOvertaking = cls.encounter === 'overtaking';
   const side = cls.targetOnStarboard ? 'starboard' : 'port';
 
-  // Local speed limit (corpus-only — a fictional strait or an obscure real port/VTS limit with no
-  // pretraining support). Scored GRADED: severity = how far the realized min speed sat *over* the
-  // limit, normalized by the headroom above it. A generic safe-speed reduction (~0.5) toward a
-  // strict limit (~0.33) is partially non-compliant, not a clean pass — giving the instrument the
-  // continuous dynamic range a binary memorized rule cannot, so corpus-reliance can be graded.
-  const localSpeedChecks: RuleCheck[] = localSpeedLimit
-    ? [(() => {
-        const f = minSpeedFactor ?? 1;
-        const target = localSpeedLimit.targetFactor;
-        const severity = Math.max(0, Math.min(1, (f - target) / Math.max(1e-6, 1 - target)));
-        return {
-          id: 'local-speed-limit',
-          label: `Local limit: reduce to ≤ ${Math.round(target * 100)}% speed (${localSpeedLimit.label})`,
-          applicable: true,
-          pass: severity < 0.5,
-          detail: severity <= 0
-            ? `Met the local speed limit (${localSpeedLimit.label}).`
-            : `Exceeded the local speed limit (${localSpeedLimit.label}); realized ${Math.round(f * 100)}% vs required ≤ ${Math.round(target * 100)}%.`,
-          weight: 0.4,
-          severity,
-        };
-      })()]
-    : [];
-
   return [
-    ...localSpeedChecks,
     // Rule 19(d): a detected risk of collision must draw substantial avoiding action.
     {
       id: 'take-action',

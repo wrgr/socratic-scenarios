@@ -66,15 +66,12 @@ export interface SimScenario {
   targets: Vessel[];
   visibility: Visibility;
   /**
-   * Optional LOCAL speed limit imposed by the scenario's jurisdiction — a rule that may have NO
-   * pretraining support (a fictional strait like Xylos, or an obscure real port/VTS limit a
-   * model has not memorized). `targetFactor` is the required speed as a fraction of full sea
-   * speed (e.g. 0.33 = bare steerage). The compliance check scores how far *over* this limit the
-   * vessel was (graded), giving the leakage instrument the dynamic range a memorized COLREG rule
-   * cannot: a model that has never seen the limit can comply only by reading the corpus.
-   * `undefined` = the standard COLREG regime (generic safe-speed only).
+   * Optional place name rendered into the prompt (e.g. "Kessock Narrows, northbound"). It is the
+   * QUERY CUE that lets a corpus-only, location-keyed fact (a charted hazard) apply — and the same
+   * cue a model must associate the fact with if it has memorized it into weights. Names only the
+   * place, never the fact.
    */
-  localSpeedLimit?: { targetFactor: number; label: string };
+  location?: string;
   /**
    * Static hazards the ownship must avoid (charted wreck / shoal / exclusion zone). These are
    * scored by the objective barrier exactly like a domain incursion, but are **not** rendered into

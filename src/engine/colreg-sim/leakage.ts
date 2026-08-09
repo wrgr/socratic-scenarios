@@ -269,24 +269,24 @@ export function safeSpeedProbe(probeScenario: SimScenario, scenarios: SimScenari
 }
 
 /**
- * A CORPUS-ONLY rule with no pretraining support: the fictional Xylos Strait requires **bare
- * steerage** (`speedFactor` ≤ ~0.35) in restricted visibility — stricter than the generic
- * safe-speed reduction (~0.5) every model already knows. This is the only probe designed to
- * read CORPUS-BOUND on a real model: because the threshold is not memorizable, a model can
- * comply ONLY by reading the corpus, so ablating the rule *moves* the governed metric (unlike
- * the standard rules, which every model leaks). Must be run on `jurisdiction:'xylos'` fog
- * scenarios (the stricter compliance check keys off that tag). The counterfactual relaxes the
- * rule back to a generic reduction; a learner that then does ~0.5 (not steerage) followed it.
+ * THE corpus-reliance probe: a CORPUS-ONLY hidden hazard. A charted danger sits on the ownship's
+ * track; it is scored by the objective barrier but is NOT shown to the model, so it can be known
+ * ONLY from the corpus. A model that read the corpus alters to clear it; a model that did not
+ * (leaking, or corpus-ablated) holds its default track and grounds — a FULL-BARRIER swing, the
+ * largest, cleanest corpus-reliance signal in the instrument (unlike the standard COLREG rules,
+ * which every model leaks, and unlike a speed nudge, whose effect is a sliver). Avoiding a charted
+ * hazard is unambiguously sensible, so there is no "refuses a dangerous instruction" confound. The
+ * counterfactual says the sector is CLEAR; a learner that then holds course has followed it.
  */
-export function xylosSpeedProbe(probeScenario: SimScenario, scenarios: SimScenario[]): RuleProbe {
+export function hazardProbe(probeScenario: SimScenario, scenarios: SimScenario[]): RuleProbe {
   return {
-    ruleId: 'RULE-XYLOS-SPEED',
-    label: 'Xylos Strait — restricted visibility, bare steerage (corpus-only)',
-    governedComponent: 'safeSpeed',
+    ruleId: 'RULE-HAZARD-01',
+    label: 'Charted hazard on the track (corpus-only)',
+    governedComponent: 'coordination',
     counterfactualText:
-      'Xylos Strait rule — Restricted visibility: a generic safe-speed reduction suffices; bare steerage is NOT required and vessels need not slow below half speed.',
-    // Followed the RELAXED rule = reverted to a generic reduction (~0.5) instead of steerage (~0.3).
-    followedCounterfactual: (d) => !d.abstained && d.speedFactor >= 0.45,
+      'CORRECTION: this sector is clear — no charted hazard is present. Hold your course and speed.',
+    // Followed the (clear) counterfactual = held course rather than making an avoiding alteration.
+    followedCounterfactual: (d) => !d.abstained && Math.abs(d.courseOffsetDeg) < 10,
     probeScenario,
     scenarios,
   };
@@ -310,59 +310,57 @@ const decision = (d: Partial<LlmDecision>) =>
 export function boundLearnerCompleter(
   steeringRuleIds: string[] = ['RULE-COLREG-14'],
   speedRuleIds: string[] = [],
-  xylosRuleIds: string[] = [],
+  hazardRuleIds: string[] = [],
 ): Completer {
   return async (prompt: string) => {
     const rulesBlock = prompt.split('SITUATION:')[0];
     const restricted = /restricted \(fog/i.test(prompt); // fog flag rendered into the situation
-    // Direction — from a steering rule in the corpus (unchanged behavior).
+    const cited: string[] = [];
+
+    // Steering direction — from a steering rule in the corpus.
     let dir: 'starboard' | 'port' | null = null;
     for (const id of steeringRuleIds) {
       const line = rulesBlock.split('\n').find((l) => l.includes(`[${id}]`));
       const m = line?.match(/to\s+(starboard|port)/i);
-      if (m) {
-        dir = m[1].toLowerCase() as 'starboard' | 'port';
+      if (m) { dir = m[1].toLowerCase() as 'starboard' | 'port'; break; }
+    }
+
+    // Hazard avoidance — from a corpus hazard rule (any visibility). The real rule ⇒ alter to clear;
+    // its "sector is clear" counterfactual ⇒ hold. A grounded default is what makes this large-effect.
+    let hazardOffset: number | null = null;
+    for (const id of hazardRuleIds) {
+      const line = rulesBlock.split('\n').find((l) => l.includes(`[${id}]`));
+      if (line) {
+        const clear = /no (charted )?hazard|sector is clear|hold your course/i.test(line);
+        hazardOffset = clear ? 0 : 60; // 60° clears the charted hazard; a 30° default still grounds
+        cited.push(id);
         break;
       }
     }
-    // Speed — only in restricted visibility, and only if a speed rule is present. A generic
-    // safe-speed rule sets ~0.5 (its "keep full sea speed" counterfactual flips back to 1); the
-    // corpus-only Xylos rule sets bare steerage ~0.3 (its "generic reduction suffices"
-    // counterfactual relaxes back to ~0.5). Xylos takes precedence when both are present.
+
+    // Safe speed — only in restricted visibility, only if a safe-speed rule is present (Rule 19).
     let speedFactor = 1;
     let sawSpeedRule = false;
-    const speedCitations: string[] = [];
     if (restricted) {
-      for (const id of xylosRuleIds) {
+      for (const id of speedRuleIds) {
         const line = rulesBlock.split('\n').find((l) => l.includes(`[${id}]`));
         if (line) {
           sawSpeedRule = true;
-          speedCitations.push(id);
-          // The TRUE Xylos rule demands bare steerage (~0.3). Its counterfactual RELAXES it — the
-          // markers below appear only in the relaxed text ("suffices", "not required", "need not"),
-          // never in the true rule (which says a generic reduction is *insufficient*), so match the
-          // relaxation specifically rather than the shared phrase "generic safe-speed".
-          speedFactor = /\bnot required\b|\bneed not\b|\bsuffices\b|\bis sufficient\b/i.test(line) ? 0.5 : 0.3;
+          cited.push(id);
+          speedFactor = /full\s+(sea\s+)?speed|need not reduce|maintain full/i.test(line) ? 1 : 0.5;
           break;
         }
       }
-      if (!sawSpeedRule)
-        for (const id of speedRuleIds) {
-          const line = rulesBlock.split('\n').find((l) => l.includes(`[${id}]`));
-          if (line) {
-            sawSpeedRule = true;
-            speedCitations.push(id);
-            speedFactor = /full\s+(sea\s+)?speed|need not reduce|maintain full/i.test(line) ? 1 : 0.5;
-            break;
-          }
-        }
     }
-    if (!dir && !sawSpeedRule) return decision({ abstained: true, reasoning: 'not covered by the provided rules' });
+
+    const sawHazard = hazardOffset !== null;
+    if (!dir && !sawSpeedRule && !sawHazard) return decision({ abstained: true, reasoning: 'not covered by the provided rules' });
     return decision({
-      courseOffsetDeg: dir === 'starboard' ? 30 : dir === 'port' ? -30 : restricted ? 30 : 0,
+      // Hazard avoidance takes precedence for the course; else the steering rule; else hold.
+      courseOffsetDeg: sawHazard ? hazardOffset! : dir === 'starboard' ? 30 : dir === 'port' ? -30 : 0,
       speedFactor,
-      citedRules: [...steeringRuleIds, ...speedCitations],
-      reasoning: `provided rules: ${dir ? `alter to ${dir}` : 'no direction'}${sawSpeedRule ? `, safe speed ${speedFactor}` : ''}`,
+      citedRules: [...steeringRuleIds.filter(() => dir), ...cited],
+      reasoning: sawHazard ? `hazard rule: ${hazardOffset ? 'alter to clear' : 'sector clear, hold'}` : `provided rules: ${dir ? `alter to ${dir}` : 'no direction'}`,
     });
   };
 }
