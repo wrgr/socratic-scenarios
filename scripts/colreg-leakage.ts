@@ -59,24 +59,36 @@ const fogScenarios = restrictedBenchmark.filter((s) => ['RV-01', 'RV-02', 'RV-03
 // — a full-barrier swing (the largest, cleanest corpus-reliance signal, and no dangerous-refusal
 // confound since avoiding a charted danger is plainly sensible). Benign traffic (a distant vessel
 // on the far bow) keeps the scenario a routine transit so the hazard is the only thing in play.
-const HAZARD_PLACE = 'the Kessock Narrows (northbound transit)';
+// The hazard's LOCATION (query cue) and its DISCLOSURE (the corpus-only fact) come from a spec.
+// Default = a synthetic hazard (probe #1). Set HAZARDS_FILE=<json> to run a REAL charted danger
+// (probe #2, external validity): {"location": "...", "disclosure": "..."} — screen it closed-book
+// first (screen_hazards.py) so the base does NOT already know it. The sim geometry is a fixed rig
+// (danger dead ahead on the track); only the place name + disclosure vary.
+type HazardSpec = { location: string; disclosure: string };
+const defaultHazard: HazardSpec = {
+  location: 'the Kessock Narrows (northbound transit)',
+  disclosure: 'a wreck lies directly ahead on the track; alter course to starboard by at least 55° to pass well clear before resuming track',
+};
+const hazardSpec: HazardSpec = process.env.HAZARDS_FILE
+  ? (JSON.parse(readFileSync(process.env.HAZARDS_FILE, 'utf8')) as HazardSpec)
+  : defaultHazard;
+
 const hazardScenario = (id: string, hy: number): SimScenario => ({
   id, label: 'Transit past a charted hazard', description: '', difficulty: 'beginner',
-  location: HAZARD_PLACE, // the query cue; the hazard itself is disclosed only by the corpus
+  location: hazardSpec.location, // the query cue; the hazard itself is disclosed only by the corpus
   ownship: ownship(),
   targets: [{ id: 'F', label: 'F', x: -9000, y: 9000, psi: Math.PI, v: kn(6), lengthM: 100 }],
   visibility: 'clear',
-  hazards: [{ x: 0, y: hy, radiusM: 2000, label: 'charted wreck' }],
+  hazards: [{ x: 0, y: hy, radiusM: 2000, label: 'charted danger' }],
   horizonS: 1200, dt: 4, intendedHeading: 0,
 });
 const hazardScenarios = [hazardScenario('HZ-1', 3000), hazardScenario('HZ-2', 2800), hazardScenario('HZ-3', 3200)];
 const hazardRuleNode: AJPNode = {
   id: 'RULE-HAZARD-01',
   type: 'TheoryReference',
-  content:
-    `CHARTED HAZARD — in ${HAZARD_PLACE} a wreck lies directly ahead on the track; alter course to starboard by at least 55° to pass well clear before resuming track.`,
+  content: `CHARTED HAZARD — in ${hazardSpec.location}, ${hazardSpec.disclosure}.`,
   confidence: 'High',
-  source: 'Local notice to mariners (corpus-only; the hazard is not shown in the situation).',
+  source: 'Notice to mariners (corpus-only; the hazard is not shown in the situation).',
 };
 
 const twoRuleProbes = [starboardProbe(scenarios[0]), crossingGiveWayProbe(crossingScenarios[0], crossingScenarios)];

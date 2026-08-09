@@ -81,13 +81,43 @@ python dose_response.py --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 \
 - The **naive base (α=0) already clears** the hazard → the model somehow knew it; strengthen the
   hazard's arbitrariness (a different location/geometry) and re-screen.
 
-## Real-world external validity (optional next leg)
+## Validation suite (roadmap) — one probe is not enough
 
-Swap the fictional hazard for a **real charted danger** a model can't have memorized (an obscure
-wreck/shoal on a named passage), keyed to its real location. Observationally, across several real
-hazards, corpus-reliance should be low where the base already knows the danger (closed-book) and
-high where it doesn't — a training-free known-groups check. Screen candidates closed-book first and
-report which were dropped.
+A single constructed probe is n=1. The instrument is validated by a **suite** of corpus-only rules
+that vary in *kind of knowledge*, *novel vs. conflicting with priors*, and *effect size*, so the
+result is a distribution (corpus-bound vs. leaking cleanly separated across probes), not an anecdote.
+
+| # | Probe | Kind | Novel/conflict | Effect | Status |
+|---|---|---|---|---|---|
+| 1 | Hidden hazard (synthetic) | spatial | novel | full barrier (~0.93) | **built** (`PROBES=hazard`) |
+| 2 | Real obscure hazard | spatial | novel | large→medium | **built** (screen + `HAZARDS_FILE`) |
+| 3 | Mandatory routing / keep-to-side | procedural | novel/conflict | medium | planned |
+| 4 | Other-vessel intention ("will not give way") | behavioral | conflict | large | planned |
+
+\#3 matters because it shows discrimination *below* full-barrier (not just the giant lever); \#4
+tests whether the corpus can *override* a strong prior about another agent (needs scripted target
+maneuvers). Suite-level result to report: corpus-reliance separates bound from leaking as a
+distribution, and the dose-response is monotonic per probe, across ≥3 seeds and two model sizes.
+
+### Probe #2 — real hazard (built): observational, no training
+
+Swap the fictional hazard for a **real charted danger** a model can't have memorized, keyed to its
+real place. It only works if the base does not already know the danger, so **screen closed-book first**:
+
+```bash
+# 1. screen candidates — keep only the ones the base does NOT already know (report the drops)
+python screen_hazards.py --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 \
+    --hazards real_hazards.example.jsonl --out data/usable_hazards.jsonl
+#    (real_hazards.example.jsonl ships PLACEHOLDERS — fill with real charted dangers from official
+#     charts / Notices to Mariners; do not trust the placeholders as fact.)
+
+# 2. run each usable hazard through the instrument (its location + disclosure only)
+HAZARDS_FILE=<one line of data/usable_hazards.jsonl> PROBES=hazard npm run colreg:leakage
+```
+
+Observationally, across many real hazards, corpus-reliance should be **high where the base didn't
+know the danger** and low where it did — a training-free known-groups check that complements the
+teach-based dose-response of the synthetic probe.
 
 ## Compute
 
