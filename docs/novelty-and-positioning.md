@@ -395,27 +395,28 @@ built and a one-tap Colab notebook (`colab.ipynb`) runs it end to end. The audit
 is now in hand on both CPU (1.5B) and GPU (3B); the task-level 2×2 is the outstanding piece.
 See `experiments/unlearning/README.md`.
 
-### Experiment 3 — Localization on a real multi-rule corpus (the C1(i) half — under-built, resurrect)
+### Experiment 3 — Corpus-value audit / localization (the C1(i) half — **view built**, run on a real model)
 
-The product demo we dropped: show the instrument attributes an *induced* task failure to the
-*specific* corpus rule responsible — a per-rule value/necessity audit over a real corpus, not one
-constructed probe.
+The product demo: attribute an *induced* task failure to the *specific* corpus rule, and rank the
+corpus rules by how much the learner **relies on** each — "how much of the corpus is helpful."
 
-- **Setup.** The COLREG corpus already has many rules (steering 14/15/17, safe-speed 6/19,
-  lookout 5, overtaking 13, …), each governing a diagnose.ts component. Take a capable API model,
-  corpus-bound (strict prompt).
-- **Procedure.** For **each** rule $r$: ablate only $r$ from the corpus, run the benchmark subset
-  that exercises it, record the governed-metric rise (ablation-delta) and the top localized
-  component. This yields an **ablation × component confusion matrix**.
-- **Result to report.** (a) A **diagonal** confusion matrix ⇒ the instrument localizes: removing
-  rule $r$ degrades $r$'s metric and diagnose names $r$'s component. (b) The **per-rule
-  ablation-delta ranks corpus items by necessity** — high = the model relies on it; ≈0 = redundant
-  (already known / leaking) or inert. That ranking *is* "how much of the corpus is helpful."
-- **Cost.** API calls only, no training. This is the cheapest high-value experiment left and the
-  clearest expression of the North Star; it complements the hazard dose-response (which validates
-  the *necessity* reading) with the *localization* reading on a real corpus.
-- **Confounds.** Entangled/redundant rules blur the diagonal (already a stated limitation); report
-  the off-diagonal mass as the decomposability measure rather than hiding it.
+- **Built.** `PROBES=all npm run colreg:leakage` now prints, after the per-rule detail, a
+  **corpus-value audit**: rules sorted by necessity (ablation-delta), a `governs→localizes`
+  confusion cell (the component the rule governs vs the component its ablated-failure points to),
+  the per-rule verdict, and a one-line summary (*N rules · K relied-on · M redundant/leaking*). The
+  mock recovers the ground truth (14 relied-on, 19 localizes cleanly `safeSpeed→safeSpeed`, and — a
+  real signal, not a bug — **Rule 15's starboard is redundant given Rule 14**, so it ranks last).
+- **To run on a real model.** Use the live completer (`BEDROCK_MODEL=…`) or the offline
+  DUMP→generate→REPLAY flow, `PROBES=all`. Extend the probe set beyond 14/15/19 (add role 16/17,
+  substantial 8) to widen the confusion matrix — each needs a matched scenario subset.
+- **Result to report.** (a) The **necessity ranking** = the corpus-value audit (relied-on vs
+  redundant). (b) The `governs→localizes` matrix: a clean diagonal (e.g. `safeSpeed→safeSpeed`)
+  means the instrument localizes; off-diagonal (e.g. `starboard→role`, an ablated steering rule that
+  makes the learner *freeze* rather than turn wrong) is itself informative about the failure mode.
+- **Cost.** API calls only, no training — the cheapest high-value experiment, and it complements the
+  hazard dose-response (which validates the *necessity* reading) with the *localization* reading.
+- **Confounds.** Entangled/redundant rules blur the diagonal (Rule 15 above is exactly this, and
+  the audit surfaces it); report the redundancy as the decomposability measure, don't hide it.
 
 ---
 

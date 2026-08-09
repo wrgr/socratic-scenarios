@@ -213,6 +213,26 @@ function print(report: LeakageReport) {
     console.log(`    → VERDICT: ${p.verdict.toUpperCase()}`);
   }
   console.log(`  closed-book (no corpus): ${report.closedBookAbstained ? 'abstained ✓ (bound)' : 'answered from priors ✗ (contamination)'}`);
+
+  // Corpus-value audit (Experiment 3, the C1(i) localization half): rank the corpus rules by how
+  // much the learner RELIES on each (the ablation-delta = necessity), and check the instrument
+  // LOCALIZES each rule's failure to its governed component. This is the North-Star read — "how
+  // much of the corpus is actually helpful": high Δ ⇒ the model needs that rule; ≈0 ⇒ redundant
+  // (already known / leaking) or inert. Shown when ≥2 rules are probed (PROBES=two|all).
+  if (report.perRule.length >= 2) {
+    const ranked = [...report.perRule].sort((a, b) => b.ablationDelta - a.ablationDelta);
+    console.log('\n  ── corpus-value audit: per-rule necessity ranking (how much of the corpus is helpful) ──');
+    console.log('     necessity(Δ)  regret(Δ)  rule              governs→localizes        verdict');
+    for (const p of ranked) {
+      // governs→localizes is the localization confusion cell: which component the rule is meant to
+      // govern, and which component the learner's failure-when-ablated actually points to.
+      const gl = `${p.governedComponent}→${p.localizedComponent ?? 'none'}`;
+      console.log(`     ${p.ablationDelta.toFixed(3).padStart(8)}   ${p.regretDelta.toFixed(1).padStart(7)}   ${p.ruleId.padEnd(16)} ${gl.padEnd(24)} ${p.verdict}`);
+    }
+    const relied = ranked.filter((p) => p.verdict === 'corpus-bound').length;
+    const leaked = ranked.filter((p) => p.verdict === 'leaking').length;
+    console.log(`     → ${ranked.length} rules · ${relied} relied-on (corpus adds value) · ${leaked} redundant/leaking (model already knows / rule adds nothing) · ${ranked.length - relied - leaked} inconclusive`);
+  }
 }
 
 async function main() {

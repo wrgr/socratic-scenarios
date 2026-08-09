@@ -55,6 +55,8 @@ export type Verdict = 'corpus-bound' | 'leaking' | 'inconclusive';
 export interface LeakageVerdict {
   ruleId: string;
   label: string;
+  /** The diagnose component this rule is meant to govern (for the localization confusion cell). */
+  governedComponent: GapComponent;
   /** Governed metric (mean compliance penalty) with the rule present. */
   metricWith: number;
   /** ... with the rule ablated. */
@@ -175,6 +177,7 @@ export async function runRuleProbe(
   return {
     ruleId: probe.ruleId,
     label: probe.label,
+    governedComponent: probe.governedComponent,
     metricWith,
     metricWithout,
     ablationDelta,
