@@ -181,14 +181,22 @@ Knowledge-Learning-Instruction framework \citep{koedinger2012kli}, open learner 
 established. We reuse them as infrastructure, not as contributions.
 
 \paragraph{Corpus-bounded tutoring, leakage, and faithfulness.} RAG tutors that abstain
-outside a corpus are standard engineering. A separate line detects whether a model relies
-on provided context versus parametric memory: no-context filtering \citep{seedrg2026},
-aggregate prior-dominance \citep{priordominance2026}, counterfactual context
-\citep{faithfulrag2025}, and---closest to us---intervention-based evidence ablation with a
-zero-retrieval control \citep{cuer2026}. These are per-answer or system-level and judge
-\emph{answer text}; none localizes \emph{which specific corpus rule is missing} and detects
-leakage \emph{on one objective control-task metric}, per rule, bidirectionally. That join
-is the \emph{Corpus Diagnosis}.
+outside a corpus are standard engineering. A large line asks whether a model uses provided
+context or parametric memory: faithfulness metrics score whether an answer is grounded in
+context \citep{ragas2023}; context attribution ablates context sources and measures the
+change in output probability to attribute a generation to them \citep{contextcite2024,
+priordominance2026}; knowledge-conflict work studies which side wins when context contradicts
+memory \citep{knowledgeconflicts2024, faithfulrag2025}; leakage-free benchmarking filters
+items answerable with no context \citep{seedrg2026}; and intermediate-step scoring looks
+beyond the final answer \citep{cuer2026}. All of these measure whether context
+\emph{influenced} the output, judged on \emph{answer text}, per answer or system-wide. We
+differ on three axes: (a) we score a \emph{behavioral task outcome} against a reference-optimal
+policy, not answer text; (b) we attribute \emph{per corpus rule} and localize which rule is
+missing or wrong, not per token or system-wide; and (c) we measure not merely \emph{influence}
+but \emph{necessity}---calibrated by manipulating the parametric baseline directly (weight-level
+construction and unlearning, Section~\ref{sec:weightlevel}), so a fact the model already knew is
+not mistaken for one it relied on. No context-attribution method has that weight-level ground
+truth. That join is the \emph{Corpus Diagnosis}.
 
 \paragraph{Objective competency instruments.} Deviation-from-optimal scoring appears in
 flight \citep{zinn2023flight} and construct-validity-by-novice/expert-separation in surgery
