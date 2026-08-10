@@ -88,7 +88,18 @@ def write_csv(path, points):
 
 def dump_prompts(prompts_path, probes):
     env = dict(os.environ, LEAKAGE_DUMP=prompts_path, PROBES=probes)
-    subprocess.run(["npm", "run", "--silent", "colreg:leakage"], cwd=REPO, env=env, check=True)
+    _run(["npm", "run", "--silent", "colreg:leakage"], cwd=REPO, env=env, what="prompt dump")
+
+
+def _run(cmd, cwd, env=None, what=""):
+    """Run a child, and on failure raise with its STDERR/STDOUT surfaced (never swallow it)."""
+    r = subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(
+            f"{what} failed (rc={r.returncode}).\n"
+            f"CMD: {' '.join(cmd)}\n--- STDOUT (tail) ---\n{r.stdout[-1500:]}\n"
+            f"--- STDERR (tail) ---\n{r.stderr[-3000:]}")
+    return r
 
 
 def generate(model, adapter, alpha, dtype, prompts_path, out_path, load_4bit):
@@ -98,14 +109,16 @@ def generate(model, adapter, alpha, dtype, prompts_path, out_path, load_4bit):
         cmd += ["--adapter", adapter, "--alpha", str(alpha)]
     if load_4bit:
         cmd += ["--load_4bit"]
-    subprocess.run(cmd, cwd=HERE, check=True)
+    _run(cmd, cwd=HERE, what=f"generate (alpha={alpha})")
 
 
 def replay(transcript_path, probes):
     env = dict(os.environ, LEAKAGE_REPLAY=transcript_path, PROBES=probes)
-    r = subprocess.run(["npm", "run", "--silent", "colreg:leakage"], cwd=REPO, env=env,
-                       capture_output=True, text=True, check=True)
-    return parse_leakage(r.stdout)
+    r = _run(["npm", "run", "--silent", "colreg:leakage"], cwd=REPO, env=env, what="instrument replay")
+    try:
+        return parse_leakage(r.stdout)
+    except ValueError as e:
+        raise RuntimeError(f"could not parse instrument output ({e}).\n--- OUTPUT (tail) ---\n{r.stdout[-3000:]}")
 
 
 def build_points(args):
@@ -145,7 +158,9 @@ def main():
     if args.transcripts:
         for item in args.transcripts.split(","):
             label, path = item.split("=", 1)
-            d, v = replay(path, args.probes)
+            # ABSOLUTE: the instrument (replay) runs with cwd=REPO, not here, so a relative
+            # transcript path would resolve against the wrong dir and 404 in the Node scorer.
+            d, v = replay(os.path.abspath(path), args.probes)
             points.append((label, d, v))
     else:
         pts = build_points(args)
@@ -156,7 +171,9 @@ def main():
         print(f"dumping the {args.probes} prompt set once -> {prompts_path}")
         dump_prompts(prompts_path, args.probes)
         for label, adapter, alpha in pts:
-            trans = f"{args.out}_{label.replace('=', '').replace('α', 'a')}.jsonl"
+            # ABSOLUTE path: generate writes it (cwd=here) but replay reads it via a cwd=REPO
+            # subprocess — a relative path would land in different dirs and the scorer would 404.
+            trans = os.path.abspath(f"{args.out}_{label.replace('=', '').replace('α', 'a')}.jsonl")
             print(f"== gradient point {label} (adapter={adapter}, alpha={alpha}) ==")
             generate(args.model, adapter, alpha, args.dtype, prompts_path, trans, args.load_4bit)
             d, v = replay(trans, args.probes)
