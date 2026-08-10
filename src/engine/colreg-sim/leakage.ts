@@ -272,6 +272,26 @@ export function safeSpeedProbe(probeScenario: SimScenario, scenarios: SimScenari
 }
 
 /**
+ * A fourth rule on yet another axis: Rule 8 — action must be *substantial* and readily apparent.
+ * Governs the `substantial` compliance check via the *magnitude* of the alteration (not its
+ * direction or speed). Exercised on give-way (crossing) scenarios where a token turn still clears
+ * the collision but is not bold enough. The counterfactual relaxes it ("a slight alteration
+ * suffices"); a learner that then makes only a small (<20°) turn has followed the altered rule.
+ */
+export function substantialActionProbe(probeScenario: SimScenario, scenarios: SimScenario[]): RuleProbe {
+  return {
+    ruleId: 'RULE-COLREG-08',
+    label: 'Rule 8 — substantial, readily-apparent action',
+    governedComponent: 'substantial',
+    counterfactualText:
+      'Rule 8 — Action to avoid collision: a slight alteration of a few degrees is sufficient; a small, gradual change need not be large to be readily apparent.',
+    followedCounterfactual: (d) => !d.abstained && Math.abs(d.courseOffsetDeg) > 0 && Math.abs(d.courseOffsetDeg) < 20,
+    probeScenario,
+    scenarios,
+  };
+}
+
+/**
  * THE corpus-reliance probe: a CORPUS-ONLY hidden hazard. A charted danger sits on the ownship's
  * track; it is scored by the objective barrier but is NOT shown to the model, so it can be known
  * ONLY from the corpus. A model that read the corpus alters to clear it; a model that did not
@@ -341,6 +361,17 @@ export function boundLearnerCompleter(
       }
     }
 
+    // Boldness (Rule 8): a *substantial*, readily-apparent alteration. Without the rule — or under
+    // its "a slight alteration suffices" counterfactual — the bound learner makes only a token turn
+    // (15°), which clears the collision but fails the `substantial` check. With it, a bold 30°.
+    const r8line = rulesBlock.split('\n').find((l) => l.includes('[RULE-COLREG-08]'));
+    // "bold" unless the line is the RELAXED counterfactual. Match only phrases distinctive to that
+    // counterfactual — NOT "small", which the TRUE rule uses ("a succession of small alterations
+    // should be avoided") and which would otherwise mis-read the real rule as token.
+    const bold = !!r8line && !/\bslight\b|a few degrees|need not be large/i.test(r8line);
+    const magnitude = bold ? 30 : 15;
+    if (r8line) cited.push('RULE-COLREG-08');
+
     // Safe speed — only in restricted visibility, only if a safe-speed rule is present (Rule 19).
     let speedFactor = 1;
     let sawSpeedRule = false;
@@ -359,11 +390,12 @@ export function boundLearnerCompleter(
     const sawHazard = hazardOffset !== null;
     if (!dir && !sawSpeedRule && !sawHazard) return decision({ abstained: true, reasoning: 'not covered by the provided rules' });
     return decision({
-      // Hazard avoidance takes precedence for the course; else the steering rule; else hold.
-      courseOffsetDeg: sawHazard ? hazardOffset! : dir === 'starboard' ? 30 : dir === 'port' ? -30 : 0,
+      // Hazard avoidance takes precedence for the course; else the steering rule at a magnitude set
+      // by the boldness rule (Rule 8); else hold.
+      courseOffsetDeg: sawHazard ? hazardOffset! : dir === 'starboard' ? magnitude : dir === 'port' ? -magnitude : 0,
       speedFactor,
       citedRules: [...steeringRuleIds.filter(() => dir), ...cited],
-      reasoning: sawHazard ? `hazard rule: ${hazardOffset ? 'alter to clear' : 'sector clear, hold'}` : `provided rules: ${dir ? `alter to ${dir}` : 'no direction'}`,
+      reasoning: sawHazard ? `hazard rule: ${hazardOffset ? 'alter to clear' : 'sector clear, hold'}` : `provided rules: ${dir ? `alter to ${dir} (${bold ? 'bold' : 'token'})` : 'no direction'}`,
     });
   };
 }

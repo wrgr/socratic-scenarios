@@ -22,6 +22,7 @@ import {
   starboardProbe,
   crossingGiveWayProbe,
   safeSpeedProbe,
+  substantialActionProbe,
   hazardProbe,
   boundLearnerCompleter,
   leakingLearnerCompleter,
@@ -96,7 +97,7 @@ const isHazard = process.env.PROBES === 'hazard';
 const probes = isHazard
   ? [hazardProbe(hazardScenarios[0], hazardScenarios)]
   : process.env.PROBES === 'all'
-    ? [...twoRuleProbes, safeSpeedProbe(fogScenarios[0], fogScenarios)]
+    ? [...twoRuleProbes, safeSpeedProbe(fogScenarios[0], fogScenarios), substantialActionProbe(crossingScenarios[0], crossingScenarios)]
     : process.env.PROBES === 'two'
       ? twoRuleProbes
       : [starboardProbe(scenarios[0])];
