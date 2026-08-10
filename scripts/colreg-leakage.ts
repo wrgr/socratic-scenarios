@@ -83,7 +83,16 @@ const hazardScenario = (id: string, hy: number): SimScenario => ({
   hazards: [{ x: 0, y: hy, radiusM: 2000, label: 'charted danger' }],
   horizonS: 1200, dt: 4, intendedHeading: 0,
 });
-const hazardScenarios = [hazardScenario('HZ-1', 3000), hazardScenario('HZ-2', 2800), hazardScenario('HZ-3', 3200)];
+// A GRADED difficulty ladder, not three near-identical rungs. The along-track distance `hy` sets
+// the minimum turn that clears the hazard (closer ⇒ sharper turn): hy 6500→~19°, 5200→24°,
+// 4500→28°, 4000→32°, 3600→36°, 3300→41°, 3000→47°. Every rung is clearable by the corpus's 55°
+// instruction (so a corpus-bound learner clears all → full reliance), but a PARTIALLY-knowing
+// learner that turns only part-way clears the easy rungs and grounds on the hard ones — so the
+// aggregate corpus-reliance falls *smoothly* as weight-knowledge rises, instead of stepping. This
+// is what gives the dose-response curve dynamic range in its interior (empirically, a single
+// difficulty makes all scenarios flip at the same α and the curve is flat-then-cliff).
+const HAZARD_LADDER = [6500, 5200, 4500, 4000, 3600, 3300, 3000];
+const hazardScenarios = HAZARD_LADDER.map((hy, i) => hazardScenario(`HZ-${i + 1}`, hy));
 const hazardRuleNode: AJPNode = {
   id: 'RULE-HAZARD-01',
   type: 'TheoryReference',
@@ -204,7 +213,7 @@ function realCompleter(): { completer: Completer; label: string } | null {
 }
 
 function print(report: LeakageReport) {
-  console.log(`\n── provider: ${report.provider}  (instrument = ${report.scenarios} head-on cases, δ threshold ${report.deltaThreshold}) ──`);
+  console.log(`\n── provider: ${report.provider}  (instrument = ${report.scenarios} cases, δ threshold ${report.deltaThreshold}) ──`);
   for (const p of report.perRule) {
     console.log(`  ${p.label}`);
     console.log(`    ablation-delta   ${p.metricWithout.toFixed(3)} (without) − ${p.metricWith.toFixed(3)} (with) = ${p.ablationDelta.toFixed(3)}  [compliance sub-metric]`);
