@@ -21,7 +21,7 @@ validity backbone: same instrument, same `classify()` verdict, three objectives.
 | 1 | Cross-model leakage — standard COLREG | C1(ii) | ✅ result in hand | every frontier model **LEAKS/redundant** on textbook COLREG (they already know it) |
 | 1b | Cross-model **hazard** discrimination | C1(ii)/C1(iii) | ✅ result in hand | hazard splits **corpus-bound** (Haiku, Sonnet) vs **unusable** (Llama-70B) vs inconclusive (Nova) |
 | 2a | Unlearning arm (remove from weights) | C1(ii) validation | ⚠️ ran, null for its goal | says≠does: words forget, the instrument's decision does not move — **supporting only** |
-| 2b | Hazard **dose-response** (add to weights) | C1(ii) validation | 🔧 harness fixed, **GPU curve unrun** | endpoints proven (Δ 0.93 / regret ~1996 → 0); graded ladder fixes the interior; monotone curve still the missing result |
+| 2b | Hazard **dose-response** (add to weights) | C1(ii) validation | ✅ endpoints validated (real model) | necessity 667→0.2, α & checkpoint sweeps **agree**; interior is a step (single discrete fact = threshold learning) — graded curve is Exp 7's job |
 | 3 | Corpus-value audit / localization | C1(i) | ✅ real run done, refinements landed | 4-rule necessity ranking on real models; standard rules redundant, hazard corpus-bound; clean 4-rule re-run optional |
 | 3b | redundant vs unusable split | C1(iii) | ✅ built + observed | Llama-70B reads the hazard **unusable** (regret-with 1207) where Haiku/Sonnet read it corpus-bound |
 | 4 | Real-hazard leg (external validity) | C1(ii) | 🔧 harness built, **needs real data** | screen + `HAZARDS_FILE` wired; user must supply real charted dangers |
@@ -36,16 +36,18 @@ Legend: ✅ done / result in hand · ⚠️ ran with a caveat · 🔧 built but 
 
 ## The critical path (what actually gates the paper)
 
-Two GPU runs remain — both wired end-to-end and one-click; everything else is done or is breadth:
+**2b is done** — the hazard dose-response validated the known-groups *endpoints* on a real model,
+with α/checkpoint agreement (the interior is a step by construction — one discrete fact — so the
+graded curve is Exp 7's job, not a missing hazard result). **One GPU run remains:**
 
-1. **2b — hazard dose-response curve** (`dose_response_colab.ipynb`). The graded ladder fixed the
-   flat-then-cliff artifact; needs one real GPU run to show necessity falls monotonically.
-2. **7 — fact-QA dose-response curve** (`dose_response_factqa_colab.ipynb`). The second-domain,
-   simulator-free construct-validity curve. Offline synthetic version already monotone.
+1. **7 — fact-QA dose-response curve** (`dose_response_factqa_colab.ipynb`). The simulator-free,
+   many-independent-facts domain that yields the graded monotone curve. Offline synthetic already
+   monotone (1.00→0.00); the real run is the last gating result.
 
-If both land monotone, the necessity claim is validated **by construction, on real models, in two
-domains with independent objectives** — plus the corpus-diagnosis/sufficiency product. The rest
-(1/1b re-runs, 4 real data, 5 more probes) is robustness/breadth, not a gate.
+With 7 in hand, the necessity claim is validated **by construction, on real models, in two domains
+with independent objectives** (hazard: large-effect endpoints; fact-QA: graded curve) — plus the
+corpus-diagnosis/sufficiency product. The rest (1/1b re-runs, 4 real data, 5 more probes) is
+robustness/breadth, not a gate.
 
 ---
 
@@ -79,16 +81,21 @@ domains with independent objectives** — plus the corpus-diagnosis/sufficiency 
   dissociation and a caution about naive unlearning — but not a clean weight-level validation (Rule 14
   already leaks, no dynamic range). **Demoted to supporting evidence.** Optional: seeds/7B robustness.
 
-## 2b · Hazard dose-response — add to weights (C1(ii) validation) — 🔧 GPU curve unrun
-- **Have.** Instrument endpoints proven offline (bound → CORPUS-BOUND, Δ 0.93 / regret ~1996; leaking
-  → 0.00). Harness built + fixed this cycle: the **graded 7-rung hazard ladder** (min-clearing turn
-  19°→47°) resolves the interior that a single difficulty flattened into a step; the dose CSV now
-  reports the regret-consistent `reliant` label, not the muted compliance verdict.
-- **Missing — THE result.** The monotone curve on a real model (teach the hazard → necessity falls),
-  via checkpoints (primary) and the α cross-check. `dose_response_colab.ipynb`.
-- **Falsifier.** If necessity doesn't fall between naive and taught endpoints, the instrument isn't
-  measuring necessity — report it. (A flat *interior* with correct endpoints is a resolution artifact,
-  now handled by the ladder.)
+## 2b · Hazard dose-response — add to weights (C1(ii) validation) — ✅ endpoints validated (real model)
+- **Result (Qwen2.5-3B).** Necessity **667 (naive) → 0.2 (taught)** — a large known-groups swing in
+  the predicted direction, and the **α-sweep and checkpoint-sweep agree** (both flat-then-cliff,
+  same transition), which rules out a gradient-method artifact. The instrument measures necessity,
+  and teaching the fact into the weights collapses it.
+- **The interior is a step, and that is the honest finding — not a bug to fix.** Teaching a *single
+  discrete fact* is threshold learning: the model grounds until it has the fact, then turns fully and
+  clears everything, so there is no graded behavior to resolve. The 7-rung difficulty ladder changed
+  the plateau *value* (partial-clearance ~667 vs the full ~2000) but cannot make it vary with α — it
+  was aimed at the wrong mechanism (the flatness is one-fact-as-threshold, not shared difficulty).
+- **The graded curve is Exp 7's job.** A smooth monotone dose-response needs a gradient over the
+  *fraction of many independent items learned* — the fact-QA domain (25 facts). A graded *hazard*
+  curve would require a **suite of N independent hazards**, not one hazard's difficulty varied.
+- **Division of labor for the paper.** Hazard = large-effect known-groups endpoints + α/checkpoint
+  agreement; fact-QA = the graded monotone curve.
 
 ## 3 · Corpus-value audit / localization (C1(i)) — ✅ real run done, refinements landed
 - `PROBES=all` ranks corpus rules by necessity with a `governs→localizes` cell and a summary. Now

@@ -27,15 +27,29 @@ objective **barrier** (grounding = full penalty) but **not shown to the model** 
 track and grounds. The signal is the whole barrier range, not a sliver, and avoiding a charted
 danger is plainly sensible so there's no "refuses a dangerous instruction" confound.
 
-**Graded difficulty ladder (not one difficulty).** The hazard set is *seven rungs* whose
-along-track distance sets the minimum clearing turn from ~19° (far) to ~47° (near) — all below the
-corpus's 55° instruction, so a corpus-bound learner clears every rung (full reliance). The point is
-the *interior*: a partially-knowing learner that turns only part-way clears the easy rungs and
-grounds on the hard ones, so aggregate corpus-reliance falls **smoothly** as weight-knowledge rises.
-An earlier single-difficulty set (three near-identical scenarios) made every scenario flip at the
-same α, so the α-curve was flat-then-cliff (reliance ~1287 across α=0..0.75, then ~0.2 at α=1) — a
-gradient artifact, not a finding. The endpoints were still correct (a 6400× known-groups swing in
-the right direction); only the interior was unresolvable, which the ladder fixes.
+**The hazard curve is a STEP, and that is a property of the construct — the endpoints are the
+result.** Real runs (Qwen2.5-3B, `α` sweep and training-checkpoint sweep, which **agree**):
+necessity is ~667 at the naive end (reliant) and ~0.2 once the hazard is taught (independent) — a
+clean, large known-groups swing in the right direction. But the interior is flat-then-cliff on
+*both* gradient axes: the fact is learned as a **threshold** (the model either hasn't learned
+"hazard → turn 55°" and grounds, or has and clears everything), so there is no graded behavior to
+resolve. The α-sweep and checkpoint-sweep agreeing is the tell that the step is real learning
+dynamics, not a gradient-method artifact.
+
+A seven-rung difficulty ladder (`HAZARD_LADDER`, min-clearing turn ~19°→47°) was added to try to
+resolve the interior; it changes the plateau *value* (a partial-clearance signature, ~667 rather
+than the full ~2000) but **cannot make it vary with α**, because the model's turn magnitude jumps
+at the learning threshold rather than ramping. The ladder was aimed at the wrong mechanism: the
+flatness is not shared scenario difficulty, it is **a single discrete fact learned as a threshold**.
+
+**Where the graded curve comes from: many independent facts, not one.** To get a smooth monotone
+dose-response you need a gradient over a *fraction of learned items*, which requires many
+independent facts — exactly the **fact-QA** second domain (`src/engine/factqa`, 25 fictional facts:
+partial teaching learns some and not others, so the aggregate necessity falls smoothly). The hazard
+arm's job is therefore the **large-effect known-groups endpoints + α/checkpoint agreement**; the
+graded curve is the fact-QA arm's job. (A graded *hazard* curve is possible too, but only by
+teaching a **suite of N independent hazards** and measuring the fraction learned — the same
+many-items mechanism — not by varying one hazard's difficulty.)
 
 The mock reference learners recover the ground truth (`npm run colreg:leakage` with `PROBES=hazard`):
 

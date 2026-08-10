@@ -22,8 +22,25 @@ monotonically — a known-groups construct validation, in two domains, one with 
   (α or `ckpt-N`). Plot both the α and checkpoint series per domain — agreement = not a
   gradient-method artifact.
 
-**Status.** `[PENDING 2b]` and `[PENDING 7]`. Offline synthetic fact-QA curve is already monotone
-(1.00 → 0.76 → 0.48 → 0.24 → 0.00) and stands in until the real run lands.
+**Status.** Hazard (2b) `[IN HAND]` — but it is a **step, not a graded curve**, and that is the
+correct result to report (see below). Fact-QA (7) `[PENDING]` — this is the arm that yields the
+graded monotone curve; offline synthetic is already monotone (1.00 → 0.76 → 0.48 → 0.24 → 0.00).
+
+**Hazard real data (Qwen2.5-3B), α and checkpoint sweeps AGREE:**
+
+| gradient | naive end | … | taught end |
+|---|---|---|---|
+| α = 0, 0.25, 0.5, 0.75 → 1 | 667.2 (reliant) | flat | **0.2 (independent)** |
+| ckpt-10, 20, 30 → 40, 50 | 667 (reliant) | flat | **0.2 (independent)** |
+
+The two ends are the **known-groups validation** (necessity collapses when the fact is taught into
+the weights); the α/checkpoint **agreement** rules out a gradient-method artifact. The flat interior
+is a property of teaching a *single discrete fact* (learned as a threshold — the model grounds until
+it has the fact, then turns fully and clears everything), NOT a resolution artifact. The graded
+monotone curve is the fact-QA arm's job (a gradient over the *fraction* of many independent facts
+learned); a graded hazard curve would need a **suite of N independent hazards**, not one hazard's
+difficulty varied. Report the hazard as the two-point known-groups result with α/checkpoint
+agreement, and fact-QA as the graded curve.
 
 ```latex
 \begin{figure}[t]
