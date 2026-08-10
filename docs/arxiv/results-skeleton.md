@@ -26,8 +26,8 @@ monotonically — a known-groups construct validation, in two domains, one with 
 one discrete fact (see below). Fact-QA (7) is the **graded monotone curve**, now confirmed on a real
 model (α sweep below; checkpoint cross-check pending).
 
-**Fact-QA real α-sweep (closed-book ablation; model = Qwen2.5-3B/7B — confirm which):** necessity
-falls monotonically over the full range as the LoRA-α knowledge gradient rises:
+**Fact-QA real α-sweep (Qwen2.5-7B-Instruct, closed-book ablation):** necessity falls monotonically
+over the full range as the LoRA-α knowledge gradient rises:
 
 | α | 0 | 0.25 | 0.5 | 0.75 | 1 |
 |---|---|---|---|---|---|
@@ -35,10 +35,10 @@ falls monotonically over the full range as the LoRA-α knowledge gradient rises:
 | verdict | corpus-bound | corpus-bound | corpus-bound | leaking | leaking |
 
 A genuinely graded interior (0.93, 0.29 — not a step), spanning naive→taught, with the verdict
-flipping corpus-bound→leaking as the facts are internalized. The small taught-end residual (~0.027)
-is the cross-fact interference seen in the recall diagnostic (a 3B recalling one station's mineral as
-another's) — expected to shrink at 7B. Checkpoint cross-check (`results/dose_factqa_ckpt.csv`) still
-running; agreement with α will rule out a gradient-method artifact (as it did for the hazard).
+flipping corpus-bound→leaking as the facts are internalized. The taught-end floor (~0.027 ≈ 2 of 75
+questions) is a clean residual, not interference — the 7B recalls the facts crisply (the babble in the
+earlier recall diagnostic was the 3B). Checkpoint cross-check (`results/dose_factqa_ckpt.csv`) running;
+agreement with α will rule out a gradient-method artifact (as it did for the hazard).
 
 **Hazard real data (Qwen2.5-3B), α and checkpoint sweeps AGREE:**
 
