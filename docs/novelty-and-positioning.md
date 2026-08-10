@@ -47,6 +47,13 @@ it relied on. No context-attribution method has that weight-level ground truth.
   *validation* that the necessity measure is real (teach a fact in → reliance falls; remove it → rises).
 - The **unlearning arm** is the second, noisier direction of that same weight-level calibration — **supporting evidence, not the headline.**
 - The **localization** half of C1 (§8, Experiment 3) is the product demo (`PROBES=all` corpus-value audit).
+- The **second domain — fact-QA** (`src/engine/factqa`, `npm run factqa:leakage`) is the
+  external-validity arm: the SAME necessity measure and the SAME `classify()` verdict, but scored by
+  an answer-checker on a **fictional-fact** KB instead of a simulator. It reframes the contribution
+  from "a maritime regret simulator" to "necessity on any verifiable objective — instantiated with a
+  control-regret simulator AND an answer checker," and it directly answers the *you-engineered-the-
+  objective* and *toy-domain* objections. Its dose-response is a clean, smooth monotone curve
+  (partial-teaching at single-fact granularity resolves the gradient with no difficulty ladder).
 
 > **Experiment register & status — see [`docs/experiment-status.md`](experiment-status.md).** That
 > one page is the canonical "what each experiment is, what we have, what's next," with the critical

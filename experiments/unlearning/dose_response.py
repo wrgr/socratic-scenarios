@@ -52,16 +52,28 @@ REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 # regret-delta is the real corpus-reliance signal; the compliance sub-metric is muted/near-binary.
 _COMPLIANCE_RE = re.compile(r"ablation-delta.*?=\s*(-?\d+(?:\.\d+)?)\s*\[compliance", re.S)
 _REGRET_RE = re.compile(r"regret-delta.*?=\s*(-?\d+(?:\.\d+)?)\s*\[", re.S)
+# Second domain (fact-QA, scripts/factqa-leakage.ts): one reliance axis (necessity = accuracy with
+# − without), aggregated over probed facts and printed once as `MEAN-NECESSITY = N`. When present
+# it IS the reliance signal, so it fills both the compliance and regret slots.
+_NECESSITY_RE = re.compile(r"MEAN-NECESSITY\s*=\s*(-?\d+(?:\.\d+)?)")
 _VERDICT_RE = re.compile(r"VERDICT:\s*([A-Z-]+)")
 
 
 def parse_leakage(text):
-    """Extract (compliance_delta, regret_delta, verdict) from a LEAKAGE_REPLAY run's stdout."""
+    """Extract (compliance_delta, regret_delta, verdict) from a LEAKAGE_REPLAY run's stdout.
+
+    Handles both objectives: the COLREG runner (ablation/regret lines) and the fact-QA runner
+    (a single MEAN-NECESSITY line). For QA the necessity fills both slots so --metric regret or
+    compliance both read it."""
+    nm = _NECESSITY_RE.search(text)
+    vm = _VERDICT_RE.search(text)
+    if nm and not _COMPLIANCE_RE.search(text):
+        n = float(nm.group(1))
+        return n, n, (vm.group(1) if vm else "?")
     cm = _COMPLIANCE_RE.search(text)
     rm = _REGRET_RE.search(text)
-    vm = _VERDICT_RE.search(text)
     if not cm:
-        raise ValueError("no ablation-delta line found in instrument output")
+        raise ValueError("no ablation-delta / MEAN-NECESSITY line found in instrument output")
     compliance = float(cm.group(1))
     regret = float(rm.group(1)) if rm else compliance
     return compliance, regret, (vm.group(1) if vm else "?")
@@ -99,12 +111,13 @@ def ascii_curve(points, metric="regret", width=48):
 _RELIANCE_THR = {"regret": 50.0, "compliance": 0.15}
 
 
-def _reliant_label(reg, comp, metric):
+def _reliant_label(reg, comp, metric, thr=None):
     d = reg if metric == "regret" else comp
-    return "reliant" if d >= _RELIANCE_THR[metric] else "independent"
+    t = _RELIANCE_THR[metric] if thr is None else thr
+    return "reliant" if d >= t else "independent"
 
 
-def write_csv(path, points, metric="regret"):
+def write_csv(path, points, metric="regret", reliance_thr=None):
     # The `reliant` column is derived from the chosen reliance axis and is the honest per-point
     # readout. The instrument's own VERDICT (parsed into `v`) is keyed to the muted *compliance*
     # sub-metric and can read LEAKING even where the regret reliance is maximal — so it is recorded
@@ -114,12 +127,12 @@ def write_csv(path, points, metric="regret"):
         w.writerow(["gradient_point", "corpus_reliance_regret_delta", "compliance_delta",
                     "reliant", "instrument_verdict_compliance"])
         for label, comp, reg, v in points:
-            w.writerow([label, f"{reg:.6f}", f"{comp:.6f}", _reliant_label(reg, comp, metric), v])
+            w.writerow([label, f"{reg:.6f}", f"{comp:.6f}", _reliant_label(reg, comp, metric, reliance_thr), v])
 
 
-def dump_prompts(prompts_path, probes):
+def dump_prompts(prompts_path, probes, runner="colreg:leakage"):
     env = dict(os.environ, LEAKAGE_DUMP=prompts_path, PROBES=probes)
-    _run(["npm", "run", "--silent", "colreg:leakage"], cwd=REPO, env=env, what="prompt dump")
+    _run(["npm", "run", "--silent", runner], cwd=REPO, env=env, what="prompt dump")
 
 
 def _run(cmd, cwd, env=None, what=""):
@@ -143,9 +156,9 @@ def generate(model, adapter, alpha, dtype, prompts_path, out_path, load_4bit):
     _run(cmd, cwd=HERE, what=f"generate (alpha={alpha})")
 
 
-def replay(transcript_path, probes):
+def replay(transcript_path, probes, runner="colreg:leakage"):
     env = dict(os.environ, LEAKAGE_REPLAY=transcript_path, PROBES=probes)
-    r = _run(["npm", "run", "--silent", "colreg:leakage"], cwd=REPO, env=env, what="instrument replay")
+    r = _run(["npm", "run", "--silent", runner], cwd=REPO, env=env, what="instrument replay")
     try:
         return parse_leakage(r.stdout)
     except ValueError as e:
@@ -180,6 +193,12 @@ def main():
     ap.add_argument("--load_4bit", action="store_true")
     ap.add_argument("--out", default=os.path.join(HERE, "results", "dose_response"),
                     help="output prefix; writes <out>.csv and <out>.png")
+    ap.add_argument("--runner", default="colreg:leakage",
+                    help="npm instrument script: 'colreg:leakage' (default, control-regret) or "
+                         "'factqa:leakage' (fact-QA, answer-accuracy — the second domain).")
+    ap.add_argument("--reliance-threshold", type=float, default=None,
+                    help="reliance value at/above which a point is 'reliant' in the CSV. Default is "
+                         "scale-aware (50 on the regret barrier); pass 0.15 for the 0-1 fact-QA axis.")
     ap.add_argument("--selftest", action="store_true", help="offline unit test (no torch/npm)")
     args = ap.parse_args()
 
@@ -194,7 +213,7 @@ def main():
             label, path = item.split("=", 1)
             # ABSOLUTE: the instrument (replay) runs with cwd=REPO, not here, so a relative
             # transcript path would resolve against the wrong dir and 404 in the Node scorer.
-            comp, reg, v = replay(os.path.abspath(path), args.probes)
+            comp, reg, v = replay(os.path.abspath(path), args.probes, args.runner)
             points.append((label, comp, reg, v))
     else:
         pts = build_points(args)
@@ -203,19 +222,19 @@ def main():
         prompts_path = os.path.join(HERE, "results", "_dose_prompts.jsonl")
         os.makedirs(os.path.dirname(prompts_path), exist_ok=True)
         print(f"dumping the {args.probes} prompt set once -> {prompts_path}")
-        dump_prompts(prompts_path, args.probes)
+        dump_prompts(prompts_path, args.probes, args.runner)
         for label, adapter, alpha in pts:
             # ABSOLUTE path: generate writes it (cwd=here) but replay reads it via a cwd=REPO
             # subprocess — a relative path would land in different dirs and the scorer would 404.
             trans = os.path.abspath(f"{args.out}_{label.replace('=', '').replace('α', 'a')}.jsonl")
             print(f"== gradient point {label} (adapter={adapter}, alpha={alpha}) ==")
             generate(args.model, adapter, alpha, args.dtype, prompts_path, trans, args.load_4bit)
-            comp, reg, v = replay(trans, args.probes)
+            comp, reg, v = replay(trans, args.probes, args.runner)
             print(f"   corpus-reliance: regret-delta={reg:+.1f}  compliance-delta={comp:+.3f}  verdict={v}")
             points.append((label, comp, reg, v))
 
     csv_path = args.out + ".csv"
-    write_csv(csv_path, points, args.metric)
+    write_csv(csv_path, points, args.metric, args.reliance_threshold)
     print("\n" + ascii_curve(points, args.metric))
     print(f"\nwrote {csv_path}  (columns: gradient_point, regret_delta [reliance], compliance_delta, "
           f"reliant [derived from {args.metric}], instrument_verdict_compliance [diagnostic])")
