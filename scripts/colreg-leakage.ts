@@ -34,6 +34,7 @@ import {
   type LeakageConfig,
   type LeakageReport,
 } from '../src/engine/colreg-sim';
+import { sufficiencyVerdict } from '../src/engine/audit-sufficiency';
 import type { AJPNode } from '../src/types/ajp';
 import { colregDomain } from '../src/corpus/colreg';
 import { collisionTarget, makeScenario, ownship, kn } from '../src/corpus/colreg/benchmark-geometry';
@@ -251,6 +252,8 @@ function print(report: LeakageReport) {
       `     → ${ranked.length} rules · ${relied} relied-on (corpus adds value) · ` +
         `${redundant} redundant (model already knows) · ${unusable} unusable (model can't act on it) · ${inconclusive} inconclusive`,
     );
+    const suff = sufficiencyVerdict({ relied, redundant, unusable, inconclusive, closedBookContaminated: !report.closedBookAbstained, queries: report.scenarios });
+    console.log(`\n  ── corpus sufficiency ──\n     ${suff.headline}\n     ${suff.scope}`);
   }
 }
 

@@ -29,12 +29,18 @@ flipped (here HIGH accuracy = competent).
 
 ## Run it
 
+The runner also prints a **corpus-sufficiency verdict** (`src/engine/audit-sufficiency.ts`, shared
+with the COLREG runner): `contributing` / `partial` / `unusable` / **`FALSE SUFFICIENCY`** — the last
+firing when nothing is relied upon and the model answers closed-book (task success rides on priors;
+the corpus is a liability waiting for distribution shift). It always attaches the bounded-query scope
+caveat, because sufficiency is only ever "sufficient for *these* queries."
+
 ```bash
 # Offline dry-run: the three reference learners must recover the known ground truth.
 SHOW_MOCK=1 npm run factqa:leakage
-#   bound      -> 25/25 corpus-bound        (reads the corpus)
-#   memorized  -> 25/25 leaking/redundant   (answers with or without it)
-#   ignorant   -> 25/25 leaking/unusable    (wrong even with it)
+#   bound      -> 25/25 corpus-bound        (reads the corpus)   -> sufficiency: CONTRIBUTING
+#   memorized  -> 25/25 leaking/redundant   (answers regardless) -> sufficiency: FALSE SUFFICIENCY
+#   ignorant   -> 25/25 leaking/unusable    (wrong even with it) -> sufficiency: UNUSABLE
 
 # Live model (same providers as the COLREG runner):
 BEDROCK_MODEL=us.anthropic.claude-... npm run factqa:leakage

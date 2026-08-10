@@ -27,6 +27,7 @@ import {
   retryCompleter,
   type Completer,
 } from '../src/engine/colreg-sim';
+import { sufficiencyVerdict } from '../src/engine/audit-sufficiency';
 
 const { facts, items } = buildKB();
 const probeFactIds = process.env.PROBE_FACTS ? process.env.PROBE_FACTS.split(',') : undefined; // default: all
@@ -117,6 +118,8 @@ function print(report: FactQAReport) {
       `     → ${ranked.length} facts · ${relied} relied-on (corpus adds value) · ` +
         `${redundant} redundant (model already knows) · ${unusable} unusable (model can't act on it) · ${inconclusive} inconclusive`,
     );
+    const suff = sufficiencyVerdict({ relied, redundant, unusable, inconclusive, closedBookContaminated: !report.closedBookAbstained, queries: report.items });
+    console.log(`\n  ── corpus sufficiency ──\n     ${suff.headline}\n     ${suff.scope}`);
   }
   // Single aggregate reliance number for the dose-response harness (mean necessity over probed
   // facts). Distinct token so dose_response.py parses exactly one value per gradient point.
