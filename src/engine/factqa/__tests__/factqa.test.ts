@@ -88,10 +88,24 @@ describe('fact-QA necessity instrument — recovers the known ground truth (C1, 
     expect(ign.every((p) => p.leakMode === 'unusable')).toBe(true);
   });
 
+  it('closed-book ablation recovers the three regimes (the construction-dose-response mode)', async () => {
+    const cb: FactQAConfig = { ...cfg, ablation: 'closed-book' };
+    const bound = await runFactQAExperiment(boundQALearner(facts, items), 'b', cb);
+    const memo = await runFactQAExperiment(memorizedQALearner(facts, items), 'm', cb);
+    const ign = await runFactQAExperiment(ignorantQALearner(), 'i', cb);
+    // Bound: no corpus at all ⇒ can't answer ⇒ still corpus-bound (necessity ~1).
+    expect(bound.perFact.every((p) => p.necessity > 0.5 && p.verdict === 'corpus-bound')).toBe(true);
+    // Memorized: recalls with no corpus ⇒ necessity ~0, redundant.
+    expect(memo.perFact.every((p) => Math.abs(p.necessity) < 0.15 && p.leakMode === 'redundant')).toBe(true);
+    // Ignorant: wrong with no corpus ⇒ unusable.
+    expect(ign.perFact.every((p) => p.leakMode === 'unusable')).toBe(true);
+  });
+
   it('dose-response: mean necessity falls monotonically as the known-fact set grows (construct validity)', async () => {
+    const cb: FactQAConfig = { ...cfg, ablation: 'closed-book' }; // the mode the real dose-response uses
     const meanNec = async (frac: number) => {
       const known = new Set(facts.slice(0, Math.round(frac * facts.length)).map((f) => f.id));
-      const rep = await runFactQAExperiment(partiallyMemorizedQALearner(facts, items, known), `k${frac}`, cfg);
+      const rep = await runFactQAExperiment(partiallyMemorizedQALearner(facts, items, known), `k${frac}`, cb);
       return rep.perFact.reduce((s, p) => s + p.necessity, 0) / rep.perFact.length;
     };
     const curve = await Promise.all([0, 0.25, 0.5, 0.75, 1].map(meanNec));

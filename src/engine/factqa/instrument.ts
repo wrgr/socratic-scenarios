@@ -60,6 +60,16 @@ export interface FactQAConfig {
   competenceAccuracy?: number;
   /** Corpus-binding positive control (answer only from facts). */
   strict?: boolean;
+  /**
+   * How the without-corpus condition is built:
+   *   'remove-one'  (default) — drop the probed fact, keep the rest. The AUDIT semantics: "does
+   *                  removing THIS item from the retrieved set break the answer" (realistic RAG).
+   *   'closed-book' — no corpus at all. The CONSTRUCTION-dose-response semantics: measures pure
+   *                  parametric recall. Use this to teach a fact in and watch necessity fall — the
+   *                  remove-one framing shows an aligned model a list that omits the answer, which
+   *                  it reads as "not in the facts" and declines, suppressing the recall it has.
+   */
+  ablation?: 'remove-one' | 'closed-book';
 }
 
 const DEFAULT_DELTA_THRESHOLD = 0.15;
@@ -91,11 +101,12 @@ async function accuracyOver(
 /** Run one fact probe: necessity (ablation-delta on accuracy) + counterfactual + localization. */
 export async function runFactProbe(
   complete: Completer,
-  cfg: { facts: Fact[]; items: QAItem[]; factId: string; deltaThreshold?: number; competenceAccuracy?: number; strict?: boolean; closedBookContaminated?: boolean },
+  cfg: { facts: Fact[]; items: QAItem[]; factId: string; deltaThreshold?: number; competenceAccuracy?: number; strict?: boolean; ablation?: 'remove-one' | 'closed-book'; closedBookContaminated?: boolean },
 ): Promise<FactVerdict> {
   const thr = cfg.deltaThreshold ?? DEFAULT_DELTA_THRESHOLD;
   const competence = cfg.competenceAccuracy ?? DEFAULT_COMPETENCE_ACCURACY;
   const strict = cfg.strict ?? true;
+  const ablation = cfg.ablation ?? 'remove-one';
   const fact = cfg.facts.find((f) => f.id === cfg.factId)!;
   const factItems = cfg.items.filter((it) => it.factId === cfg.factId);
 
@@ -107,7 +118,8 @@ export async function runFactProbe(
   // taught knowledge is suppressed, so necessity stays pinned at ~1 regardless of weight-knowledge
   // and the dose-response goes flat. (This only surfaced on a real model; the mock learners ignore
   // the instruction, which is why the offline curve looked fine.)
-  const accWithout = await accuracyOver(complete, factItems, cfg.facts, { ablateId: cfg.factId }, false);
+  const withoutRender = ablation === 'closed-book' ? { closedBook: true } : { ablateId: cfg.factId };
+  const accWithout = await accuracyOver(complete, factItems, cfg.facts, withoutRender, false);
   const necessity = accWith - accWithout;
 
   // Counterfactual: swap the fact to a false value; a corpus-reading learner answers the false value.

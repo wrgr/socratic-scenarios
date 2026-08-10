@@ -38,7 +38,10 @@ import { sufficiencyVerdict } from '../src/engine/audit-sufficiency';
 
 const { facts, items } = buildKB();
 const probeFactIds = process.env.PROBE_FACTS ? process.env.PROBE_FACTS.split(',') : undefined; // default: all
-const cfg: FactQAConfig = { facts, items, probeFactIds };
+// ABLATION=closed-book for the CONSTRUCTION dose-response (pure parametric recall — teach a fact in,
+// watch necessity fall); default 'remove-one' for the corpus-value audit (realistic RAG semantics).
+const ablation = process.env.ABLATION === 'closed-book' ? 'closed-book' : 'remove-one';
+const cfg: FactQAConfig = { facts, items, probeFactIds, ablation };
 
 // ─── Offline dump / replay (portless; same shape as the COLREG runner) ──────────────────────────
 function recordingCompleter(path: string): Completer {
