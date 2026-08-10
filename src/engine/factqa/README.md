@@ -20,6 +20,13 @@ the weights and necessity must fall to ≈ 0. No simulator, no hand-tuned barrie
 necessity(fact) := accuracy(fact present) − accuracy(fact ablated)      [≥ 0 when relied upon]
 ```
 
+The **ablated (and closed-book) conditions are always UNCONSTRAINED** (the model may answer from its
+weights), even when the with-corpus side is strict. Necessity is "the value the corpus adds over what
+the model already knows", so the without-corpus side must measure parametric ability — under a strict
+"answer only from the reference facts, else say I don't know" instruction a model that *memorized* the
+fact would obey and abstain, pinning necessity at ~1 regardless of weight-knowledge and flattening the
+dose-response. (This only shows on a real model; the mock learners ignore the instruction.)
+
 Verdict is the **same `classify()`** used by the COLREG instrument (imported from
 `colreg-sim/leakage`): a majority vote over {low necessity, counterfactual ignored, closed-book
 contaminated} → `corpus-bound` / `leaking` / `inconclusive`. A leaking fact is split into

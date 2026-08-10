@@ -100,7 +100,14 @@ export async function runFactProbe(
   const factItems = cfg.items.filter((it) => it.factId === cfg.factId);
 
   const accWith = await accuracyOver(complete, factItems, cfg.facts, {}, strict);
-  const accWithout = await accuracyOver(complete, factItems, cfg.facts, { ablateId: cfg.factId }, strict);
+  // CRITICAL: the ablated (no-corpus) condition is ALWAYS unconstrained, never strict. Necessity is
+  // "the value the corpus adds over what the model already knows", so the without-corpus side must
+  // measure the model's PARAMETRIC ability. Under the strict "answer only from the reference facts,
+  // else say I don't know" instruction, a model that has MEMORIZED the fact obeys and abstains — its
+  // taught knowledge is suppressed, so necessity stays pinned at ~1 regardless of weight-knowledge
+  // and the dose-response goes flat. (This only surfaced on a real model; the mock learners ignore
+  // the instruction, which is why the offline curve looked fine.)
+  const accWithout = await accuracyOver(complete, factItems, cfg.facts, { ablateId: cfg.factId }, false);
   const necessity = accWith - accWithout;
 
   // Counterfactual: swap the fact to a false value; a corpus-reading learner answers the false value.
@@ -132,10 +139,11 @@ export async function runFactQAExperiment(
   const thr = cfg.deltaThreshold ?? DEFAULT_DELTA_THRESHOLD;
   const probeIds = cfg.probeFactIds ?? cfg.facts.map((f) => f.id);
 
-  // Closed-book baseline: ask the first probed fact's question with NO corpus. A corpus-bound
-  // learner must abstain (the fact is fictional); answering it is contamination.
+  // Closed-book baseline: ask the first probed fact's question with NO corpus, UNCONSTRAINED (same
+  // reason as accWithout — we want the model's parametric answer, so a taught/knowing model shows up
+  // as contamination rather than being silenced by the strict "reply I don't know" instruction).
   const first = cfg.items.find((it) => it.factId === probeIds[0])!;
-  const closedOut = await complete(buildQAPrompt(first.question, '', cfg.strict ?? true));
+  const closedOut = await complete(buildQAPrompt(first.question, '', false));
   const closedBookContaminated = !isAbstention(closedOut) && answerCorrect(closedOut, first.answer);
 
   const perFact: FactVerdict[] = [];
