@@ -227,10 +227,12 @@ def main():
             # ABSOLUTE path: generate writes it (cwd=here) but replay reads it via a cwd=REPO
             # subprocess — a relative path would land in different dirs and the scorer would 404.
             trans = os.path.abspath(f"{args.out}_{label.replace('=', '').replace('α', 'a')}.jsonl")
-            print(f"== gradient point {label} (adapter={adapter}, alpha={alpha}) ==")
+            print(f"== gradient point {label} (adapter={adapter}, alpha={alpha}) ==", flush=True)
             generate(args.model, adapter, alpha, args.dtype, prompts_path, trans, args.load_4bit)
             comp, reg, v = replay(trans, args.probes, args.runner)
-            print(f"   corpus-reliance: regret-delta={reg:+.1f}  compliance-delta={comp:+.3f}  verdict={v}")
+            # flush so each point streams live under a subprocess (block-buffered) — .3f keeps the
+            # precision the QA necessity (0-1) needs, without hurting the barrier-scale regret.
+            print(f"   [{label}] reliance={reg:+.3f}  compliance-delta={comp:+.3f}  verdict={v}", flush=True)
             points.append((label, comp, reg, v))
 
     csv_path = args.out + ".csv"
