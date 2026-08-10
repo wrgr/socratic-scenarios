@@ -111,6 +111,7 @@ export {
   leakingLearnerCompleter,
   type RuleProbe,
   type Verdict,
+  type LeakMode,
   type LeakageVerdict,
   type LeakageReport,
   type LeakageConfig,
