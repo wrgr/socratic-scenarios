@@ -92,12 +92,29 @@ def ascii_curve(points, metric="regret", width=48):
     return "\n".join(lines)
 
 
-def write_csv(path, points):
+# Reliance thresholds per axis: above this the point is `reliant` (the corpus still moves behavior),
+# below it `independent` (the fact is now in the weights). Regret is the barrier scale (O(1000) when
+# grounded), so 50 sits well above noise and far below a full-barrier swing; compliance uses the same
+# 0.15 the instrument uses for its delta vote.
+_RELIANCE_THR = {"regret": 50.0, "compliance": 0.15}
+
+
+def _reliant_label(reg, comp, metric):
+    d = reg if metric == "regret" else comp
+    return "reliant" if d >= _RELIANCE_THR[metric] else "independent"
+
+
+def write_csv(path, points, metric="regret"):
+    # The `reliant` column is derived from the chosen reliance axis and is the honest per-point
+    # readout. The instrument's own VERDICT (parsed into `v`) is keyed to the muted *compliance*
+    # sub-metric and can read LEAKING even where the regret reliance is maximal — so it is recorded
+    # under `instrument_verdict_compliance` (diagnostic only), NOT as the reliance verdict.
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["gradient_point", "corpus_reliance_regret_delta", "compliance_delta", "verdict"])
+        w.writerow(["gradient_point", "corpus_reliance_regret_delta", "compliance_delta",
+                    "reliant", "instrument_verdict_compliance"])
         for label, comp, reg, v in points:
-            w.writerow([label, f"{reg:.6f}", f"{comp:.6f}", v])
+            w.writerow([label, f"{reg:.6f}", f"{comp:.6f}", _reliant_label(reg, comp, metric), v])
 
 
 def dump_prompts(prompts_path, probes):
@@ -198,9 +215,10 @@ def main():
             points.append((label, comp, reg, v))
 
     csv_path = args.out + ".csv"
-    write_csv(csv_path, points)
+    write_csv(csv_path, points, args.metric)
     print("\n" + ascii_curve(points, args.metric))
-    print(f"\nwrote {csv_path}  (columns: gradient_point, regret_delta [reliance], compliance_delta, verdict)")
+    print(f"\nwrote {csv_path}  (columns: gradient_point, regret_delta [reliance], compliance_delta, "
+          f"reliant [derived from {args.metric}], instrument_verdict_compliance [diagnostic])")
 
 
 def selftest():
