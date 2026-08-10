@@ -20,6 +20,16 @@ the weights and necessity must fall to ≈ 0. No simulator, no hand-tuned barrie
 necessity(fact) := accuracy(fact present) − accuracy(fact ablated)      [≥ 0 when relied upon]
 ```
 
+**Two ablation modes** (`FactQAConfig.ablation`, or `ABLATION=` on the runner):
+- `remove-one` (default) — drop the probed fact, keep the rest. The **audit** semantics: "does
+  removing THIS item from the retrieved set break the answer" (realistic RAG).
+- `closed-book` — no corpus at all. The **construction dose-response** semantics: pure parametric
+  recall. Required for teaching a fact in and watching necessity fall — under `remove-one` an
+  aligned model is shown a reference list that omits the answer, reads it as "not in the facts", and
+  declines, *suppressing the recall it actually has* (confirmed on a real model: the taught model
+  recalls the fact closed-book but the remove-one condition reads necessity ~0.9). The dose-response
+  notebook sets `ABLATION=closed-book`.
+
 The **ablated (and closed-book) conditions are always UNCONSTRAINED** (the model may answer from its
 weights), even when the with-corpus side is strict. Necessity is "the value the corpus adds over what
 the model already knows", so the without-corpus side must measure parametric ability — under a strict

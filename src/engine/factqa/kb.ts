@@ -120,8 +120,9 @@ export function buildKB(): { facts: Fact[]; items: QAItem[] } {
 /** Render the corpus (optionally ablating one fact and/or swapping one to its counterfactual). */
 export function renderKB(
   facts: Fact[],
-  opts: { ablateId?: string; counterfactualId?: string } = {},
+  opts: { ablateId?: string; counterfactualId?: string; closedBook?: boolean } = {},
 ): string {
+  if (opts.closedBook) return ''; // no corpus at all — the pure-parametric condition
   const lines = facts
     .filter((f) => f.id !== opts.ablateId)
     .map((f) => `- ${f.text(f.id === opts.counterfactualId ? f.counterfactualValue : f.value)}`);
