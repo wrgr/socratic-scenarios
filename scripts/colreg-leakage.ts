@@ -267,7 +267,10 @@ async function main() {
     return;
   }
   try {
-    const rpm = Number(process.env.GEMINI_RPM ?? 5);
+    // Requests/min throttle. The 5 rpm default is Gemini free-tier; Bedrock's on-demand limits are
+    // far higher, so default it to 30 there (retry+backoff below covers the occasional throttle) —
+    // otherwise a Bedrock run crawls at ~12s/call. Override with RPM (or the legacy GEMINI_RPM).
+    const rpm = Number(process.env.RPM ?? process.env.GEMINI_RPM ?? (process.env.BEDROCK_MODEL ? 30 : 5));
     // Throttle to stay under the provider's rate limit, and retry on 429/5xx (honoring
     // the server's retryDelay) so a transient rate-limit doesn't abort the whole run.
     const retries = Number(process.env.GEMINI_RETRIES ?? 5);
