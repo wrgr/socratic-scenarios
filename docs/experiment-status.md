@@ -25,7 +25,7 @@ validity backbone: same instrument, same `classify()` verdict, three objectives.
 | 3 | Corpus-value audit / localization | C1(i) | ✅ real run done, refinements landed | 4-rule necessity ranking on real models; standard rules redundant, hazard corpus-bound; clean 4-rule re-run optional |
 | 3b | redundant vs unusable split | C1(iii) | ✅ built + observed | Llama-70B reads the hazard **unusable** (regret-with 1207) where Haiku/Sonnet read it corpus-bound |
 | 4 | Real-hazard leg (external validity) | C1(ii) | 🔧 harness built, **needs real data** | screen + `HAZARDS_FILE` wired; user must supply real charted dangers |
-| 7 | **Second domain — fact-QA necessity** (no simulator) | C1 generality | 🔧 built + offline-proven, **GPU curve pending** | 3 regimes recovered; synthetic dose-response monotone (1.00→0.00); real-model curve = one-click notebook |
+| 7 | **Second domain — fact-QA necessity** (no simulator) | C1 generality | ✅ graded curve validated (real model) | necessity **1.00→0.93→0.29→0.03** as α rises — the graded monotone dose-response; checkpoint cross-check pending |
 | 8 | **Corpus sufficiency + FALSE SUFFICIENCY** | C1b | ✅ built + tested | verdict rollup shared by both runners; fires correctly on all three reference learners |
 | 5 | Probe suite breadth (routing, intention) | C1 breadth | 🔧 partial | Rule 8 (substantial) added → 4 rules; role 16/17 + agent-intention still planned |
 | 6 | Human trial | external validity | 📝 future work | pre-registered, out of scope for this paper |
@@ -36,18 +36,16 @@ Legend: ✅ done / result in hand · ⚠️ ran with a caveat · 🔧 built but 
 
 ## The critical path (what actually gates the paper)
 
-**2b is done** — the hazard dose-response validated the known-groups *endpoints* on a real model,
-with α/checkpoint agreement (the interior is a step by construction — one discrete fact — so the
-graded curve is Exp 7's job, not a missing hazard result). **One GPU run remains:**
+**The empirical spine is complete.** The necessity claim is now validated **by construction, on real
+models, in two domains with independent objectives:**
+- **2b — hazard** (control-regret objective): large-effect known-groups **endpoints** (necessity
+  667→0.2), α and checkpoint sweeps agree. Step interior by construction (one discrete fact).
+- **7 — fact-QA** (answer-accuracy objective, no simulator): the **graded monotone curve**, necessity
+  **1.00→0.93→0.29→0.03** as α rises. Checkpoint cross-check pending (expected to agree, as for 2b).
 
-1. **7 — fact-QA dose-response curve** (`dose_response_factqa_colab.ipynb`). The simulator-free,
-   many-independent-facts domain that yields the graded monotone curve. Offline synthetic already
-   monotone (1.00→0.00); the real run is the last gating result.
-
-With 7 in hand, the necessity claim is validated **by construction, on real models, in two domains
-with independent objectives** (hazard: large-effect endpoints; fact-QA: graded curve) — plus the
-corpus-diagnosis/sufficiency product. The rest (1/1b re-runs, 4 real data, 5 more probes) is
-robustness/breadth, not a gate.
+Plus the corpus-diagnosis / sufficiency product (Exp 1/1b/3/3b/8, all in hand). **Remaining work is
+robustness/breadth, not a gate:** the fact-QA checkpoint cross-check, a 7B run for a second model
+size + crisper recall, the 1/1b clean re-run tables, Exp 4 real-hazard data, Exp 5 more probes.
 
 ---
 
