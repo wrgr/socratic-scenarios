@@ -45,34 +45,48 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 
-# The instrument prints, per probe:  "  ablation-delta  A (without) - B (with) = D  [compliance ...]"
-# (the minus is a unicode figure dash) and "  -> VERDICT: X". Parse the final "= D" and verdict.
-_DELTA_RE = re.compile(r"ablation-delta.*?=\s*(-?\d+(?:\.\d+)?)\s*\[compliance", re.S)
+# The instrument prints, per probe, TWO ablation deltas:
+#   "  ablation-delta  A (without) - B (with) = C  [compliance sub-metric]"   (bounded, discrete)
+#   "  regret-delta    A (without) - B (with) = R  [... full J regret ...]"   (the barrier — large)
+# (the minus is a unicode figure dash). For a HAZARD probe the effect lives in the barrier, so the
+# regret-delta is the real corpus-reliance signal; the compliance sub-metric is muted/near-binary.
+_COMPLIANCE_RE = re.compile(r"ablation-delta.*?=\s*(-?\d+(?:\.\d+)?)\s*\[compliance", re.S)
+_REGRET_RE = re.compile(r"regret-delta.*?=\s*(-?\d+(?:\.\d+)?)\s*\[", re.S)
 _VERDICT_RE = re.compile(r"VERDICT:\s*([A-Z-]+)")
 
 
 def parse_leakage(text):
-    """Extract (ablation_delta, verdict) from a PROBES=... LEAKAGE_REPLAY run's stdout."""
-    dm = _DELTA_RE.search(text)
+    """Extract (compliance_delta, regret_delta, verdict) from a LEAKAGE_REPLAY run's stdout."""
+    cm = _COMPLIANCE_RE.search(text)
+    rm = _REGRET_RE.search(text)
     vm = _VERDICT_RE.search(text)
-    if not dm:
+    if not cm:
         raise ValueError("no ablation-delta line found in instrument output")
-    return float(dm.group(1)), (vm.group(1) if vm else "?")
+    compliance = float(cm.group(1))
+    regret = float(rm.group(1)) if rm else compliance
+    return compliance, regret, (vm.group(1) if vm else "?")
 
 
-def ascii_curve(points, width=48):
+# points = list of (label, compliance_delta, regret_delta, verdict). `metric` picks the reliance axis.
+def _reliance(p, metric):
+    return p[2] if metric == "regret" else p[1]
+
+
+def ascii_curve(points, metric="regret", width=48):
     """A tiny stdlib sparkline of corpus-reliance vs gradient — a visual even without matplotlib."""
-    ys = [d for _, d, _ in points]
+    ys = [_reliance(p, metric) for p in points]
     lo, hi = min(ys), max(ys)
     span = (hi - lo) or 1.0
     blocks = "▁▂▃▄▅▆▇█"
     spark = "".join(blocks[min(7, int((y - lo) / span * 7 + 0.5))] for y in ys)
-    lines = [f"corpus-reliance (ablation-delta) across the gradient:  {lo:.3f} … {hi:.3f}",
+    lines = [f"corpus-reliance ({metric}-delta) across the gradient:  {lo:.3f} … {hi:.3f}",
              f"  {spark}"]
-    for label, d, v in points:
+    for p in points:
+        label, _, _, v = p
+        d = _reliance(p, metric)
         bar = "#" * max(1, int((d - lo) / span * width)) if hi > lo else "#"
         lines.append(f"  {label:>10}  {d:+.3f}  {v:<12} {bar}")
-    mono = all(points[i][1] >= points[i + 1][1] - 1e-9 for i in range(len(points) - 1))
+    mono = all(_reliance(points[i], metric) >= _reliance(points[i + 1], metric) - 1e-9 for i in range(len(points) - 1))
     lines.append(f"  monotonic non-increasing across the gradient: {mono}  "
                  f"(the predicted signature: corpus-reliance falls as weight-knowledge rises)")
     return "\n".join(lines)
@@ -81,9 +95,9 @@ def ascii_curve(points, width=48):
 def write_csv(path, points):
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["gradient_point", "corpus_reliance_ablation_delta", "verdict"])
-        for label, d, v in points:
-            w.writerow([label, f"{d:.6f}", v])
+        w.writerow(["gradient_point", "corpus_reliance_regret_delta", "compliance_delta", "verdict"])
+        for label, comp, reg, v in points:
+            w.writerow([label, f"{reg:.6f}", f"{comp:.6f}", v])
 
 
 def dump_prompts(prompts_path, probes):
@@ -142,6 +156,9 @@ def main():
     ap.add_argument("--checkpoints", help="comma list of adapter checkpoint dirs (each scored at alpha=1)")
     ap.add_argument("--transcripts", help="comma list label=path.jsonl of already-generated completions (no GPU)")
     ap.add_argument("--probes", default="hazard", help="instrument probe set (default hazard)")
+    ap.add_argument("--metric", default="regret", choices=["regret", "compliance"],
+                    help="corpus-reliance axis: 'regret' (the barrier — the real signal for a "
+                         "hazard probe, default) or 'compliance' (the bounded sub-metric).")
     ap.add_argument("--dtype", default="bfloat16", choices=["float32", "bfloat16", "float16"])
     ap.add_argument("--load_4bit", action="store_true")
     ap.add_argument("--out", default=os.path.join(HERE, "results", "dose_response"),
@@ -160,8 +177,8 @@ def main():
             label, path = item.split("=", 1)
             # ABSOLUTE: the instrument (replay) runs with cwd=REPO, not here, so a relative
             # transcript path would resolve against the wrong dir and 404 in the Node scorer.
-            d, v = replay(os.path.abspath(path), args.probes)
-            points.append((label, d, v))
+            comp, reg, v = replay(os.path.abspath(path), args.probes)
+            points.append((label, comp, reg, v))
     else:
         pts = build_points(args)
         if not pts:
@@ -176,14 +193,14 @@ def main():
             trans = os.path.abspath(f"{args.out}_{label.replace('=', '').replace('α', 'a')}.jsonl")
             print(f"== gradient point {label} (adapter={adapter}, alpha={alpha}) ==")
             generate(args.model, adapter, alpha, args.dtype, prompts_path, trans, args.load_4bit)
-            d, v = replay(trans, args.probes)
-            print(f"   corpus-reliance = {d:+.3f}  verdict={v}")
-            points.append((label, d, v))
+            comp, reg, v = replay(trans, args.probes)
+            print(f"   corpus-reliance: regret-delta={reg:+.1f}  compliance-delta={comp:+.3f}  verdict={v}")
+            points.append((label, comp, reg, v))
 
     csv_path = args.out + ".csv"
     write_csv(csv_path, points)
-    print("\n" + ascii_curve(points))
-    print(f"\nwrote {csv_path}  (plot-ready: gradient_point, corpus_reliance, verdict)")
+    print("\n" + ascii_curve(points, args.metric))
+    print(f"\nwrote {csv_path}  (columns: gradient_point, regret_delta [reliance], compliance_delta, verdict)")
 
 
 def selftest():
@@ -191,22 +208,24 @@ def selftest():
 ── provider: offline(comp0.jsonl)  (instrument = 3 head-on cases, δ threshold 0.15) ──
   Charted hazard on the track (corpus-only)
     ablation-delta   0.925 (without) − 0.000 (with) = 0.925  [compliance sub-metric]
+    regret-delta     1996.1 (without) − 0.2 (with) = 1995.9  [same ablation on the full J regret instrument]
     → VERDICT: CORPUS-BOUND
 """
-    sample_leak = "ablation-delta   0.242 (without) − 0.242 (with) = 0.000  [compliance sub-metric]\n → VERDICT: LEAKING"
-    d0, v0 = parse_leakage(sample_bound)
-    d1, v1 = parse_leakage(sample_leak)
-    assert abs(d0 - 0.925) < 1e-9 and v0 == "CORPUS-BOUND", (d0, v0)
-    assert abs(d1 - 0.0) < 1e-9 and v1 == "LEAKING", (d1, v1)
-    # A synthetic dose-response: corpus-reliance falls as weight-knowledge rises.
-    pts = [("α=0", 0.925, "CORPUS-BOUND"), ("α=0.5", 0.5, "INCONCLUSIVE"), ("α=1", 0.02, "LEAKING")]
-    curve = ascii_curve(pts)
+    sample_leak = ("ablation-delta   0.242 (without) − 0.242 (with) = 0.000  [compliance sub-metric]\n"
+                   "regret-delta     10.0 (without) − 10.0 (with) = 0.0  [full J regret]\n → VERDICT: LEAKING")
+    c0, r0, v0 = parse_leakage(sample_bound)
+    c1, r1, v1 = parse_leakage(sample_leak)
+    assert abs(c0 - 0.925) < 1e-9 and abs(r0 - 1995.9) < 1e-6 and v0 == "CORPUS-BOUND", (c0, r0, v0)
+    assert abs(c1 - 0.0) < 1e-9 and abs(r1 - 0.0) < 1e-9 and v1 == "LEAKING", (c1, r1, v1)
+    # A synthetic dose-response on the regret axis: corpus-reliance falls as weight-knowledge rises.
+    pts = [("α=0", 0.9, 1996.0, "CORPUS-BOUND"), ("α=0.5", 0.5, 900.0, "INCONCLUSIVE"), ("α=1", 0.02, 5.0, "LEAKING")]
+    curve = ascii_curve(pts, "regret")
     assert "monotonic non-increasing across the gradient: True" in curve, curve
     import tempfile
     p = os.path.join(tempfile.gettempdir(), "_dose_selftest.csv")
     write_csv(p, pts)
     with open(p) as f:
-        assert "corpus_reliance" in f.readline()
+        assert "regret_delta" in f.readline()
     print(curve)
     print("\nSELFTEST: PASS")
 
