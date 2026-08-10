@@ -9,7 +9,14 @@
  * Offline flow mirrors the COLREG runner: LEAKAGE_DUMP -> generate offline -> LEAKAGE_REPLAY.
  * Live: set BEDROCK_MODEL (+ AWS creds) / GEMINI_API_KEY / OPENAI_API_KEY / GITHUB_MODELS_TOKEN.
  */
-import { writeFileSync, appendFileSync, readFileSync } from 'node:fs';
+import { writeFileSync, appendFileSync, readFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+
+/** Create a file's parent directory if missing — a fresh clone has no experiments/.../data dir,
+ * and writeFileSync does not create parents (ENOENT). */
+function ensureParent(path: string) {
+  mkdirSync(dirname(path), { recursive: true });
+}
 import {
   buildKB,
   runFactQAExperiment,
@@ -36,6 +43,7 @@ const cfg: FactQAConfig = { facts, items, probeFactIds };
 // ─── Offline dump / replay (portless; same shape as the COLREG runner) ──────────────────────────
 function recordingCompleter(path: string): Completer {
   const seen = new Set<string>();
+  ensureParent(path);
   writeFileSync(path, '');
   return async (prompt: string) => {
     if (!seen.has(prompt)) { seen.add(prompt); appendFileSync(path, JSON.stringify({ prompt }) + '\n'); }
@@ -137,6 +145,7 @@ function dumpTeachSet(path: string) {
     rows.push({ prompt: stem, target: `${f.value}${tail}` });
   }
   for (const it of items) rows.push({ prompt: `${it.question}\nAnswer:`, target: ` ${it.answer}` });
+  ensureParent(path);
   writeFileSync(path, rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
   console.log(`Wrote ${rows.length} teach examples (${facts.length} declarative + ${items.length} Q/A) to ${path}.`);
 }
@@ -149,6 +158,7 @@ async function synthTranscript(path: string, knownFrac: number) {
   const k = Math.round(knownFrac * facts.length);
   const known = new Set(facts.slice(0, k).map((f) => f.id));
   const learner = partiallyMemorizedQALearner(facts, items, known);
+  ensureParent(path);
   writeFileSync(path, '');
   const recorder: Completer = async (prompt: string) => {
     const completion = await learner(prompt);

@@ -34,9 +34,23 @@ function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/** An explicit abstention ("I don't know") — used to tell "read the corpus and it wasn't there"
- * apart from a wrong guess. */
+// Real models abstain in many phrasings, not just "I don't know" — and a narrow matcher would
+// misread "the reference facts do not mention that" as a (wrong) answer and mis-score contamination.
+// These markers are checked against the *normalized* text (lowercased, punctuation/articles
+// stripped). Deliberately NOT included: "unspecified" (the ignorant mock's wrong guess — a failure,
+// not an abstention) and bare "not know" (would catch unrelated text).
+const ABSTAIN_MARKERS = [
+  'don t know', 'do not know', 'dont know', 'does not know',
+  'not mention', 'not mentioned', 'no mention', 'does not mention', 'do not mention',
+  'not provided', 'not specified', 'not stated', 'not listed', 'not available', 'not given', 'not found',
+  'no information', 'not enough information', 'insufficient information',
+  'cannot be determined', 'can not be determined', 'cannot determine', 'unable to',
+  'not in reference', 'not in facts', 'reference facts do not', 'facts do not', 'no data',
+];
+
+/** An explicit abstention — used to tell "read the corpus and it wasn't there" apart from a wrong
+ * guess. Recognizes the common ways a real model declines, not just the literal "I don't know". */
 export function isAbstention(output: string): boolean {
   const out = normalizeAnswer(output);
-  return out === 'i don t know' || out === 'i dont know' || out === 'unknown' || out === '' || /(^|\s)don t know(\s|$)/.test(out);
+  return out === '' || out === 'unknown' || ABSTAIN_MARKERS.some((m) => out.includes(m));
 }
