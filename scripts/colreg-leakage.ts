@@ -211,7 +211,10 @@ function print(report: LeakageReport) {
     console.log(`    regret-delta     ${p.regretWithout.toFixed(1)} (without) − ${p.regretWith.toFixed(1)} (with) = ${p.regretDelta.toFixed(1)}  [same ablation on the full J regret instrument]`);
     console.log(`    counterfactual   ${p.counterfactualFollowed ? 'followed the altered rule ✓ (bound)' : 'ignored it ✗ (leaking)'}`);
     console.log(`    localization     top=${p.localizedComponent ?? 'none'}; governed component present: ${p.localizedGovernedComponent}`);
-    console.log(`    → VERDICT: ${p.verdict.toUpperCase()}`);
+    // A leaking rule is split by WHY the corpus doesn't help: `redundant` (competent with it —
+    // regret ≈ 0) vs `unusable` (fails even with it — regret high; the item has value, the model can't act on it).
+    const mode = p.leakMode ? ` (${p.leakMode}: regret-with ${p.regretWith.toFixed(1)})` : '';
+    console.log(`    → VERDICT: ${p.verdict.toUpperCase()}${mode}`);
   }
   console.log(`  closed-book (no corpus): ${report.closedBookAbstained ? 'abstained ✓ (bound)' : 'answered from priors ✗ (contamination)'}`);
 
@@ -228,11 +231,17 @@ function print(report: LeakageReport) {
       // governs→localizes is the localization confusion cell: which component the rule is meant to
       // govern, and which component the learner's failure-when-ablated actually points to.
       const gl = `${p.governedComponent}→${p.localizedComponent ?? 'none'}`;
-      console.log(`     ${p.ablationDelta.toFixed(3).padStart(8)}   ${p.regretDelta.toFixed(1).padStart(7)}   ${p.ruleId.padEnd(16)} ${gl.padEnd(24)} ${p.verdict}`);
+      const v = p.leakMode ? `${p.verdict}/${p.leakMode}` : p.verdict;
+      console.log(`     ${p.ablationDelta.toFixed(3).padStart(8)}   ${p.regretDelta.toFixed(1).padStart(7)}   ${p.ruleId.padEnd(16)} ${gl.padEnd(24)} ${v}`);
     }
     const relied = ranked.filter((p) => p.verdict === 'corpus-bound').length;
-    const leaked = ranked.filter((p) => p.verdict === 'leaking').length;
-    console.log(`     → ${ranked.length} rules · ${relied} relied-on (corpus adds value) · ${leaked} redundant/leaking (model already knows / rule adds nothing) · ${ranked.length - relied - leaked} inconclusive`);
+    const redundant = ranked.filter((p) => p.leakMode === 'redundant').length;
+    const unusable = ranked.filter((p) => p.leakMode === 'unusable').length;
+    const inconclusive = ranked.filter((p) => p.verdict === 'inconclusive').length;
+    console.log(
+      `     → ${ranked.length} rules · ${relied} relied-on (corpus adds value) · ` +
+        `${redundant} redundant (model already knows) · ${unusable} unusable (model can't act on it) · ${inconclusive} inconclusive`,
+    );
   }
 }
 

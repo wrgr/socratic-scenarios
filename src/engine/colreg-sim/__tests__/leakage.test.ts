@@ -107,6 +107,11 @@ describe('leakage — a hidden hazard is the large-effect corpus-reliance probe'
     expect(Math.abs(p.ablationDelta)).toBeLessThan(0.1);
     expect(report.closedBookAbstained).toBe(false);
     expect(p.verdict).toBe('leaking');
+    // The corpus is NOT redundant here — the model fails the hazard even with the rule present
+    // (regret ≈ full barrier). The split must call this `unusable`, not `redundant`: the item has
+    // value, this model just can't act on it. (Mirrors Bedrock Llama-70B: regret-with ≈ 1207.)
+    expect(p.regretWith).toBeGreaterThan(100);
+    expect(p.leakMode).toBe('unusable');
   });
 });
 
@@ -142,5 +147,10 @@ describe('leakage — per-rule necessity ranking (corpus-value audit)', () => {
     const leaking = await runLeakageExperiment(leakingLearnerCompleter(), 'leaking', auditCfg);
     expect(leaking.perRule.every((p) => p.ablationDelta < 0.15)).toBe(true);
     expect(leaking.perRule.every((p) => p.verdict === 'leaking')).toBe(true);
+    // On these standard rules the leaking learner is COMPETENT (it applies memorized COLREGs and
+    // complies, regret-with ≈ 0), so the split reads `redundant` — the corpus is genuinely dead
+    // weight here, the opposite pole from the `unusable` hazard case above.
+    expect(leaking.perRule.every((p) => p.regretWith < 10)).toBe(true);
+    expect(leaking.perRule.every((p) => p.leakMode === 'redundant')).toBe(true);
   });
 });

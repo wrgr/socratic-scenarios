@@ -24,6 +24,14 @@ trial. Two questions, one instrument:
 - **C1 — Corpus Diagnosis** (the product). Run the task instrument *backwards* on the corpus:
   - **(i) Localize** — attribute a task failure to *which specific corpus rule* is missing/wrong (fix the RAG).
   - **(ii) Necessity / leakage** — ablate a rule; if behavior doesn't change, the model used priors, not the corpus.
+  - **(iii) Why-not-needed split** — a rule whose ablation doesn't move behavior is `leaking`, but *why*
+    splits into two opposite verdicts, discriminated by the **with-corpus regret**: `redundant` (competent
+    with the rule present, regret ≈ 0 — the model already knows it, so drop it) vs `unusable` (fails the task
+    *even with the rule present*, regret ≈ full barrier — the item has value, this model just can't act on it,
+    so fix the model, not the corpus). Ablation-delta alone conflates these; regret-with separates them.
+    Observed on real Bedrock models: every model reads the textbook COLREG rules `redundant`, while Llama-70B
+    reads the corpus-only charted hazard `unusable` (grounds regardless, regret-with ≈ 1207) where Haiku/Sonnet
+    read it `corpus-bound`.
 - **C2 — Transfer Instrument** (what makes C1's score objective). Score the learner by its
   **regret against a reference-optimal policy** in a simulator, with \kc→single-metric identifiability.
 

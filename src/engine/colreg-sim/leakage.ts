@@ -52,6 +52,20 @@ export interface RuleProbe {
 
 export type Verdict = 'corpus-bound' | 'leaking' | 'inconclusive';
 
+/**
+ * When a rule reads `leaking` (the corpus does not move the learner's behavior), WHY it
+ * doesn't matters for a corpus-value audit — and the two reasons are opposite:
+ *   - `redundant`: the learner already does the right thing WITH the corpus (regret-with ≈ 0).
+ *                  The corpus item is genuinely dead weight — the model knows it. Drop it.
+ *   - `unusable`:  the learner does the WRONG thing even WITH the corpus (regret-with high).
+ *                  The item is NOT redundant; this model simply cannot act on it. The fix is
+ *                  the model, not the corpus. (e.g. Llama-70B grounds on a charted hazard the
+ *                  corpus explicitly warns about — regret ≈ full barrier with the rule present.)
+ * Discriminated by the WITH-corpus regret (regret above the reference policy), which is ≈ 0
+ * when the learner is competent and large when it fails the task regardless of the corpus.
+ */
+export type LeakMode = 'redundant' | 'unusable';
+
 export interface LeakageVerdict {
   ruleId: string;
   label: string;
@@ -78,6 +92,12 @@ export interface LeakageVerdict {
   /** Did the governed component appear among the ablated-run findings? */
   localizedGovernedComponent: boolean;
   verdict: Verdict;
+  /**
+   * Only set when `verdict === 'leaking'`: WHY the corpus doesn't move behavior —
+   * `redundant` (the learner is already competent) vs `unusable` (the learner fails the
+   * task even with the corpus present). Undefined for corpus-bound / inconclusive.
+   */
+  leakMode?: LeakMode;
 }
 
 export interface LeakageReport {
@@ -98,6 +118,8 @@ export interface LeakageConfig {
   closedBookScenario: SimScenario;
   /** Minimum ablation-delta (governed-metric rise) to call a rule "relied upon". */
   deltaThreshold?: number;
+  /** WITH-corpus regret below which a leaking rule is `redundant` (else `unusable`). */
+  competenceRegret?: number;
   /**
    * Prompt condition. true (default) = the strict corpus-binding positive control;
    * false = the `unconstrained` condition, in which the binding clause is removed and the
@@ -107,6 +129,19 @@ export interface LeakageConfig {
 }
 
 const DEFAULT_DELTA_THRESHOLD = 0.15;
+
+/**
+ * WITH-corpus regret (above the reference policy) below which a leaking learner is deemed
+ * competent → `redundant`; at or above it the learner is failing the task even with the
+ * corpus present → `unusable`. The compliance-governed rules sit at O(0.1–1) regret, while a
+ * grounded hazard is O(1000) (the categorical barrier), so this cleanly separates the two.
+ */
+const DEFAULT_COMPETENCE_REGRET = 10;
+
+/** Sub-classify a leaking rule by whether the learner is competent WITH the corpus. */
+function leakModeOf(regretWith: number, competenceRegret: number): LeakMode {
+  return regretWith < competenceRegret ? 'redundant' : 'unusable';
+}
 
 /**
  * Verdict from a majority vote of three orthogonal leakage signals, rather than the old
@@ -134,11 +169,12 @@ function classify(
 /** Run one rule probe: ablation-delta + counterfactual adherence + localization. */
 export async function runRuleProbe(
   complete: Completer,
-  cfg: { corpusNodes: AJPNode[]; scenarios: SimScenario[]; probe: RuleProbe; deltaThreshold?: number; strict?: boolean; closedBookContaminated?: boolean },
+  cfg: { corpusNodes: AJPNode[]; scenarios: SimScenario[]; probe: RuleProbe; deltaThreshold?: number; competenceRegret?: number; strict?: boolean; closedBookContaminated?: boolean },
 ): Promise<LeakageVerdict> {
   const { corpusNodes, probe } = cfg;
   const scenarios = probe.scenarios ?? cfg.scenarios; // rule-matched instrument subset
   const thr = cfg.deltaThreshold ?? DEFAULT_DELTA_THRESHOLD;
+  const competenceRegret = cfg.competenceRegret ?? DEFAULT_COMPETENCE_REGRET;
   const strict = cfg.strict ?? true;
 
   const policy = (opts: CorpusOptions) => {
@@ -174,6 +210,7 @@ export async function runRuleProbe(
   const localizedGovernedComponent = findings.some((f) => f.component === probe.governedComponent);
 
   const closedBookContaminated = cfg.closedBookContaminated ?? false;
+  const verdict = classify(ablationDelta, counterfactualFollowed, closedBookContaminated, thr);
   return {
     ruleId: probe.ruleId,
     label: probe.label,
@@ -188,7 +225,9 @@ export async function runRuleProbe(
     counterfactualFollowed,
     localizedComponent,
     localizedGovernedComponent,
-    verdict: classify(ablationDelta, counterfactualFollowed, closedBookContaminated, thr),
+    verdict,
+    // Only a leaking rule carries a mode; redundant vs unusable is decided by WITH-corpus regret.
+    ...(verdict === 'leaking' ? { leakMode: leakModeOf(regretWith, competenceRegret) } : {}),
   };
 }
 
