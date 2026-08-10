@@ -151,7 +151,7 @@ function leakModeOf(regretWith: number, competenceRegret: number): LeakMode {
  * {low ablation-delta, counterfactual ignored, closed-book contaminated} fixes that:
  * >=2 leak signals ⇒ leaking, 0 ⇒ corpus-bound, exactly 1 ⇒ genuinely mixed (inconclusive).
  */
-function classify(
+export function classify(
   ablationDelta: number,
   counterfactualFollowed: boolean,
   closedBookContaminated: boolean,
