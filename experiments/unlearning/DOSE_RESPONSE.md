@@ -27,6 +27,16 @@ objective **barrier** (grounding = full penalty) but **not shown to the model** 
 track and grounds. The signal is the whole barrier range, not a sliver, and avoiding a charted
 danger is plainly sensible so there's no "refuses a dangerous instruction" confound.
 
+**Graded difficulty ladder (not one difficulty).** The hazard set is *seven rungs* whose
+along-track distance sets the minimum clearing turn from ~19° (far) to ~47° (near) — all below the
+corpus's 55° instruction, so a corpus-bound learner clears every rung (full reliance). The point is
+the *interior*: a partially-knowing learner that turns only part-way clears the easy rungs and
+grounds on the hard ones, so aggregate corpus-reliance falls **smoothly** as weight-knowledge rises.
+An earlier single-difficulty set (three near-identical scenarios) made every scenario flip at the
+same α, so the α-curve was flat-then-cliff (reliance ~1287 across α=0..0.75, then ~0.2 at α=1) — a
+gradient artifact, not a finding. The endpoints were still correct (a 6400× known-groups swing in
+the right direction); only the interior was unresolvable, which the ladder fixes.
+
 The mock reference learners recover the ground truth (`npm run colreg:leakage` with `PROBES=hazard`):
 
 | learner | corpus-reliance (ablation-δ) | regret-δ (J) | verdict |
@@ -52,22 +62,32 @@ and runs build → teach → α-sweep → curve end to end. Locally:
 # 0. teach set (the location -> hazard fact, many phrasings)
 python build_hazard_datasets.py                         # data/hazard_teach.jsonl
 
-# 1. TEACH the fact into the weights (SFT; --save_every gives the checkpoint gradient)
+# 1. TEACH the fact into the weights (SFT; --save_every gives the checkpoint gradient).
+#    The teach set is ~25 examples, so at batch 4 x 8 epochs the run is ~56 steps; save_every 5
+#    gives ~11 snapshots across it. If the curve is too sharp (learning finishes in a few steps),
+#    lower --lr to 3e-5 and --save_every to 3 to stretch and resolve the early curve.
 python unlearn.py --method sft --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 \
-    --sft_file data/hazard_teach.jsonl --epochs 4 --lr 1e-4 --save_every 20 --out out/hazard_taught
+    --sft_file data/hazard_teach.jsonl --epochs 8 --lr 1e-4 --save_every 5 --out out/hazard_taught
 
-# 2. SWEEP — corpus-reliance vs weight-knowledge (two cross-checked gradients)
+# 2. SWEEP — corpus-reliance vs weight-knowledge (checkpoints are the robust graded axis; the
+#    α-sweep is the cross-check — agreement rules out a gradient-method artifact)
 python dose_response.py --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 \
     --adapter out/hazard_taught --alphas 0,0.25,0.5,0.75,1.0 --out results/dose_alpha
 python dose_response.py --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 \
-    --checkpoints out/hazard_taught/ckpt-20,out/hazard_taught/ckpt-60,out/hazard_taught/ckpt-120 \
+    --checkpoints out/hazard_taught/ckpt-5,out/hazard_taught/ckpt-10,out/hazard_taught/ckpt-20,out/hazard_taught/ckpt-35,out/hazard_taught/ckpt-55,out/hazard_taught \
     --out results/dose_ckpt
 # -> results/*.csv + an ASCII curve, flagging monotonic non-increasing. Plot from the CSV.
+# CSV columns: gradient_point, corpus_reliance_regret_delta, compliance_delta,
+#   reliant (derived from the chosen --metric), instrument_verdict_compliance (diagnostic only —
+#   keyed to the muted compliance sub-metric, so it can read LEAKING even at maximal regret reliance).
 ```
 
-- **LoRA-α** (one training run, evaluated at α∈{0..1}: α=0 = naive base, α=1 = fully taught) and
-  **checkpoints** (snapshots over training) should give the same curve — agreement rules out a
-  gradient-method artifact.
+- **checkpoints** (snapshots over training — early = R-naive, late = R-knowing) are the robust
+  graded axis: partial *training* yields genuinely partial/probabilistic knowledge. **LoRA-α**
+  (one run evaluated at α∈{0..1}) is the cross-check, but scaling a *converged* adapter is
+  threshold-like, so on its own it can step where checkpoints resolve — agreement between the two
+  rules out a gradient-method artifact; a smooth checkpoint curve beside a steppy α-curve is itself
+  a methods point, not a failure.
 
 ## The two validation directions
 
@@ -78,8 +98,10 @@ python dose_response.py --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 \
 
 ## What would refute the instrument (stated up front)
 
-- Corpus-reliance does **not** fall as the model is taught the hazard (flat / non-monotonic) → the
-  measure isn't tracking weight-knowledge. Report it.
+- Corpus-reliance does **not** fall between the *endpoints* (R-naive vs fully-taught) → the measure
+  isn't tracking weight-knowledge. Report it. (A flat *interior* with correct endpoints is a
+  gradient-resolution artifact, not a refutation — see the graded-ladder note above; it means the
+  scenarios shared one difficulty or the α-knob is threshold-like, both fixable.)
 - The α-curve and checkpoint-curve **disagree** → artifact.
 - The **naive base (α=0) already clears** the hazard → the model somehow knew it; strengthen the
   hazard's arbitrariness (a different location/geometry) and re-screen.
