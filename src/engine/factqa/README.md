@@ -49,6 +49,10 @@ GEMINI_API_KEY=... npm run factqa:leakage
 
 ## Dose-response (construct validity), simulator-free
 
+**One-click GPU run:** open `experiments/unlearning/dose_response_factqa_colab.ipynb` in Colab (GPU
+runtime) — it clones the branch, installs deps, builds the teach set from the KB, teaches the
+fictional facts with checkpoints, and runs both the α and checkpoint sweeps end to end.
+
 The same `experiments/unlearning/dose_response.py` drives this domain via `--runner factqa:leakage`.
 Because you can partially-teach at the granularity of *individual facts*, the aggregate necessity
 falls **smoothly** as the known set grows — no graded-difficulty ladder needed (the COLREG hazard
