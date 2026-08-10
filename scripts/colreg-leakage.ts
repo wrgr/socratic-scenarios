@@ -251,17 +251,23 @@ async function main() {
     return;
   }
 
-  console.log('Deterministic dry-run (no key needed) — the instrument must recover the known ground truth:');
-  // The bound learner reads whichever rules the mode's corpus provides. Under PROBES=hazard it
-  // reads ONLY the charted-hazard rule (a benign transit — no give-way steering to apply), so with
-  // the hazard ablated it holds its track and grounds; otherwise it reads Rule 14 / Rule 19.
-  const boundMock = isHazard
-    ? boundLearnerCompleter([], [], ['RULE-HAZARD-01'])
-    : boundLearnerCompleter(['RULE-COLREG-14'], ['RULE-COLREG-19']);
-  print(await runLeakageExperiment(boundMock, 'mock: corpus-bound learner', cfg));
-  print(await runLeakageExperiment(leakingLearnerCompleter(), 'mock: leaking learner', cfg));
-
   const real = realCompleter();
+
+  // Deterministic mock dry-run: the offline harness self-check. It's noise once a real model is
+  // running (two mock blocks before the live result), so run it only when there's NO live model —
+  // or force it with SHOW_MOCK=1.
+  if (!real || process.env.SHOW_MOCK === '1') {
+    console.log('Deterministic dry-run (no key needed) — the instrument must recover the known ground truth:');
+    // The bound learner reads whichever rules the mode's corpus provides. Under PROBES=hazard it
+    // reads ONLY the charted-hazard rule (a benign transit — no give-way steering to apply), so with
+    // the hazard ablated it holds its track and grounds; otherwise it reads Rule 14 / Rule 19.
+    const boundMock = isHazard
+      ? boundLearnerCompleter([], [], ['RULE-HAZARD-01'])
+      : boundLearnerCompleter(['RULE-COLREG-14'], ['RULE-COLREG-19']);
+    print(await runLeakageExperiment(boundMock, 'mock: corpus-bound learner', cfg));
+    print(await runLeakageExperiment(leakingLearnerCompleter(), 'mock: leaking learner', cfg));
+  }
+
   if (!real) {
     console.log('\nNo LLM credential found — skipping the live run. Set GEMINI_API_KEY / OPENAI_API_KEY / GITHUB_MODELS_TOKEN / BEDROCK_MODEL (with AWS creds) to run a real model through the same loop.');
     return;
