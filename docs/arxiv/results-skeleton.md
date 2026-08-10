@@ -37,8 +37,18 @@ over the full range as the LoRA-α knowledge gradient rises:
 A genuinely graded interior (0.93, 0.29 — not a step), spanning naive→taught, with the verdict
 flipping corpus-bound→leaking as the facts are internalized. The taught-end floor (~0.027 ≈ 2 of 75
 questions) is a clean residual, not interference — the 7B recalls the facts crisply (the babble in the
-earlier recall diagnostic was the 3B). Checkpoint cross-check (`results/dose_factqa_ckpt.csv`) running;
-agreement with α will rule out a gradient-method artifact (as it did for the hazard).
+earlier recall diagnostic was the 3B).
+
+**Checkpoint cross-check — PASSES (agrees with α):** genuine partial training reproduces the same
+graded monotone curve as α-scaling, ruling out a gradient-method artifact.
+
+| training | ckpt-15 | ckpt-60 | ckpt-105 | ckpt-150 | ckpt-195 |
+|---|---|---|---|---|---|
+| necessity | **1.000** | 0.253 | 0.027 | 0.027 | **0.027** |
+
+Same endpoints (1.00→0.03), same graded fall (α=0.5→0.293 vs ckpt-60→0.253), same floor. The two
+gradients are built differently (scaling a converged adapter vs. partial training), so their
+agreement is the artifact-ruling-out confirmation — Exp 7 is closed.
 
 **Hazard real data (Qwen2.5-3B), α and checkpoint sweeps AGREE:**
 

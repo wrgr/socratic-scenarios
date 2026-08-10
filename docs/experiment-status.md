@@ -25,7 +25,7 @@ validity backbone: same instrument, same `classify()` verdict, three objectives.
 | 3 | Corpus-value audit / localization | C1(i) | ✅ real run done, refinements landed | 4-rule necessity ranking on real models; standard rules redundant, hazard corpus-bound; clean 4-rule re-run optional |
 | 3b | redundant vs unusable split | C1(iii) | ✅ built + observed | Llama-70B reads the hazard **unusable** (regret-with 1207) where Haiku/Sonnet read it corpus-bound |
 | 4 | Real-hazard leg (external validity) | C1(ii) | 🔧 harness built, **needs real data** | screen + `HAZARDS_FILE` wired; user must supply real charted dangers |
-| 7 | **Second domain — fact-QA necessity** (no simulator) | C1 generality | ✅ graded curve validated (Qwen2.5-7B) | necessity **1.00→0.93→0.29→0.03** as α rises — the graded monotone dose-response; checkpoint cross-check pending |
+| 7 | **Second domain — fact-QA necessity** (no simulator) | C1 generality | ✅ done (Qwen2.5-7B; α & ckpt agree) | necessity **1.00→0.93→0.29→0.03** (α) and **1.00→0.25→0.03** (checkpoints) — graded monotone, artifact-free |
 | 8 | **Corpus sufficiency + FALSE SUFFICIENCY** | C1b | ✅ built + tested | verdict rollup shared by both runners; fires correctly on all three reference learners |
 | 5 | Probe suite breadth (routing, intention) | C1 breadth | 🔧 partial | Rule 8 (substantial) added → 4 rules; role 16/17 + agent-intention still planned |
 | 6 | Human trial | external validity | 📝 future work | pre-registered, out of scope for this paper |
@@ -41,8 +41,8 @@ models, in two domains with independent objectives:**
 - **2b — hazard** (control-regret objective): large-effect known-groups **endpoints** (necessity
   667→0.2), α and checkpoint sweeps agree. Step interior by construction (one discrete fact).
 - **7 — fact-QA** (answer-accuracy objective, no simulator; Qwen2.5-7B): the **graded monotone
-  curve**, necessity **1.00→0.93→0.29→0.03** as α rises. Checkpoint cross-check pending (expected to
-  agree, as for 2b).
+  curve**, necessity **1.00→0.93→0.29→0.03** (α) and **1.00→0.25→0.03** (checkpoints) — the two
+  gradients agree, so it is artifact-free. Done.
 
 Plus the corpus-diagnosis / sufficiency product (Exp 1/1b/3/3b/8, all in hand). **Remaining work is
 robustness/breadth, not a gate:** the fact-QA checkpoint cross-check, a 7B run for a second model

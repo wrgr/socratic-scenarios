@@ -625,9 +625,12 @@ competent model is necessarily corpus-bound at baseline, and because there are m
 facts, partial teaching learns a fraction of them, so the aggregate necessity is \emph{graded}.
 Teaching the facts into a Qwen2.5-7B-Instruct model drives mean necessity smoothly and monotonically
 down the LoRA-$\alpha$ gradient: $1.00\!\to\!0.93\!\to\!0.29\!\to\!0.03$ (Table~\ref{tab:dose}), with
-the verdict flipping \textsc{corpus-bound}$\to$\textsc{leaking} as the facts are internalized. This is
-the clean dose-response, in a domain we did not build a simulator for---answering the objection that
-the measure is an artifact of one hand-built environment. (Necessity here is measured closed-book:
+the verdict flipping \textsc{corpus-bound}$\to$\textsc{leaking} as the facts are internalized. A
+training-checkpoint sweep reproduces the same curve ($1.00\!\to\!0.25\!\to\!0.03$)---the two gradients
+are built differently (scaling one converged adapter vs.\ genuine partial training), so their
+agreement rules out a gradient-method artifact. This is the clean dose-response, in a domain we did
+not build a simulator for---answering the objection that the measure is an artifact of one hand-built
+environment. (Necessity here is measured closed-book:
 the without-corpus condition permits parametric answering, so taught knowledge surfaces rather than
 being suppressed by a strict ``answer only from the provided facts'' instruction.)
 
