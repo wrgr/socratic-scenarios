@@ -22,9 +22,23 @@ monotonically — a known-groups construct validation, in two domains, one with 
   (α or `ckpt-N`). Plot both the α and checkpoint series per domain — agreement = not a
   gradient-method artifact.
 
-**Status.** Hazard (2b) `[IN HAND]` — but it is a **step, not a graded curve**, and that is the
-correct result to report (see below). Fact-QA (7) `[PENDING]` — this is the arm that yields the
-graded monotone curve; offline synthetic is already monotone (1.00 → 0.76 → 0.48 → 0.24 → 0.00).
+**Status.** Both `[IN HAND]`. Hazard (2b) is a **step, not a graded curve** — the correct result for
+one discrete fact (see below). Fact-QA (7) is the **graded monotone curve**, now confirmed on a real
+model (α sweep below; checkpoint cross-check pending).
+
+**Fact-QA real α-sweep (closed-book ablation; model = Qwen2.5-3B/7B — confirm which):** necessity
+falls monotonically over the full range as the LoRA-α knowledge gradient rises:
+
+| α | 0 | 0.25 | 0.5 | 0.75 | 1 |
+|---|---|---|---|---|---|
+| necessity | **1.000** | 0.933 | 0.293 | 0.027 | **0.027** |
+| verdict | corpus-bound | corpus-bound | corpus-bound | leaking | leaking |
+
+A genuinely graded interior (0.93, 0.29 — not a step), spanning naive→taught, with the verdict
+flipping corpus-bound→leaking as the facts are internalized. The small taught-end residual (~0.027)
+is the cross-fact interference seen in the recall diagnostic (a 3B recalling one station's mineral as
+another's) — expected to shrink at 7B. Checkpoint cross-check (`results/dose_factqa_ckpt.csv`) still
+running; agreement with α will rule out a gradient-method artifact (as it did for the hazard).
 
 **Hazard real data (Qwen2.5-3B), α and checkpoint sweeps AGREE:**
 
