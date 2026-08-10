@@ -48,57 +48,58 @@ Reference-Policy Transfer Measurement with Bidirectional Corpus-Gap and Leakage 
 \maketitle
 
 \begin{abstract}
-Retrieval-augmented tutors are increasingly proposed for safety-critical, procedural
-domains, but validating that a tutor's mechanism actually works---rather than merely
-sounding fluent---usually requires expensive human-subject studies. We present an
-\emph{in-silico measurement instrument} that lets a designer falsify the mechanism of a
-corpus-bounded instructional method \emph{before} spending human-subject effort. The
-instrument has two parts that are really one tool used two ways. The first is a
-\emph{transfer instrument}: we replace item-response correctness with an \emph{objective
-continuous-control simulator whose reference solver yields regret-to-reference} as the
-transfer outcome, and we establish a measurement-design property we call
-\emph{knowledge-component (\kc) $\to$ single-metric identifiability}: each knowledge
-component governs exactly one metric, so ablating it degrades that metric and no other. The
-second is a \emph{corpus diagnosis} that is simply the transfer instrument read
-\emph{backwards} over a governed external corpus---to \emph{localize} which corpus rule is
-missing from measured task failures, and to \emph{detect parametric leakage} by rule
-ablation (is a model answering from the corpus or from pretrained priors?). Because
-removing a rule from the \emph{prompt} cannot by itself prove the knowledge lived in the
-\emph{weights}, the leakage test is validated by a machine-unlearning arm that deletes a rule
-from an open model and checks that the instrument responds---so the unlearning arm is
-constitutive of the leakage claim, not a detachable add-on. The method is
-\emph{closed-model compatible} (it needs only API access), operates \emph{per rule}, and
-reads both diagnoses off a single control-task metric. We exercise the instrument with
-controlled-competence proxy learners on maritime collision avoidance (COLREG) and a
-discrete procedural domain (roadside tire change), and report construct validity,
-estimator-recovery calibration, and a real-model discrimination result across six current
-LLMs. Read on the same regret instrument, the rule-ablation grades with binding fidelity
-under a strict prompt (falling monotonically with model capability) and collapses when the
-binding clause is removed, flipping \emph{every} model to \emph{leaking}; the lightest model
-fails to bind even when instructed to---a binding failure the instrument surfaces. All
-results are \textbf{simulation-based mechanism evidence, not human-subject
-external validity}; we scope the contribution accordingly and pre-register the human study
-as future work.
+When a model answers correctly with a corpus in context, did it \emph{need} the corpus, or
+did it already know the answer? We present an \emph{in-silico measurement instrument} that
+answers this---and the dual question of whether a corpus is \emph{sufficient}---as a
+behavioral task outcome, before any human-subject study. The central quantity is
+\emph{corpus necessity}: ablate a corpus item and measure the change in a task outcome scored
+against a reference. Our headline contribution is that we make necessity \emph{non-confounded}
+by calibrating it against a \emph{known parametric baseline}: we \emph{construct} the ground
+truth by teaching a fact into a model's weights and showing necessity falls as a
+\emph{dose-response}. We demonstrate this in \textbf{two domains with independent objectives},
+one of which uses \emph{no simulator at all}: (i) a control-regret simulator (maritime
+collision avoidance), where teaching a hidden charted hazard into the weights collapses
+necessity from a full-barrier swing to $\approx 0$, with the LoRA-scale and training-checkpoint
+gradients agreeing; and (ii) a simulator-free \emph{fictional-fact question answering} task
+scored by an answer checker, where teaching invented facts into a 7B model drives necessity
+\emph{smoothly and monotonically from $1.00$ to $0.03$}. This calibrated necessity measure is
+the basis of two products: a \emph{corpus diagnosis} that ranks each item by necessity,
+localizes which item is missing from task failures, and---crucially---splits an unrelied-upon
+item into \emph{redundant} (the model already knows it) versus \emph{unusable} (the model
+fails even with it present); and a \emph{corpus-sufficiency} verdict that surfaces
+\emph{false sufficiency}---a corpus that only appears sufficient because the model is coasting
+on priors and is therefore fragile to distribution shift. Unlike faithfulness (RAGAS) and
+context-attribution (ContextCite), which measure whether context \emph{supported} or
+\emph{influenced} an output, we measure whether the model \emph{needed} it, against a
+weight-level baseline they lack. The method is \emph{closed-model compatible} (API access
+only) and operates \emph{per item}. As breadth we report: cross-model discrimination across
+current LLMs; a second control domain (roadside tire change); \kc$\to$single-metric
+identifiability and estimator-recovery calibration; and a machine-unlearning arm that yields a
+\emph{says\,$\neq$\,does} dissociation (gentle unlearning changes what a model \emph{says} but
+not what the instrument sees it \emph{do}) as supporting weight-level evidence. All results
+are \textbf{simulation-based mechanism evidence, not human-subject external validity}; we
+scope the contribution accordingly and pre-register the human study as future work.
 \end{abstract}
 
 \vspace{0.5em}
 \noindent\fbox{\parbox{\dimexpr\textwidth-2\fboxsep-2\fboxrule}{%
-\small\textbf{Plain-language summary.} An AI tutor that is supposed to answer only from an
-approved rulebook is easy to demo but hard to trust: you cannot easily tell whether it is
-really using the rulebook or just leaning on what the language model already learned, and
-you cannot tell whether the rulebook itself has holes. Normally you would find out by
-running an expensive study with real learners. We instead build a cheap ``test bench'' that
-answers both questions before involving any people. It drops the tutor into a realistic
-steering task---avoiding ship collisions---where a standard automatic solver gives a strong
-reference move, and scores the tutor by how far its decisions fall from that reference. Because we
-design each rule to control exactly one part of the score, we can remove a single rule and
-watch what breaks: if the score gets worse, the tutor genuinely relied on that rule; if
-nothing changes, the tutor was quietly using its own built-in knowledge---a ``leak.'' Run
-the other way, the same measurement pinpoints which rule is missing when the tutor fails.
-It works with ordinary commercial models over an API, needs no access to their internals,
-and we confirm it on a current model. Everything here is a controlled simulation that
-checks the machinery works---not yet a claim that learners learn more, which is the study
-we set up next.}}
+\small\textbf{Plain-language summary.} When an AI answers correctly with a rulebook in front
+of it, you cannot easily tell whether it \emph{needed} the rulebook or already knew the
+answer---and you cannot tell whether the rulebook has holes. Normally you would find out with
+an expensive human study. We build a cheap ``test bench'' that answers both questions first.
+We remove a single item from the corpus and watch what breaks: if performance drops, the model
+genuinely relied on it; if nothing changes, it did not. To prove that ``nothing changes''
+really means the knowledge was already in the model---and not some prompt artifact---we
+\emph{construct} the answer: we teach a fact into the model's weights and show reliance falls
+step by step (a ``dose-response''). We do this in two settings, one of which uses no simulator
+at all: a ship-steering task, and a set of \emph{made-up facts} about fictional places no model
+could know---taught into a real model, reliance on the corpus drops smoothly from
+$100\%$ to near zero. The payoff is a corpus audit: which items are truly needed, which are
+\emph{redundant} (already known---delete them), which are \emph{unusable} (present but the
+model can't act on them), and whether the corpus only \emph{looks} sufficient because the
+model is coasting on what it already knew. Everything here is controlled simulation that checks
+the machinery---not yet a claim that human learners learn more, which is the study we set up
+next.}}
 \vspace{0.5em}
 
 \section{Introduction}
@@ -118,28 +119,37 @@ in silico, and we build the instrument to do it (Figure~\ref{fig:instrument}). O
 \emph{methods/measurement} one, not a new tutor and not a new collision-avoidance
 technique. Concretely:
 
+\emph{The central storyline} (Sections~\ref{sec:diagnosis}--\ref{sec:weightlevel}):
+
 \begin{itemize}
-  \item \textbf{The Transfer Instrument.} We measure a learner by its \emph{regret against a
-  reference-policy solver} on a continuous-control task, and design the instrument so that
-  each knowledge component governs exactly one metric (\kc$\to$single-metric identifiability;
-  Section~\ref{sec:instrument}).
-  \item \textbf{The Corpus Diagnosis --- the same instrument, read backwards.} Not a second
-  tool: running the \emph{one} metric in reverse both \emph{localizes} a missing corpus rule
-  from task failures and \emph{detects parametric leakage} by rule ablation, per rule, using
-  only API access (Section~\ref{sec:diagnosis}). Its leakage half makes a claim about the
-  model's \emph{weights}, so it is \emph{validated at the weight level} by a machine-unlearning
-  arm that actually deletes a rule and checks the instrument responds
-  (Section~\ref{sec:weightlevel})---that arm is part of this contribution, not an appendix to it.
-  \item \textbf{A proxy-learner screen} exercises the instrument as a pre-human-trial go/no-go,
-  using two complementary controlled-competence proxy classes---a parametric one and the
-  unlearned open-weight one (Sections~\ref{sec:proxies}--\ref{sec:weightlevel}).
+  \item \textbf{Necessity, calibrated by construction.} We measure \emph{corpus necessity}---the
+  change in a task outcome when a corpus item is ablated---and make it non-confounded by
+  \emph{constructing} the parametric baseline: teach a fact into the weights and necessity falls
+  as a \emph{dose-response}. We show this in \textbf{two domains with independent objectives},
+  one \emph{simulator-free}: a control-regret simulator (teaching a hidden hazard collapses
+  necessity to $\approx 0$; LoRA-scale and checkpoint gradients agree) and a simulator-free
+  fictional-fact QA task scored by an answer checker (teaching invented facts drives necessity
+  smoothly $1.00\!\to\!0.03$ on a 7B model). This is a known-groups validation of the measure.
+  \item \textbf{The corpus diagnosis} ranks each item by necessity, localizes a missing item from
+  task failures, and splits an unrelied-upon item into \emph{redundant} (already known) versus
+  \emph{unusable} (present but the model fails with it)---distinct fixes (prune vs.\ fix the model).
+  \item \textbf{Corpus sufficiency}, the product face of the audit, surfaces \emph{false
+  sufficiency}: a corpus that only looks sufficient because the model coasts on priors (necessity
+  $\approx 0$ everywhere), a fragility ordinary RAG metrics report as all-green.
 \end{itemize}
 
-Every \emph{component} we build on is prior art; the \emph{unified instrument} and the
-\emph{reference-policy transfer metric} are the open ground
-(Section~\ref{sec:related}). We are explicit throughout that our evidence is
-simulation-based: it tests whether the machinery behaves as designed and whether the
-measurement can distinguish competence, not whether humans learn more.
+\emph{Additional breadth} (supporting the above, not the headline): a \emph{transfer instrument}
+that scores a learner by its \emph{regret against a reference-policy solver} with
+\kc$\to$single-metric identifiability (Section~\ref{sec:instrument}); a second control domain and
+estimator-recovery calibration; cross-model discrimination on current LLMs
+(Section~\ref{sec:diagnosis}); and a machine-unlearning arm that yields a \emph{says\,$\neq$\,does}
+dissociation as secondary weight-level evidence (Section~\ref{sec:weightlevel}).
+
+Our contribution is a \emph{methods/measurement} one, not a new tutor. Every \emph{component} we
+build on is prior art; the \emph{calibrated necessity measure} and its \emph{corpus-value/sufficiency
+audit} are the open ground (Section~\ref{sec:related}). We are explicit throughout that our
+evidence is simulation-based: it tests whether the machinery behaves as designed, not whether
+humans learn more.
 
 \begin{figure}[t]
 \centering
@@ -403,7 +413,7 @@ governed penalty when that rule is removed---and a localization that names the g
 component. A large delta plus a matching localization means the learner \emph{relied on}
 that corpus rule.
 
-\paragraph{(ii) Parametric leakage detection.} The mirror image: ablate a rule from the
+\paragraph{(ii) Parametric leakage detection (necessity).} The mirror image: ablate a rule from the
 corpus; if the metric it governs does \emph{not} degrade, the model is answering from
 pretrained priors, not the corpus. We combine the ablation-delta with a
 \emph{counterfactual} test (replace ``alter to starboard'' with ``alter to port''; does the
@@ -411,7 +421,29 @@ learner follow the altered rule?) and a \emph{closed-book} contamination baselin
 corpus supplied). The verdict---\textsc{corpus-bound}, \textsc{leaking}, or
 \textsc{inconclusive}---is read from the same metric, by a majority vote over the three
 signals so that a clear ablation-and-contamination pattern is not vetoed by a single
-dissenting sub-test.
+dissenting sub-test. Section~\ref{sec:construction} calibrates this necessity against a known
+parametric baseline by construction.
+
+\paragraph{(iii) Why an item is not needed: \emph{redundant} vs.\ \emph{unusable}.} A small
+ablation-delta says the corpus did not move behavior, but not \emph{why}, and the two reasons
+demand opposite fixes. We split a \textsc{leaking} item by its \emph{with-corpus} performance:
+\emph{redundant} (the learner is competent \emph{with} the item present---it already knows the
+rule, so the item is dead weight and should be pruned) versus \emph{unusable} (the learner fails
+the task \emph{even with} the item present---the content has value but this model cannot act on
+it, so the fix is the model/prompting/retrieval, not the corpus). The delta alone conflates
+these; the with-corpus outcome (regret in the control domain, accuracy in QA) separates them. On
+the real-model sweep this is not hypothetical: on the corpus-only hazard, Claude Haiku and Sonnet
+read \textsc{corpus-bound} while Llama-3.3-70B grounds regardless (with-corpus regret $\approx
+1207\approx$ full barrier)---\emph{unusable}, not redundant.
+
+\paragraph{Corpus sufficiency, and \emph{false sufficiency}.} Rolling the per-item verdicts to the
+corpus level yields a sufficiency judgement for a query set: \emph{contributing} (every item
+relied upon), \emph{partial}, \emph{unusable}, or---the diagnostic ordinary RAG metrics cannot
+produce---\emph{false sufficiency}: task accuracy is high yet necessity is $\approx 0$ everywhere,
+so the corpus is not carrying the load and success rides on priors, fragile to distribution shift.
+The claim is explicitly scoped to the probed query set (sufficiency is always ``for these
+queries''); the false-sufficiency signal (necessity $\approx 0$) is precisely the measurable
+warning that a bounded-query sufficiency claim will not survive a shift.
 
 \subsection{One instrument, not two}
 \label{sec:coupling}
@@ -558,20 +590,78 @@ any human is recruited. This differs from prior proxy-learner work
 objective control-task outcome rather than dialogue behavior, profile alignment, or
 LLM-judge helpfulness.
 
-\section{Validating the leakage test at the weight level (machine unlearning)}
+\section{Validating necessity at the weight level}
 \label{sec:weightlevel}
-This section is not an optional add-on; it is what earns the leakage half of the Corpus
-Diagnosis. That test infers a fact about a model's \emph{weights} from a change in the
-\emph{prompt}: ablate a rule from the corpus, and if the governed metric does not move, we
-call the model a leaker. The sharpest objection is that corpus \emph{context} removal is not
-weight-level \emph{unlearning}, so ``leakage'' could be the no-context heuristic in disguise---
-a model might simply be answering a now-underspecified prompt. The only way to close that gap
-is to actually remove the knowledge from the weights and show the \emph{same instrument}
-responds. So we build an open-weight arm: remove the alter-to-starboard knowledge from an
-open-weight model with a real unlearning method---SimNPO \citep{simnpo2024} as primary
-(reference-free, length-normalized), with NPO \citep{npo2024}, RMU \citep{rmu2024}, and
-gradient ascent \citep{ga2023} as baselines---and score the base vs.\ unlearned model on
-the reference-policy instrument. A removal audit \citep{lynch2024} reports whether the
+The necessity/leakage test infers a fact about a model's \emph{weights} from a change in the
+\emph{prompt}: ablate an item from the corpus, and if the governed outcome does not move, the
+model did not need it. The sharpest objection is that corpus \emph{context} removal is not
+weight-level \emph{knowledge} change, so a small necessity could be the no-context heuristic in
+disguise---or, conversely, a large necessity could reflect a fact the model happens not to know
+for reasons we did not control. We close this two ways, in increasing strength.
+
+\subsection{Validation by construction: the necessity dose-response}
+\label{sec:construction}
+The decisive test is \emph{known-groups}: build models along a gradient from fact-naive to
+fact-knowing \emph{by construction}, and show necessity falls monotonically. We teach a target
+fact into the weights (LoRA SFT) and sweep two independent knowledge gradients---the LoRA scale
+$\alpha$ (one adapter, evaluated at $\alpha\in[0,1]$) and training checkpoints---so their
+agreement rules out a gradient-method artifact. We run this in two domains with \emph{independent
+objectives}, the second of which uses no simulator at all.
+
+\paragraph{Domain 1 --- control-regret (a hidden hazard).} Standard COLREG rules have no dynamic
+range for this test---every current model already knows them (Section~\ref{sec:diagnosis})---so we
+use a \emph{corpus-only charted hazard}: a danger scored by the objective barrier but not shown in
+the prompt, knowable only from the corpus. Teaching it into a Qwen2.5-3B model collapses necessity
+from a full-barrier swing ($\regret$-necessity $\approx 667$, naive) to $\approx 0.2$ (taught), and
+the $\alpha$ and checkpoint sweeps \emph{agree} on the transition. The curve is a \emph{step}, not
+graded---the correct signature for a \emph{single discrete fact}, which is learned as a threshold
+(the model either lacks the fact and grounds, or has it and clears)---so the hazard arm establishes
+the large-effect known-groups \emph{endpoints}, and the graded curve is Domain 2's job.
+
+\paragraph{Domain 2 --- simulator-free fictional-fact QA.} We invent facts about fictional entities
+(research outposts and their attributes) that no model can have memorized, and score answers with a
+programmatic checker---\emph{no simulator, no reference policy}. Because the facts are fictional, a
+competent model is necessarily corpus-bound at baseline, and because there are many \emph{independent}
+facts, partial teaching learns a fraction of them, so the aggregate necessity is \emph{graded}.
+Teaching the facts into a Qwen2.5-7B-Instruct model drives mean necessity smoothly and monotonically
+down the LoRA-$\alpha$ gradient: $1.00\!\to\!0.93\!\to\!0.29\!\to\!0.03$ (Table~\ref{tab:dose}), with
+the verdict flipping \textsc{corpus-bound}$\to$\textsc{leaking} as the facts are internalized. This is
+the clean dose-response, in a domain we did not build a simulator for---answering the objection that
+the measure is an artifact of one hand-built environment. (Necessity here is measured closed-book:
+the without-corpus condition permits parametric answering, so taught knowledge surfaces rather than
+being suppressed by a strict ``answer only from the provided facts'' instruction.)
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Domain / objective & \multicolumn{5}{c}{necessity across the knowledge gradient} \\
+\midrule
+& naive & & & & taught \\
+Hazard / $\regret$ (Qwen-3B) & $667$ & \multicolumn{3}{c}{$\cdots$ step $\cdots$} & $0.2$ \\
+\midrule
+& $\alpha{=}0$ & $0.25$ & $0.5$ & $0.75$ & $\alpha{=}1$ \\
+Fictional-fact QA / accuracy (Qwen-7B) & $1.00$ & $0.93$ & $0.29$ & $0.03$ & $0.03$ \\
+\bottomrule
+\end{tabular}
+\caption{Necessity dose-response by construction. Teaching a fact into the weights drives the
+instrument's necessity for that fact down. The hazard (control-regret objective) gives a
+large-effect \emph{step}---the known-groups endpoints for one discrete fact, with $\alpha$/checkpoint
+sweeps agreeing---while the simulator-free fictional-fact QA (answer-accuracy objective) gives the
+\emph{graded} monotone curve over many independent facts. Two objectives, one measure. Harness:
+\texttt{experiments/unlearning} (\texttt{dose\_response.py}), \texttt{src/engine/factqa}.}
+\label{tab:dose}
+\end{table}
+
+\subsection{Validation by unlearning: a \emph{says\,$\neq$\,does} dissociation (supporting)}
+\label{sec:unlearning}
+The complementary direction removes a rule the model \emph{does} know and asks whether necessity
+rises. This arm is secondary---it has dynamic range only on a rule with a real corpus-vs-prior
+gap, which the standard rules lack---but it yields an independently interesting result. We remove
+the alter-to-starboard knowledge from an open-weight model with a real unlearning method---SimNPO
+\citep{simnpo2024} as primary (reference-free, length-normalized), with NPO \citep{npo2024}, RMU
+\citep{rmu2024}, and gradient ascent \citep{ga2023} as baselines---and score the base vs.\ unlearned
+model on the reference-policy instrument. A removal audit \citep{lynch2024} reports whether the
 knowledge is \emph{gone} vs.\ merely \emph{suppressed}; for a stable novice that resists
 benign relearning we layer in a robust utility-preserving recipe \citep{unlearninglasts2025}.
 The harness is built, and a completed GPU run (SimNPO on Qwen2.5-3B-Instruct, \texttt{bfloat16},
@@ -724,30 +814,43 @@ examples rather than a leaderboard. \textbf{Single-rule decomposability may not 
 entangled, redundant, or jointly govern one outcome. Where a single rule cannot be cleanly
 isolated, the localization degrades to a coarser attribution and the leakage test to a
 group-level one; how far clean decomposition extends beyond corpora we constructed is open.
-\textbf{Unlearning is a single model at one scale.} The instrument-scoring result
-(Section~\ref{sec:weightlevel}) is informative---a gentle recipe suppresses the \emph{words}
-while the scored \emph{decision} is untouched (says\,$\neq$\,does), and an aggressive one
-\emph{inverts} the rule---but it is one 3B model; seed/method variance and replication at a
-larger scale (7B, \texttt{bfloat16}, not 4-bit---quantization noise would confound the
-damage/coherence signal that is the point) are outstanding. A clean
-\textsc{corpus-bound}\,$\to$\,\textsc{gone} transition is structurally out of reach for any
-pretrained COLREG rule (all leak); demonstrating it requires the corpus-only rule of the
-designed next experiment, not a re-tune of this one.
+\textbf{The unlearning arm is a single model at one scale.} The \emph{says\,$\neq$\,does}
+result (Section~\ref{sec:unlearning}) is informative---a gentle recipe suppresses the
+\emph{words} while the scored \emph{decision} is untouched, an aggressive one \emph{inverts}
+the rule---but it is one 3B model, and seed/method variance is outstanding. It is a
+\emph{supporting} result: a clean necessity transition is structurally out of reach for any
+pretrained COLREG rule (all leak), which is exactly why the primary weight-level validation is
+the \emph{construction} dose-response (Section~\ref{sec:construction}), where we build the
+knowledge into the weights and observe necessity fall---already run in two domains, though on
+single models per domain; more seeds and sizes (and a 7B hazard replication in
+\texttt{bfloat16}, not 4-bit, since quantization noise would confound the effect) remain
+breadth. \textbf{Sufficiency is scoped to a query set.} Every sufficiency verdict is relative
+to the probed queries; we mitigate rather than escape this by always reporting the query count
+and by treating the false-sufficiency signal as the measurable warning of fragility to shift,
+but a corpus adequate for one query distribution may be insufficient for another.
 
 \section{Conclusion}
-We have described an in-silico instrument that lets a designer falsify the mechanism of a
-corpus-bounded instructional method before human-subject effort. It is \emph{one} tool used
-two ways: a reference-policy transfer metric with \kc$\to$single-metric identifiability (the
-Transfer Instrument), read backwards to localize corpus gaps and detect parametric leakage on
-one closed-model-compatible metric (the Corpus Diagnosis), with the leakage claim validated at
-the weight level by machine unlearning and the whole exercised by two complementary
-proxy-learner classes. The claim is testable and narrow; the domains are worked examples, the
-evidence base is deliberately small, and the measurement method is the point.
+We have described an in-silico instrument that measures whether a learner \emph{needs} a corpus,
+and whether a corpus is \emph{sufficient}, before human-subject effort. The central contribution
+is a \emph{necessity} measure made non-confounded by \emph{construction}: teaching a fact into a
+model's weights drives the instrument's necessity for that fact down as a dose-response, which we
+demonstrate in two domains with independent objectives---a control-regret simulator (large-effect
+known-groups endpoints) and a \emph{simulator-free} fictional-fact QA task (the graded monotone
+curve, $1.00\!\to\!0.03$). On that calibrated measure we build a corpus-value audit---ranking
+items by necessity, localizing a missing item, and splitting the unrelied-upon into
+\emph{redundant} versus \emph{unusable}---and a corpus-sufficiency verdict that surfaces
+\emph{false sufficiency}. Distinct from faithfulness and context-attribution, we measure need
+against a weight-level baseline they lack. Supporting breadth---a reference-policy transfer
+instrument with \kc$\to$single-metric identifiability, cross-model discrimination, a second
+control domain, and a \emph{says\,$\neq$\,does} unlearning dissociation---rounds out the picture.
+The claim is testable and narrow; the domains are worked examples, the evidence base is
+deliberately small, and the measurement method is the point.
 
-\paragraph{Reproducibility.} The simulator, instrument, diagnosis harness, proxy learners,
-and the open-weight unlearning scaffold will be released, along with a deterministic no-key
-dry-run that recovers the mock ground truth and a one-tap GPU notebook for the unlearning
-arm. (Code is withheld here to preserve double-blind review.)
+\paragraph{Reproducibility.} The simulator, the answer-checker QA domain, the diagnosis and
+sufficiency harness, the construction dose-response, and the open-weight unlearning scaffold will
+be released, along with a deterministic no-key dry-run that recovers the mock ground truth and
+one-tap GPU notebooks for the dose-response. (Code is withheld here to preserve double-blind
+review.)
 
 \small
 \bibliographystyle{plainnat}

@@ -5,7 +5,7 @@
 \usepackage{enumitem}
 \usepackage{parskip}
 
-\title{\textbf{Can We Trust an AI Tutor That's Supposed to Use Only the Rulebook?}\\[4pt]
+\title{\textbf{Did the AI Really \emph{Need} the Rulebook, or Did It Already Know the Answer?}\\[4pt]
 \large A plain-language companion to the paper}
 \author{}
 \date{}
@@ -16,135 +16,194 @@
 \begin{quote}
 \small\emph{This is a high-school-level retelling of the technical paper, written so we can
 check that the argument actually holds together. It is a companion, not the paper of record;
-every claim here is stated more carefully (and hedged) in \texttt{main.tex}.}
+every claim here is stated more carefully (and hedged) in \texttt{main.tex}. It is a
+\textbf{test bench}---a way to check the machinery in simulation---not a proof that real
+students learn more.}
 \end{quote}
 
 \section*{The problem in one paragraph}
 
-Imagine an AI tutor that is only supposed to teach from an approved rulebook---say, the rules
-that stop ships from colliding. Two things can go wrong, and both are hard to see from the
-outside. (1)~\textbf{The tutor cheats.} Instead of using the rulebook, it just leans on
-whatever the underlying language model already memorized from the internet. It sounds right,
-but it isn't really using \emph{your} rules---so if your rules change, or the model's memory
-is wrong, you won't know. (2)~\textbf{The rulebook has holes.} Maybe a rule is missing or
-worded badly, and you can't tell which one. Normally you'd find out by running an expensive
-study with real students. We wanted a cheap ``test bench'' that answers both questions
-\emph{before} involving any people.
+Picture an AI that is supposed to answer using an approved rulebook or reference corpus---say,
+the rules that stop ships from colliding, or a set of facts about your company's products. It
+gives a right-looking answer. Here is the question almost nobody can answer: \textbf{did it
+actually \emph{need} the corpus?} Maybe it read your rule and used it. Or maybe it already knew
+the answer from its own training and your corpus added nothing---in which case the moment your
+rules change, or the questions shift, the whole thing quietly breaks and you won't see it
+coming. That is the \textbf{necessity} question. There is a twin question: is the corpus
+\textbf{sufficient}---does it actually contain what's needed to do the job? Normally you'd find
+out by running an expensive study with real people. We wanted a cheap way to answer both
+questions \emph{before} involving anyone.
 
 \section*{Idea 1: a test with a right answer (the ``Transfer Instrument'')}
 
-Multiple-choice quizzes are a weak way to measure a tutor, because a fluent-sounding answer
-can still be wrong in practice. So instead we drop the learner into a \textbf{realistic task
-that has a measurable best move}: steering a ship to avoid a collision. For any situation,
-a standard piece of autopilot software computes a strong ``reference'' move. We then score
-the learner by \textbf{how far its decision lands from that reference move}. Small distance =
-good; large distance = bad. We call that distance \emph{regret}. Unlike a quiz score, regret
-is smooth---it can tell ``slightly off'' from ``about to crash.''
+Multiple-choice quizzes are a weak way to measure this, because a fluent-sounding answer can
+still be wrong in practice. So instead we drop the learner into a \textbf{realistic task that
+has a measurable best move}: steering a ship to avoid a collision. For any situation, a
+standard piece of autopilot software computes a strong ``reference'' move. We then score the
+learner by \textbf{how far its decision lands from that reference move}. Small distance = good;
+large distance = bad. We call that distance \emph{regret}. Unlike a quiz score, regret is
+smooth---it can tell ``slightly off'' from ``about to crash.''
 
-The clever part: we build the rulebook so that \textbf{each rule controls exactly one part of
-the score}. Remove the ``turn to starboard'' rule and \emph{only} the ``did you turn the
-right way'' part of the score gets worse; nothing else moves. We check this actually holds
-(it's not automatic---if the scoring terms were tangled, removing one rule would smear across
-several). That one-rule-$\to$-one-number property is what makes the next idea work.
+We also build the rulebook so that \textbf{each rule controls exactly one part of the score}.
+Remove the ``turn to starboard'' rule and \emph{only} the ``did you turn the right way'' part of
+the score gets worse; nothing else moves. We check this actually holds---it's not automatic. That
+``one rule $\to$ one number'' property is what lets us test rules one at a time.
 
-\section*{Idea 2: run the same test backwards (the ``Corpus Diagnosis'')}
+\section*{Idea 2: run the test backwards to measure NECESSITY}
 
-Here's the key move, and the thing worth double-checking: \textbf{the diagnosis is not a
-second tool. It is the exact same test, run in reverse.}
+Here is the core move: \textbf{take a corpus item out and re-run the test.} If the score gets
+worse, the learner was genuinely relying on that item---it \emph{needed} it. If the score
+\emph{doesn't budge}, the learner already knew the answer and never needed your corpus. That
+gap---how much performance falls when we remove an item---\emph{is} the necessity of that item.
+Same instrument that grades learning, run in reverse, now audits the corpus.
+
+\section*{The headline: proving necessity is real, by \emph{building} the ground truth}
+
+Here's the honest soft spot, and how we close it---this is the biggest change in the whole
+project. When we remove an item and the score doesn't move, we \emph{conclude} the model already
+knew the answer. But how do we \emph{know} it already knew it? We could be fooling ourselves. The
+only airtight way to prove necessity is real, and not confounded by what the model happened to
+already know, is to \textbf{control what the model knows}---and watch necessity move in lockstep.
+
+So we do exactly that: we \textbf{teach a fact directly into a model's weights} and watch its
+necessity for that fact fall. Before teaching, the model must read the corpus to answer, so
+necessity is high. After teaching, it knows the fact on its own, so necessity should drop to
+near zero. If it does, the instrument is measuring what we claim. We ran this two ways, in two
+different domains:
 
 \begin{itemize}[leftmargin=1.4em]
-  \item \textbf{Which rule is missing?} If the learner keeps failing one specific part of the
-  score, and that part is the one a particular rule controls, then \emph{that} rule is the
-  hole in your rulebook. The test that measures learning, read backwards, points at the gap.
-  \item \textbf{Is the tutor cheating?} Take a rule \emph{out} of the rulebook and re-run the
-  test. If the score gets worse, the tutor was genuinely relying on that rule---good. If the
-  score \emph{doesn't budge}, the tutor already ``knew'' the answer from its own memory and
-  never needed your rulebook---that's a leak.
+  \item \textbf{Ship hazard (a simulator domain).} We invent a hidden charted hazard---a danger
+  no model could already know---and teach it into the weights. Necessity collapses from large
+  ($\approx$667 in our regret units) to essentially zero ($\approx$0.2). We validated the two
+  ends on a \emph{real} model, and we built the ``knowledge gradient'' two independent ways
+  (turning a training knob up, and saving the model at successive training checkpoints); the two
+  methods \textbf{agree}, which rules out the result being a quirk of how we trained. But it's a
+  \emph{step}, not a smooth slope---because this is \emph{one discrete fact}. The model either
+  knows it or it doesn't; there's no ``halfway.''
+  \item \textbf{Fictional-facts Q\&A (NO simulator---just an answer checker).} Here there is no
+  ship, no autopilot, no hand-built barrier: just made-up facts about fictional places that no
+  model could possibly know, and a plain checker that asks ``is the answer right?'' We teach those
+  facts into a real 7B model, a bit at a time, and necessity falls \textbf{smoothly and steadily:
+  1.00 $\to$ 0.93 $\to$ 0.29 $\to$ 0.03} as the model soaks the facts up. It's smooth \emph{because
+  there are many independent facts}---you can learn a quarter of them, then half, then almost all.
+  This is the clean ``dose-response'' curve: more knowledge in the weights, less need for the
+  corpus, every step of the way.
 \end{itemize}
 
-Same simulator, same score. One direction grades learning; the other direction audits the
-rulebook and catches cheating. That's why the paper insists it is \emph{one} instrument, not
-two.
+The two-domains point matters, and one of them uses \textbf{no simulator at all}. That's what
+shows the method isn't a lucky trick of one hand-built ship simulator---it works on any task with
+a checkable right answer, and it's calibrated against knowledge we \emph{put in ourselves}, so
+``necessity'' provably means ``needed the corpus,'' not ``happened to correlate with something.''
 
-\section*{The catch, and why unlearning is not optional}
+\section*{What this is \emph{for}: two products}
 
-The cheating test has a soft spot, and it's the honest heart of the paper. When we remove a
-rule from the \emph{prompt} and the score doesn't move, we \emph{conclude} the model was using
-its own memory. But maybe the model just got confused by a now-incomplete prompt. Removing
-text from a prompt doesn't \emph{prove} the knowledge was baked into the model's brain.
+\textbf{Product 1 --- Corpus diagnosis.} Run the test backwards over every rule or fact and
+\textbf{rank them by how much the learner relies on each one}. That already tells you which items
+are carrying weight and which are dead weight. The sharp part is splitting ``the corpus didn't
+help'' into two \emph{opposite} cases that look identical from the outside:
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Redundant} --- the model already knew it, so removing it changes nothing.
+  \emph{Verdict: delete it, it's clutter.}
+  \item \textbf{Unusable} --- the model fails the task \emph{even with the item right in front of
+  it}. The item has value; this model just can't act on it. \emph{Verdict: the problem is the
+  model, not the corpus.}
+\end{itemize}
+Removing-and-watching (necessity alone) can't tell these apart---both show ``no change.'' What
+separates them is the score \emph{with} the item present: near-perfect $\Rightarrow$ redundant;
+still failing $\Rightarrow$ unusable. We saw both live on the ship hazard: Claude Haiku and Sonnet
+read it \emph{corpus-bound} (they use it), while Llama-70B grounds anyway and \emph{ignores} it
+(regret stays $\approx$1207 with the rule present)---the textbook ``unusable'' case.
 
-The only way to close that gap is to actually \textbf{erase the rule from the model's brain}
-and check that our test notices. There's a real technique for this---``machine
-unlearning''---that surgically removes one fact from an open-weight model's weights. If, after
-erasing ``turn to starboard,'' the model now fails the steering test \emph{even with no
-rulebook at all}, and then \emph{recovers} once we hand it the rulebook, that proves two
-things at once: the knowledge really was in the weights, and \textbf{our test can tell}. So
-the unlearning experiment isn't a bonus chapter---it's what makes the cheating detector
-trustworthy. Take it away and the leak-detection claim is just a hunch.
+\textbf{Product 2 --- Corpus sufficiency, and the FALSE SUFFICIENCY alarm.} This is the
+diagnostic ordinary RAG scoring simply cannot produce. Imagine a corpus that looks totally
+sufficient: the model answers everything correctly, every check is green. Our instrument can tell
+you the accuracy is a mirage---the model is \textbf{coasting on what it already knew}, and the
+corpus is contributing nothing (necessity $\approx$0 everywhere). We call that \textbf{false
+sufficiency}, and it's a warning: this system will fail the instant the questions drift outside
+what the model happens to have memorized. \emph{Honest caveat:} sufficiency is always ``sufficient
+for \emph{these} questions.'' We can only test the questions we ask, so we always report how many
+we asked---and the false-sufficiency alarm is precisely the measurable warning that a
+looks-fine-on-this-question-set corpus is fragile.
 
-(Status, honestly: we ran the surgery on a GPU and it produced a surprise that is better than a
-tidy confirmation. Erasing ``turn to starboard'' \emph{gently} makes the model stop \emph{saying}
-the rule---it even quits citing ``Rule 14'' and starts naming other rules---so every text-based
-``did we forget it?'' score reports success. But when we run the actual steering test, the ship
-still turns to starboard, exactly as before. In other words: the model changed what it
-\emph{says}, not what it \emph{does}. The text scores were fooled; our steering test was not.
-That is the whole thesis in miniature---the test measures the \emph{decision}, and the decision
-never budged. A ``benign relearning'' check (a few normal training steps) confirms the fact was
-only \emph{hidden}, not truly gone: the model's memory of the rule springs right back, while the
-steering decision stays put the entire time.)
+\section*{How this differs from existing tools (RAGAS, ContextCite)}
 
-(Two footnotes, kept honest. If instead we erase \emph{aggressively}, we get the opposite
-failure: the ship starts turning the \emph{wrong} way---the test catches that too, which is the
-point. And there's a real limit: because \emph{every} big model already knows ``head-on
-$\to$ starboard'' from its own training, erasing it can't make the test flip from
-``corpus-bound'' to ``gone''---there's no room to move. To show that clean flip, the next
-experiment teaches a model a made-up rule no model could already know---a fictional strait with
-its own strict speed limit---then erases \emph{that}, where the test has room to register the
-change.)
+Tools like RAGAS and ContextCite are good, and close by, so it's worth being precise. They ask
+whether an answer is \textbf{supported by} or \textbf{influenced by} the provided context---did
+these words come from that passage? We ask a different question: did the model \textbf{need} the
+context at all? And crucially, we \textbf{calibrate} that against a known baseline by teaching
+facts in ourselves, so a fact the model already knew is never miscounted as one it relied on.
+That calibration---controlling what's in the weights and checking necessity tracks it---is the
+thing those tools structurally lack. It's the difference between ``the answer matches the
+passage'' and ``the answer would have been wrong without the passage.''
 
-\section*{The dress rehearsal: two kinds of fake students}
+\section*{Additional breadth (clearly separate from the central story)}
 
-Before testing a tutoring method on real people, we rehearse it on two kinds of
-\emph{simulated} students, both scored on the same steering test:
-\begin{enumerate}[leftmargin=1.4em]
-  \item a \textbf{dial-a-skill} student, where we turn competence up or down directly, and
-  \item the \textbf{brain-erased} student from the unlearning experiment above.
-\end{enumerate}
-If a teaching method can't move the needle on these controllable stand-ins, it probably isn't
-worth an expensive human trial. Two different kinds of fake student agreeing is a stronger
-check than either alone.
+Everything above is the \textbf{central story}: measure necessity, prove it's real by construction
+in two domains, and turn it into diagnosis and sufficiency products. The following are supporting
+breadth---they widen the evidence, but the paper does not lean on them.
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Cross-model discrimination.} We run the instrument across many different LLMs
+  (Claude Haiku/Sonnet, Llama, Nova, and others) and it tells them apart: every model reads the
+  \emph{textbook} ship rules as redundant (they all already know the COLREGs), while the invented
+  hidden hazard splits them---corpus-bound vs.\ unusable vs.\ inconclusive. Different models,
+  genuinely different verdicts.
+  \item \textbf{A second simulator domain.} Besides the continuous steering task, we built a
+  \emph{discrete, step-by-step} task---a roadside tire change---and showed the same machinery
+  works there too (each skill controls exactly one part of the score, and competence and
+  performance move together). So the ``one rule, one number'' property isn't special to ships.
+  \item \textbf{The unlearning ``says $\ne$ does'' sidelight.} An earlier version of this project
+  made machine-\emph{unlearning}---surgically erasing a rule from the model's brain---the
+  load-bearing proof. It isn't anymore; the teaching-in dose-response above is the primary
+  weight-level validation. But the unlearning result is a lovely illustration in its own right:
+  when we \emph{gently} erase ``turn to starboard,'' the model stops \emph{saying} the rule (it
+  quits citing ``Rule 14,'' and every text-based ``did it forget?'' score reports success---probe
+  dropped from 0.43 to 0.27), yet on the actual steering test the ship \textbf{still turns to
+  starboard, unchanged} ($\Delta = 0.000$). The model changed what it \emph{says}, not what it
+  \emph{does}---and our instrument measures the \emph{decision}, so it wasn't fooled. A supporting
+  sidelight, not the keystone.
+  \item \textbf{Honest limitations.} (1)~Sufficiency is only ever ``sufficient for the questions we
+  asked''---a bounded question set (see false sufficiency above). (2)~Everything here is
+  \textbf{simulation and mechanism evidence, not a human study}. A real trial with real learners is
+  written down as the next step, not skipped. (3)~We designed our rulebooks so each rule controls
+  one thing; real corpora are messier, and when rules overlap the diagnosis gets coarser (it points
+  at a \emph{group} of items, not one).
+\end{itemize}
 
 \section*{What we are \emph{not} claiming (the honest part)}
 
 \begin{itemize}[leftmargin=1.4em]
   \item \textbf{This is a test bench, not proof that students learn more.} Everything is
-  simulation. The real human study is written down as the next step, not skipped.
-  \item \textbf{The evidence here is small on purpose.} We show the machinery works on
-  \emph{two} ship rules and \emph{six} models from \emph{one} company. That's a demonstration,
-  not a benchmark; a convincing claim needs many more rules and models, which the released
-  code is built to run.
-  \item \textbf{Cleanly pulling one rule out may not always work.} We \emph{designed} our
-  rulebook so each rule controls exactly one thing. Real rulebooks are messier---rules overlap
-  and lean on each other---so this ``one rule, one number'' cleanliness might not hold for a
-  corpus we didn't build ourselves. When rules are tangled, the diagnosis gets coarser (it
-  points at a \emph{group} of rules, not one).
+  simulation. The real human study is the next step, not a result in hand.
+  \item \textbf{We are not claiming a new AI tutor, or a new collision-avoidance method.} We
+  borrow mature ship-autopilot software as a \emph{measuring stick}. The measurement method is the
+  contribution.
+  \item \textbf{We are not claiming the corpus is ``sufficient'' in general}---only for the
+  specific questions we probed. The false-sufficiency alarm is our honest handle on that limit.
 \end{itemize}
 
-\section*{Five checks (does the logic survive a plain retelling?)}
+\section*{Does the logic survive a plain retelling? (the checks)}
 
 \begin{enumerate}[leftmargin=1.4em]
   \item The score is a \emph{distance from an expert's move}, so ``better'' is a measurable
   quantity, not a vibe. \hfill[measurement]
-  \item Each rule moves exactly one part of that score---verified, not assumed. \hfill[identifiability]
-  \item Running that same score backwards finds missing rules \emph{and} catches cheating.
-  \hfill[one tool, two uses]
-  \item ``Cheating'' means the score ignores the rulebook---which is only believable if we can
-  show the test reacts when knowledge is truly erased from the weights. \hfill[why unlearning is load-bearing]
-  \item We rehearse on controllable fake students before spending on real ones. \hfill[pre-trial screen]
+  \item Removing a corpus item and watching the score fall measures \emph{necessity}---whether the
+  learner truly needed it. \hfill[the core method]
+  \item We prove necessity is real by \emph{teaching a fact into the weights} and watching necessity
+  fall---in two domains, one with no simulator, giving a smooth 1.00 $\to$ 0.93 $\to$ 0.29 $\to$
+  0.03 curve. \hfill[known-groups validation, the headline]
+  \item Read backwards, the same test ranks corpus items and splits ``didn't help'' into
+  \emph{redundant} (delete it) vs \emph{unusable} (fix the model). \hfill[corpus diagnosis]
+  \item A corpus can look perfectly sufficient while the model coasts on priors---necessity
+  $\approx$0 everywhere is the measurable \emph{false-sufficiency} alarm ordinary RAG scoring can't
+  raise. \hfill[sufficiency]
+  \item We measure whether the model \emph{needed} the context (calibrated against a known
+  baseline), where RAGAS/ContextCite measure whether it was \emph{supported/influenced} by it.
+  \hfill[the delta vs prior tools]
 \end{enumerate}
 
-If any of these five feels like a leap, that's exactly where the technical paper needs to work
-harder---and where more experiments (more rules, more models, the made-up-rule erasure that
-gives the test room to flip) would change ``plausible'' into ``demonstrated.''
+If any of these feels like a leap, that's exactly where the technical paper needs to work
+harder---and where the remaining work (more rules, more models, a real charted-hazard leg, and
+eventually the human trial) would turn ``plausible'' into ``demonstrated.''
 
 \end{document}
