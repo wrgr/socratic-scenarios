@@ -8,6 +8,7 @@ import {
   partiallyMemorizedQALearner,
   answerCorrect,
   normalizeAnswer,
+  isAbstention,
   type FactQAConfig,
 } from '../index';
 
@@ -21,6 +22,23 @@ describe('fact-QA verifier', () => {
     expect(answerCorrect('dorn', 'dornalium')).toBe(false); // prefix must not match
     expect(answerCorrect("I don't know", 'veltricite')).toBe(false);
     expect(normalizeAnswer('The  Year, 2231!')).toBe('year 2231');
+  });
+
+  it('recognizes real abstention phrasings (not just the literal "I don\'t know")', () => {
+    for (const s of [
+      "I don't know",
+      'The reference facts do not mention that.',
+      'That information is not provided in the facts.',
+      'It is not specified.',
+      'There is no information about that.',
+      'Unknown',
+      'It cannot be determined from the reference facts.',
+      "I'm unable to answer that from the provided facts.",
+    ]) expect(isAbstention(s)).toBe(true);
+    // But a wrong guess is NOT an abstention (the ignorant learner's failure mode).
+    expect(isAbstention('unspecified')).toBe(false);
+    expect(isAbstention('veltricite')).toBe(false);
+    expect(isAbstention('Aada Nurmi')).toBe(false);
   });
 });
 
