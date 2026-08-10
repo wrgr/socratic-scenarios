@@ -34,6 +34,19 @@ trial. Two questions, one instrument:
     read it `corpus-bound`.
 - **C2 — Transfer Instrument** (what makes C1's score objective). Score the learner by its
   **regret against a reference-optimal policy** in a simulator, with \kc→single-metric identifiability.
+- **C1b — Corpus Sufficiency** (co-equal claim; the product face of C1). Roll the per-item verdicts
+  into a corpus-level judgement for a query set: `contributing` (every item relied upon — lean),
+  `partial` (some relied-on, some redundant-prunable, some unusable), `unusable` (content present,
+  the model can't exploit it), or **`redundant` / FALSE SUFFICIENCY** (nothing relied upon and the
+  model answers closed-book — the corpus adds ~nothing; task success rides on priors and is fragile
+  to distribution shift). Implemented in `src/engine/audit-sufficiency.ts`; printed by both runners.
+  **Scoping condition (state it up front, it is intrinsic):** sufficiency is *always relative to the
+  probed query set* — "sufficient for these queries." An item scored redundant here may be necessary
+  for queries not exercised. This is not a differential weakness (RAGAS metrics are equally
+  eval-set-bounded); the honest move is to (a) always report the query count, (b) test held-out and
+  distribution-shifted queries, and (c) lean on the FALSE-SUFFICIENCY detector — necessity ≈ 0 is the
+  *measurable* warning that a bounded-query sufficiency claim won't survive shift, which is exactly
+  the risk the bounded set cannot otherwise see.
 
 **The one novel delta** (defend it explicitly; see §5): prior work — faithfulness (RAGAS),
 context attribution by ablation (ContextCite), knowledge-conflict, prior-dominance — measures
@@ -219,6 +232,40 @@ by ablation (**ContextCite** — the closest precedent), knowledge-conflict, pri
 SeedRG, and states the delta as (a) behavioral task-outcome scoring, (b) per-rule localization,
 (c) **necessity, not just influence**, calibrated by weight-level construction/unlearning. Do not
 maintain a second copy here — edit the paper.
+
+### 5a. Sharpened RAGAS / ContextCite delta (fold into `main.tex` related-work)
+
+The fact-QA domain (`src/engine/factqa`, the **first simulator-free** instantiation — the COLREG and
+tire domains both use a scored simulator) sits visibly close to RAG evaluation, so the delta must be
+drawn on *necessity vs. known parametric baseline*, not on "we ablate context" (a known trick). The
+incumbents all score a single *(question, retrieved-context, answer)* instance:
+
+| Method | Measures | Cannot tell you |
+|---|---|---|
+| RAGAS **faithfulness** | is the answer *supported by* the context | whether the model *needed* it — a prior-driven answer that agrees with context scores high |
+| RAGAS **context recall** | is the answer *present in* the retrieved passages | whether the model *used* it, already knew it, or can't use it |
+| RAGAS **answer correctness** | answer vs a reference | nothing about corpus attribution |
+| **ContextCite** (closest) | which context sentences *influenced* the output (ablation on logprobs) | necessity for *task success*; and it is uncalibrated — flags an influential sentence even if the model already knew the fact |
+
+The three moves none of them make: (1) **counterfactual necessity on a task outcome** (ablate the
+item, measure behavior) — not support/influence-on-text; (2) **weight-level known-groups calibration**
+(fictional facts / dose-response fix the parametric baseline, so necessity is provably about the
+corpus, not confounded with what the model already knew) — the construct-validation RAG-eval papers
+structurally lack; (3) the **relied-on / redundant / unusable** trichotomy — no RAGAS analog (context
+recall can confirm "the answer is in the corpus" and stay blind to both leaking regimes).
+
+### 5b. The sufficiency headline: FALSE SUFFICIENCY (the diagnostic RAGAS can't produce)
+
+Because necessity is calibrated against a known parametric baseline, the audit can detect a corpus
+that **looks sufficient only because the model is coasting on priors**: high task accuracy + high
+faithfulness, yet necessity ≈ 0 everywhere. Standard RAG metrics are all green in this case; ours
+flags it (`FALSE SUFFICIENCY`). The product line — *"is your corpus carrying the load, or is it a
+liability waiting for a distribution shift?"* — is more legible than "we measure faithfulness better,"
+and it is the honest handle on the bounded-query limitation (necessity ≈ 0 is the measurable warning
+that the bounded-query sufficiency claim won't survive shift). This is distinct from RAGAS context
+recall, the nearest neighbour: recall is a *retrieval* property (is the answer string in the
+passages, needs a reference answer, ignores the model); sufficiency-via-necessity is *behavioral and
+parametric-calibrated* (does the model need, and can it use, content it could not supply itself).
 
 ---
 
