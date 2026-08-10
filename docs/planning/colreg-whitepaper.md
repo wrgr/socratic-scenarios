@@ -2,9 +2,9 @@
 
 **A TeachMe / EDDIE working whitepaper.**
 Companion documents: [OVERVIEW.md](../OVERVIEW.md) (the educational stance),
-[docs/colreg-simulator-design.md](colreg-simulator-design.md) (instrument design),
-[docs/colreg-validation.md](colreg-validation.md) (methodology),
-[docs/colreg-conops.md](colreg-conops.md) (operations).
+[docs/colreg-simulator-design.md](../colreg-simulator-design.md) (instrument design),
+[docs/colreg-validation.md](../colreg-validation.md) (methodology),
+[docs/colreg-conops.md](../colreg-conops.md) (operations).
 
 > **Evidence status.** All quantitative results below are **simulation-based
 > mechanism evidence** — they test whether the machinery behaves as designed and
@@ -252,7 +252,7 @@ velocity obstacles (Fiorini & Shiller; Kuwata et al.); ship-domain and CRI model
 and simulated/agent learners in education (SimStudent / Apprentice-Learner;
 GPTeach; generative student agents; machine-unlearning-based novice simulation) with
 the associated proxy-validity caveats. See
-[docs/colreg-validation.md](colreg-validation.md) for linked sources.
+[docs/colreg-validation.md](../colreg-validation.md) for linked sources.
 
 ## 10. Reproduction
 

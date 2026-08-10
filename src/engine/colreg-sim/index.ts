@@ -105,6 +105,7 @@ export {
   starboardProbe,
   crossingGiveWayProbe,
   safeSpeedProbe,
+  hazardProbe,
   boundLearnerCompleter,
   leakingLearnerCompleter,
   type RuleProbe,

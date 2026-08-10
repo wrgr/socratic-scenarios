@@ -2,12 +2,18 @@ import { describe, it, expect } from 'vitest';
 import {
   runLeakageExperiment,
   starboardProbe,
+  crossingGiveWayProbe,
+  safeSpeedProbe,
+  hazardProbe,
   boundLearnerCompleter,
   leakingLearnerCompleter,
   type LeakageConfig,
+  type SimScenario,
 } from '../index';
+import type { AJPNode } from '../../../types/ajp';
 import { colregDomain } from '../../../corpus/colreg';
-import { collisionTarget, makeScenario } from '../../../corpus/colreg/benchmark-geometry';
+import { collisionTarget, makeScenario, ownship, kn } from '../../../corpus/colreg/benchmark-geometry';
+import { restrictedBenchmark } from '../../../corpus/colreg/restricted';
 
 const headOn = (id: string, range: number, speedKn: number) =>
   makeScenario(id, 'Head-on', 'beginner', [collisionTarget('A', 0, range, speedKn)]);
@@ -52,5 +58,89 @@ describe('leakage experiment — the instrument recovers the known ground truth 
     // The same instrument, run bidirectionally, cleanly tells them apart.
     expect(bound.ablationDelta).toBeGreaterThan(leaking.ablationDelta + 0.5);
     expect(bound.verdict).not.toBe(leaking.verdict);
+  });
+});
+
+// THE corpus-reliance probe: a hidden hazard the model can know ONLY from the corpus. This is the
+// large-effect design — a learner that reads the corpus alters to clear; one that does not holds
+// its default track and grounds (full barrier). The swing is the whole metric range, not a sliver.
+describe('leakage — a hidden hazard is the large-effect corpus-reliance probe', () => {
+  const hazardScenario = (id: string, hy: number): SimScenario => ({
+    id, label: 'Transit past a charted hazard', description: '', difficulty: 'beginner',
+    ownship: ownship(),
+    targets: [{ id: 'F', label: 'F', x: -9000, y: 9000, psi: Math.PI, v: kn(6), lengthM: 100 }],
+    visibility: 'clear',
+    hazards: [{ x: 0, y: hy, radiusM: 2000, label: 'charted wreck' }],
+    horizonS: 1200, dt: 4, intendedHeading: 0,
+  });
+  const scns = [hazardScenario('HZ-1', 3000), hazardScenario('HZ-2', 2800), hazardScenario('HZ-3', 3200)];
+  const hazardNode: AJPNode = {
+    id: 'RULE-HAZARD-01',
+    type: 'TheoryReference',
+    content: 'CHARTED HAZARD — a wreck lies directly ahead on your track; alter course to starboard by at least 55° to pass well clear.',
+    confidence: 'High',
+    source: 'corpus-only notice to mariners',
+  };
+  const cfg: LeakageConfig = {
+    corpusNodes: [...colregDomain.nodes, hazardNode],
+    scenarios: scns,
+    probes: [hazardProbe(scns[0], scns)],
+    closedBookScenario: scns[0],
+  };
+  // The bound learner reads ONLY the hazard rule (benign transit, no give-way steering to apply),
+  // so with the hazard ablated it holds and grounds.
+  const boundMock = () => boundLearnerCompleter([], [], ['RULE-HAZARD-01']);
+
+  it('a learner that reads the hazard is judged corpus-bound, with a LARGE ablation-delta', async () => {
+    const report = await runLeakageExperiment(boundMock(), 'mock-bound', cfg);
+    const p = report.perRule[0];
+    // Ablating the corpus-only hazard makes the bound learner ground — a full-barrier swing, an
+    // order of magnitude past the discrete threshold (not a sliver).
+    expect(p.ablationDelta).toBeGreaterThan(0.5);
+    expect(report.closedBookAbstained).toBe(true);
+    expect(p.verdict).toBe('corpus-bound');
+  });
+
+  it('a prior-driven learner (ignores the corpus) grounds either way → leaking, ~0 delta', async () => {
+    const report = await runLeakageExperiment(leakingLearnerCompleter(), 'mock-leaking', cfg);
+    const p = report.perRule[0];
+    expect(Math.abs(p.ablationDelta)).toBeLessThan(0.1);
+    expect(report.closedBookAbstained).toBe(false);
+    expect(p.verdict).toBe('leaking');
+  });
+});
+
+// Experiment 3 — the corpus-value audit (C1 localization half): per-rule ablation ranks the corpus
+// rules by how much the learner RELIES on each. This is the data behind the necessity ranking and
+// the localization confusion cell (governedComponent vs localizedComponent).
+describe('leakage — per-rule necessity ranking (corpus-value audit)', () => {
+  const crossing = (id: string, bearingDeg: number, speedKn: number) =>
+    makeScenario(id, 'Starboard crossing', 'intermediate', [collisionTarget('A', bearingDeg, 6000, speedKn)]);
+  const crossingScns = [crossing('XG-1', 45, 12), crossing('XG-2', 60, 11)];
+  const fog = restrictedBenchmark.filter((s) => ['RV-01', 'RV-02', 'RV-03'].includes(s.id));
+  const auditCfg: LeakageConfig = {
+    corpusNodes: colregDomain.nodes,
+    scenarios,
+    probes: [starboardProbe(scenarios[0]), crossingGiveWayProbe(crossingScns[0], crossingScns), safeSpeedProbe(fog[0], fog)],
+    closedBookScenario: scenarios[0],
+  };
+
+  it('ranks a relied-on rule above a redundant one, and every verdict carries its governed component', async () => {
+    const bound = await runLeakageExperiment(
+      boundLearnerCompleter(['RULE-COLREG-14', 'RULE-COLREG-15'], ['RULE-COLREG-19']), 'bound', auditCfg,
+    );
+    const byRule = Object.fromEntries(bound.perRule.map((p) => [p.ruleId, p]));
+    // Head-on steering is relied on (ablating it collapses the metric); the crossing rule's
+    // starboard is redundant given Rule 14, so it ranks below — the audit's core signal.
+    expect(byRule['RULE-COLREG-14'].ablationDelta).toBeGreaterThan(0.5);
+    expect(byRule['RULE-COLREG-14'].ablationDelta).toBeGreaterThan(byRule['RULE-COLREG-15'].ablationDelta);
+    // Every verdict now carries the governed component for the localization confusion cell.
+    expect(bound.perRule.every((p) => typeof p.governedComponent === 'string')).toBe(true);
+  });
+
+  it('a leaking learner relies on nothing — every rule reads redundant', async () => {
+    const leaking = await runLeakageExperiment(leakingLearnerCompleter(), 'leaking', auditCfg);
+    expect(leaking.perRule.every((p) => p.ablationDelta < 0.15)).toBe(true);
+    expect(leaking.perRule.every((p) => p.verdict === 'leaking')).toBe(true);
   });
 });

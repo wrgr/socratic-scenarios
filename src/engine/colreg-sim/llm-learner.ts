@@ -57,7 +57,12 @@ export function renderScenario(scenario: SimScenario): string {
   const o = scenario.ownship;
   const vis = scenario.visibility === 'restricted' ? 'restricted (fog; radar contact only)' : 'good';
   const targets = scenario.targets.map((t, i) => describeTarget(o, t, t.label ?? String.fromCharCode(65 + i)));
+  // `location` is the query cue for corpus-only facts (e.g. a charted hazard): it names WHERE the
+  // ownship is so a rule keyed to that place applies. It never states the fact itself (hazards are
+  // never rendered here — they can be known only from the corpus).
+  const where = scenario.location ? [`Location: ${scenario.location}.`] : [];
   return [
+    ...where,
     `Ownship: heading ${Math.round(COMPASS(o.psi))}°, speed ${Math.round(o.v * MS_TO_KNOTS)} kn. Visibility: ${vis}.`,
     ...targets,
   ].join('\n');

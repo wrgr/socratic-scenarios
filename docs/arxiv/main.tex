@@ -181,14 +181,22 @@ Knowledge-Learning-Instruction framework \citep{koedinger2012kli}, open learner 
 established. We reuse them as infrastructure, not as contributions.
 
 \paragraph{Corpus-bounded tutoring, leakage, and faithfulness.} RAG tutors that abstain
-outside a corpus are standard engineering. A separate line detects whether a model relies
-on provided context versus parametric memory: no-context filtering \citep{seedrg2026},
-aggregate prior-dominance \citep{priordominance2026}, counterfactual context
-\citep{faithfulrag2025}, and---closest to us---intervention-based evidence ablation with a
-zero-retrieval control \citep{cuer2026}. These are per-answer or system-level and judge
-\emph{answer text}; none localizes \emph{which specific corpus rule is missing} and detects
-leakage \emph{on one objective control-task metric}, per rule, bidirectionally. That join
-is the \emph{Corpus Diagnosis}.
+outside a corpus are standard engineering. A large line asks whether a model uses provided
+context or parametric memory: faithfulness metrics score whether an answer is grounded in
+context \citep{ragas2023}; context attribution ablates context sources and measures the
+change in output probability to attribute a generation to them \citep{contextcite2024,
+priordominance2026}; knowledge-conflict work studies which side wins when context contradicts
+memory \citep{knowledgeconflicts2024, faithfulrag2025}; leakage-free benchmarking filters
+items answerable with no context \citep{seedrg2026}; and intermediate-step scoring looks
+beyond the final answer \citep{cuer2026}. All of these measure whether context
+\emph{influenced} the output, judged on \emph{answer text}, per answer or system-wide. We
+differ on three axes: (a) we score a \emph{behavioral task outcome} against a reference-optimal
+policy, not answer text; (b) we attribute \emph{per corpus rule} and localize which rule is
+missing or wrong, not per token or system-wide; and (c) we measure not merely \emph{influence}
+but \emph{necessity}---calibrated by manipulating the parametric baseline directly (weight-level
+construction and unlearning, Section~\ref{sec:weightlevel}), so a fact the model already knew is
+not mistaken for one it relied on. No context-attribution method has that weight-level ground
+truth. That join is the \emph{Corpus Diagnosis}.
 
 \paragraph{Objective competency instruments.} Deviation-from-optimal scoring appears in
 flight \citep{zinn2023flight} and construct-validity-by-novice/expert-separation in surgery
@@ -566,89 +574,122 @@ gradient ascent \citep{ga2023} as baselines---and score the base vs.\ unlearned 
 the reference-policy instrument. A removal audit \citep{lynch2024} reports whether the
 knowledge is \emph{gone} vs.\ merely \emph{suppressed}; for a stable novice that resists
 benign relearning we layer in a robust utility-preserving recipe \citep{unlearninglasts2025}.
-The predicted $2\times2$: the base model scores low even without the corpus (it has the
-knowledge in weights); the unlearned model scores high without the corpus and recovers with
-it (weight-level corpus reliance). Nobody has scored an \emph{unlearned} learner on a
-control-task regret metric; this is what turns the leakage test from a prompt-level heuristic
-into a claim about the weights. The harness is built, and both CPU and GPU runs deliver the audit-level
-half (Table~\ref{tab:unlearn}). On CPU, the primary method SimNPO on Qwen2.5-1.5B-Instruct---a
-model that knows the rule---drives the forget-target NLL from $4.6$ to $92$ and the held-out
-direction-cue rate (robust to the starboard$\to$right synonym) from $5/6$ to $0/6$ while
-retain knowledge stays coherent; the NPO baseline produces the same qualitative collapse
-($4.6\to41$, $5/6\to0/6$), so the suppression is method-agnostic. On GPU at larger scale
-(Qwen2.5-3B-Instruct, \texttt{bfloat16}) the \emph{forget-target NLL collapse reproduces}
-($5.5\to33.9$), which is the robust cross-scale signal; the behavioral and utility readings,
-however, are weaker there and carry two honest caveats. First, the ``retain preserved''
-reading is teacher-forced (retain NLL $3.5\to0.26$): some \emph{free} generations---including
-on retain topics---degrade into off-language or repetitive output (the model falls back to its
-dominant-language priors when the targeted English pathway is damaged), so low retain NLL
-overstates preserved utility; we therefore also track free-generation coherence, not NLL alone.
-Second, the held-out direction-cue moved only modestly ($5/6\to4/6$)---a single-probe change on
-$n{=}6$ that is within noise---and because a bare keyword-drop also credits wrong-direction and
-garbled answers, we now classify each probe answer as survived / wrong-direction / degenerate /
-abstained so model \emph{damage} cannot masquerade as forgetting. All of this establishes
-behavioral \emph{suppression}, not yet verified semantic \emph{removal}: the probe is lexical
-and the NLL teacher-forced. Scoring the base-vs.-unlearned model on the full regret
-instrument---the step that turns suppression into an instrument-level result and fills the
-corpus-recovery cell of the $2\times2$---yields a first, illustrative result (below), which a
-larger-$n$, better-tuned rerun should sharpen (the forget/retain and probe sets are now
-generated in the hundreds rather than a dozen).
+The harness is built, and a completed GPU run (SimNPO on Qwen2.5-3B-Instruct, \texttt{bfloat16},
+LoRA $r{=}8$, at a deliberately gentle, guardrailed setting: lr $5\!\times\!10^{-5}$,
+retain\_weight $3.0$, $3$ epochs, with COLREG's own Rule-14 head-on-port prohibition kept in
+the retain set as an anti-inversion guardrail) delivers not just the audit half but a first
+instrument-scoring result (Table~\ref{tab:unlearn}). Its lesson is sharper than the predicted
+$2\times2$: \textbf{the standard free-text unlearning metrics overstate removal because they
+measure what the model \emph{says}; the reference-policy instrument measures what the model
+\emph{does}---its steering decision---and shows the decision is untouched.}
 
-\paragraph{First instrument-scoring result: unlearning can \emph{invert} a safety rule, not erase it.}
-On the head-on instrument (corpus present vs.\ ablated), the base Qwen2.5-3B turns to starboard
-on all $8/8$ scored prompts and scores compliance penalty $0.00$ whether or not the corpus
-carries the rule---the knowledge is in its weights (verdict \textsc{leaking}, the contamination
-baseline). The unlearned model instead turns to \emph{port}---the wrong way---on $6/8$, driving
-the penalty to $0.36$ with the corpus and $0.54$ without (regret $0.6$ vs.\ $0.9$; verdict
-\textsc{inconclusive}). The generations are coherent JSON, not garbled, so this is not the
-fluency damage the audit flagged but a distinct, more dangerous failure: because the head-on
-turn is essentially binary, the default SimNPO objective (push down ``starboard'') moves the
-mass onto ``port,'' \emph{inverting} the rule rather than removing it. The forget-target NLL
-audit calls this success ($5.5\to33.9$); the control-task instrument calls it a wrong-way
-steamer---the sharpest vindication of the thesis (an objective outcome catches what a likelihood
-audit cannot) and a caution that naive weight-level unlearning of a safety rule can yield
-\emph{confident non-compliance}. A clean \textsc{corpus-bound} cell (abstain/hold without the
-corpus, recover with it) requires steering the fallback away from that inversion: we retain
-COLREG's own prohibition on a head-on port turn (Rule~14) in the retain set so the post-forget
-default is to hold or reduce speed. This is a single default-recipe run, reported as
-illustrative, not a tuned result.
-For that rerun the removal audit is hardened along the axes a single keyword rate misses
-\citep{lynch2024}: held-out \emph{paraphrase}, \emph{jailbreak}, and \emph{indirect} probes
-(a removal that holds only on the trained phrasing is suppression, and the audit reports a
-survived-rate per probe type), a \emph{benign-relearning} test
-\citep{hu2024relearn,deebroger2024} (do a few steps of fine-tuning restore the behavior---gone
-vs.\ merely suppressed), and seed/method variance rather than a single run. Two would-be $2\times2$ confounds do not bite here: the instrument scores a
-\emph{task outcome} (simulated-maneuver rule-compliance), not a text probe, so it is not
-re-detecting the lexical suppression; and it renders the full rule corpus, not a retrieved
-top-$k$, so a null in the corpus-present cell is not a retrieval miss. The confound that does
-bite---a \emph{damaged} model failing the instrument for the wrong reason---is why the
-damage-aware audit (off-language / incoherent generations scored as damage, not forgetting)
-must be clean before the $2\times2$ is trusted.
+\paragraph{Primary result: a \emph{says\,$\neq$\,does} dissociation.}
+On CPU the primary method reproduces the classic likelihood collapse (SimNPO on Qwen2.5-1.5B
+drives forget-target NLL $4.6\to92$ and the direction-cue rate $5/6\to0/6$; the NPO baseline
+matches it, $4.6\to41$, $5/6\to0/6$), so the audit-level suppression is method-agnostic. The
+GPU run tells the more interesting story. Every metric that reads the model's \emph{words}
+registers forgetting: the forget-probe ``starboard'' rate falls $0.43\to0.27$, and---most
+tellingly---the Rule-14 \emph{citation} disappears, the model now attributing its maneuver to
+Rules 15/16/17 instead of 14. The likelihood audit calls it a clean success (forget-set NLL
+$7.4\to32.4$; retain-set NLL, teacher-forced, actually \emph{improves} $4.3\to1.07$ as
+retain\_weight$=3$ intended). Yet when the same base and unlearned models are scored on the
+head-on instrument (corpus present vs.\ ablated), the $2\times2$ does not move a cell: both
+read verdict \textsc{leaking}, ablation-delta $0.000$, counterfactual ignored, closed-book
+contaminated. The unlearned completions \emph{still turn $+30^\circ$ to starboard}---the
+steering \emph{decision} is unchanged; only the citation and the verbalization moved. Model
+damage stays flat (wrong+degenerate $0.10$, unchanged) with no inversion, and retain-coherence
+is nearly intact ($1.00\to0.91$: $3/32$ free generations degenerate, one an off-language
+Chinese ``lookout'' slip when the targeted English pathway frays). This is the thesis in one
+run: a words-level metric can report a fact removed while the
+policy that governs behavior is entirely intact.
+
+\paragraph{Suppressed, not removed (benign relearning).}
+A gone-vs.-suppressed test \citep{hu2024relearn,deebroger2024} confirms the reading from the
+other side. Twenty benign fine-tuning steps pull the forget-set NLL $32.4\to9.2$, back near
+its base value---the textbook \emph{suppressed-not-removed} signature: the fact was never gone,
+only pushed down. Across the whole pipeline---base\,$\to$\,unlearned\,$\to$\,relearned---the
+one quantity that never moves is the decision the instrument measures: starboard, verdict
+\textsc{leaking}, at every stage. The likelihood rises and falls; the policy does not.
+
+\paragraph{Contrast: aggressive unlearning \emph{inverts} the rule.}
+The gentleness is load-bearing. An earlier, aggressive recipe (lr $1\!\times\!10^{-4}$,
+retain\_weight $1.0$, no guardrail) drove model damage $0.10\to0.33$ and turned the ship to
+\emph{port}---the wrong way---on $6/8$ prompts, moving the $2\times2$ to $6/8$ port and verdict
+\textsc{inconclusive}. Because the head-on turn is essentially binary, the default objective
+(push down ``starboard'') simply relocated the mass onto ``port,'' \emph{inverting} the safety
+rule rather than removing it---a caution that naive weight-level unlearning of a safety rule
+can yield \emph{confident non-compliance}. The two recipes bracket the finding: gentle
+unlearning suppresses the \emph{words} but not the \emph{policy} (the instrument stays flat and
+so exposes the illusion), while aggressive unlearning moves the instrument---in the wrong
+direction. In both, the probe metrics track words and the instrument tracks the decision.
+
+\paragraph{Convergent evidence, and why the $2\times2$ is flat.}
+An API sweep across every enabled frontier family---Anthropic Claude Haiku~4.5, Meta
+Llama~3.1/3.3/4 (8B--405B), and Amazon Nova (micro/lite/pro), read through Amazon Bedrock---
+returns verdict \textsc{leaking} on the standard COLREG rules \emph{universally}; only a
+constructed reference learner, trained on the corpus alone, reads \textsc{corpus-bound}. The
+interpretation also explains the flat cell above: head-on\,$\to$\,starboard is memorized by
+every pretrained model, so ablating it from the corpus changes nothing (ablation-delta $0$).
+The instrument's \textsc{leaking} verdicts are therefore \emph{correct}---and this is precisely
+why the $2\times2$ cannot move under unlearning: Rule~14 is already leaking at baseline, leaving
+no dynamic range for the corpus-bound cell to travel. Two would-be confounds do not bite here:
+the instrument scores a \emph{task outcome} (simulated-maneuver compliance), not a text probe,
+so it is not re-detecting the lexical suppression; and it renders the full rule corpus, not a
+retrieved top-$k$, so a null in the corpus-present cell is not a retrieval miss. The confound
+that does bite---a \emph{damaged} model failing for the wrong reason---is held off by the
+damage-aware audit (off-language / incoherent generations scored as damage, not forgetting),
+which reads clean here ($0.10$, coherence $0.91$).
+
+\paragraph{The honest limitation, and the experiment it motivates.}
+State it plainly: because Rule~14 is already leaking at baseline---every pretrained model knows
+it---the $2\times2$ \emph{cannot} exhibit a clean \textsc{corpus-bound}\,$\to$\,\textsc{gone}
+transition under unlearning; both cells read \textsc{leaking} regardless of what the weights do.
+To demonstrate the instrument detecting weight-level knowledge, the target rule must be
+\emph{corpus-bound at baseline} (high ablation-delta)---which no pretrained COLREG rule is. The
+fix is a \emph{corpus-only} fact with no pretraining support, scored at \emph{full} effect by the
+objective barrier: a \textbf{charted hazard} on the ownship's track that is scored by the
+simulator but \emph{not shown to the model}, so it can be known only from the corpus. A model that
+reads the corpus alters to clear; one that does not holds its track and grounds---a full-barrier
+swing (reference learners: corpus-reliance $0.93$ / regret-$\delta\approx2000$ when bound versus
+$0.00$ when leaking), and no safety-refusal confound since avoiding a charted danger is plainly
+sensible. We then \emph{validate by construction}: teach the hazard into the weights along a
+gradient (LoRA-$\alpha$ and training checkpoints) and show corpus-reliance falls monotonically to
+$0$ as the fact is memorized---the known-groups dose-response that a single cell cannot provide
+(implementation in \texttt{experiments/unlearning}, \texttt{PROBES=hazard}). We present this as
+the designed next experiment, not a completed result. The hidden hazard is the anchor of a
+\emph{suite} of corpus-only probes---an obscure \emph{real} charted danger (external validity, via
+closed-book screening), a medium-effect routing convention, and a conflicting fact about another
+vessel's intention---so the eventual claim rests on corpus-reliance separating corpus-bound from
+leaking as a \emph{distribution} across probe kinds and effect sizes, not on any single test.
 
 \begin{table}[t]
 \centering
 \small
 \begin{tabular}{@{}lcccc@{}}
 \toprule
- & \multicolumn{2}{c}{1.5B (CPU, SimNPO)} & \multicolumn{2}{c}{3B (GPU, SimNPO)} \\
+ & \multicolumn{2}{c}{1.5B (CPU, SimNPO)} & \multicolumn{2}{c}{3B (GPU, gentle SimNPO)} \\
 \cmidrule(lr){2-3}\cmidrule(lr){4-5}
-Audit metric & base & unlearned & base & unlearned \\
+Metric & base & unlearned & base & unlearned \\
 \midrule
-Forget-target NLL ($\uparrow$)         & 4.6 & 92.0 & 5.5 & 33.9 \\
-Retain-set NLL, teacher-forced         & 3.2 & 0.18 & 3.5 & 0.26 \\
-Direction-cue rate ($\downarrow$)      & 5/6 & 0/6  & 5/6 & 4/6  \\
+Forget-target NLL ($\uparrow$)              & 4.6 & 92.0 & 7.4  & 32.4 \\
+Retain-set NLL, teacher-forced ($\downarrow$)& 3.2 & 0.18 & 4.3  & 1.07 \\
+Forget-probe ``starboard'' rate ($\downarrow$)& 5/6 & 0/6 & 0.43 & 0.27 \\
+Retain-coherence, free-gen ($\uparrow$)     & --- & ---  & 1.00 & 0.91 \\
+Model damage (wrong+degen., $\downarrow$)   & --- & ---  & 0.10 & 0.10 \\
+\emph{Steering decision (instrument)}       & --- & ---  & \emph{stbd} & \emph{stbd} \\
 \bottomrule
 \end{tabular}
-\caption{Removal-audit signature of SimNPO unlearning of the alter-to-starboard rule, on a
-1.5B model (CPU) and a 3B model (GPU, \texttt{bfloat16}). The forget-target likelihood
-collapses (NLL $\uparrow$) at both scales---the robust signal. Retain-set NLL is
-\emph{teacher-forced}: it stays low at 3B but free generation there degrades (off-language /
-repetitive), so it overstates preserved utility. The direction-cue rate drops sharply at 1.5B
-but only modestly at 3B ($n{=}6$, within noise), and a bare keyword-drop can credit
-wrong-direction or garbled answers as ``forgotten''---the harness now scores survived /
-wrong-direction / degenerate / abstained instead. Behavioral suppression audited at the weight
-level; the task-level instrument $2\times2$ is the outstanding step. Harness:
-\texttt{experiments/unlearning}.}
+\caption{Gentle, guardrailed SimNPO unlearning of the alter-to-starboard rule, on a 1.5B model
+(CPU) and Qwen2.5-3B (GPU, \texttt{bfloat16}; lr $5\!\times\!10^{-5}$, retain\_weight $3.0$,
+Rule-14 kept in the retain set). Every \emph{words-level} metric registers forgetting---the
+forget-target likelihood collapses (NLL $\uparrow$), the ``starboard'' probe rate drops, and
+the Rule-14 citation disappears (model cites 15/16/17)---while retain utility is preserved
+(retain NLL improves; free-generation coherence $0.91$) and there is no inversion (model damage
+flat at $0.10$). Yet the \emph{decision} the reference-policy instrument scores is untouched:
+the unlearned model still turns $+30^\circ$ to starboard, and the $2\times2$ stays verdict
+\textup{\textsc{leaking}}, ablation-delta $0.000$---a says\,$\neq$\,does dissociation. Benign relearning
+($20$ steps) pulls forget NLL $32.4\to9.2$, confirming the fact was \emph{suppressed}, not
+removed; the decision holds throughout. Harness: \texttt{experiments/unlearning}.}
 \label{tab:unlearn}
 \end{table}
 
@@ -683,10 +724,15 @@ examples rather than a leaderboard. \textbf{Single-rule decomposability may not 
 entangled, redundant, or jointly govern one outcome. Where a single rule cannot be cleanly
 isolated, the localization degrades to a coarser attribution and the leakage test to a
 group-level one; how far clean decomposition extends beyond corpora we constructed is open.
-\textbf{Unlearning is one tuned-recipe run.} A first instrument-scoring result is in hand
-(Section~\ref{sec:weightlevel}) and is informative---it shows the default recipe \emph{inverts}
-the rule rather than removing it---but a clean \textsc{corpus-bound} cell, seed/method variance,
-and the relearning battery are outstanding; we report the single run as illustrative.
+\textbf{Unlearning is a single model at one scale.} The instrument-scoring result
+(Section~\ref{sec:weightlevel}) is informative---a gentle recipe suppresses the \emph{words}
+while the scored \emph{decision} is untouched (says\,$\neq$\,does), and an aggressive one
+\emph{inverts} the rule---but it is one 3B model; seed/method variance and replication at a
+larger scale (7B, \texttt{bfloat16}, not 4-bit---quantization noise would confound the
+damage/coherence signal that is the point) are outstanding. A clean
+\textsc{corpus-bound}\,$\to$\,\textsc{gone} transition is structurally out of reach for any
+pretrained COLREG rule (all leak); demonstrating it requires the corpus-only rule of the
+designed next experiment, not a re-tune of this one.
 
 \section{Conclusion}
 We have described an in-silico instrument that lets a designer falsify the mechanism of a

@@ -83,6 +83,18 @@ export interface RuleCheck {
   pass: boolean;
   detail: string;
   weight: number;
+  /**
+   * Optional GRADED failure severity in [0,1] (0 = fully compliant, 1 = fully failed). When
+   * present it drives the penalty instead of the binary `pass`, giving a check dynamic range —
+   * e.g. a speed-limit check scores how far *over* the limit the vessel was, not just over/under.
+   * Absent ⇒ the check contributes `pass ? 0 : 1` as before (fully backward-compatible).
+   */
+  severity?: number;
+}
+
+/** A check's contribution to the penalty: graded `severity` if set, else binary pass/fail. */
+function checkSeverity(c: RuleCheck): number {
+  return c.severity !== undefined ? Math.max(0, Math.min(1, c.severity)) : c.pass ? 0 : 1;
 }
 
 export interface ComplianceReport {
@@ -127,6 +139,30 @@ export function scoreCompliance(scenario: SimScenario, traj: Trajectory): Compli
   const speedReduced = minSpeed <= SAFE_SPEED_FACTOR * own0.v;
   const acted = Math.abs(netHeading) > ACTION_DETECT || minSpeed < 0.95 * own0.v;
 
+  // Hazard-clearance (corpus-only, both visibilities): did the track clear the charted hazards?
+  // This is the large-effect corpus-reliance check — a model that never read the corpus grounds.
+  // Weight dominates so grounding drives the compliance penalty to ~1, clearing it to ~0.
+  let minHazardClearance = Infinity;
+  for (const s of traj) {
+    for (const hz of scenario.hazards ?? []) {
+      const d = Math.hypot(s.own.x - hz.x, s.own.y - hz.y) / hz.radiusM;
+      if (d < minHazardClearance) minHazardClearance = d;
+    }
+  }
+  const hazardChecks: RuleCheck[] = scenario.hazards?.length
+    ? [{
+        id: 'hazard-clearance',
+        label: 'Clear the charted hazard (corpus-only)',
+        applicable: true,
+        pass: minHazardClearance >= 1,
+        detail: minHazardClearance >= 1
+          ? 'Cleared the charted hazard.'
+          : 'Stood into a charted hazard — grounding.',
+        weight: 2.0, // safety-critical: dominates the penalty when a hazard is in play
+        severity: minHazardClearance >= 1 ? 0 : Math.max(0, Math.min(1, 1 - minHazardClearance)),
+      }]
+    : [];
+
   // When did the maneuver begin, and what was TCPA then?
   let tcpaAtAction = Infinity;
   for (const s of traj) {
@@ -148,13 +184,13 @@ export function scoreCompliance(scenario: SimScenario, traj: Trajectory): Compli
   const restricted: boolean = scenario.visibility === ('restricted' as Visibility);
   const substantialAction = Math.abs(netHeading) >= SUBSTANTIAL || speedReduced;
   const checks: RuleCheck[] = restricted
-    ? restrictedChecks({ cls, acted, turnedPort, turnedToward: cls.targetOnStarboard ? turnedStarboard : turnedPort, substantialAction, speedReduced, tcpaAtAction })
-    : [];
+    ? [...hazardChecks, ...restrictedChecks({ cls, acted, turnedPort, turnedToward: cls.targetOnStarboard ? turnedStarboard : turnedPort, substantialAction, speedReduced, tcpaAtAction })]
+    : [...hazardChecks];
 
   if (restricted) {
     const applicable = checks.filter((c) => c.applicable);
     const wSum = applicable.reduce((a, c) => a + c.weight, 0);
-    const wFail = applicable.filter((c) => !c.pass).reduce((a, c) => a + c.weight, 0);
+    const wFail = applicable.reduce((a, c) => a + c.weight * checkSeverity(c), 0);
     return { classification: cls, primaryTargetIndex: idx, checks, penalty: wSum > 0 ? wFail / wSum : 0 };
   }
 
@@ -240,7 +276,7 @@ export function scoreCompliance(scenario: SimScenario, traj: Trajectory): Compli
 
   const applicable = checks.filter((c) => c.applicable);
   const wSum = applicable.reduce((a, c) => a + c.weight, 0);
-  const wFail = applicable.filter((c) => !c.pass).reduce((a, c) => a + c.weight, 0);
+  const wFail = applicable.reduce((a, c) => a + c.weight * checkSeverity(c), 0);
   const penalty = wSum > 0 ? wFail / wSum : 0;
 
   return { classification: cls, primaryTargetIndex: idx, checks, penalty };

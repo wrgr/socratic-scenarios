@@ -14,6 +14,41 @@ control-task transfer instruments.
 
 ---
 
+## North Star (single source of truth — read this first)
+
+**Goal.** Given a model and a corpus (a RAG store, an instructional corpus), measure **how much
+of the corpus the learner actually uses** — which items it *relies on*, which it *already knew*
+(redundant), which it *ignores* — as a behavioral outcome, in silico, before any expensive human
+trial. Two questions, one instrument:
+
+- **C1 — Corpus Diagnosis** (the product). Run the task instrument *backwards* on the corpus:
+  - **(i) Localize** — attribute a task failure to *which specific corpus rule* is missing/wrong (fix the RAG).
+  - **(ii) Necessity / leakage** — ablate a rule; if behavior doesn't change, the model used priors, not the corpus.
+- **C2 — Transfer Instrument** (what makes C1's score objective). Score the learner by its
+  **regret against a reference-optimal policy** in a simulator, with \kc→single-metric identifiability.
+
+**The one novel delta** (defend it explicitly; see §5): prior work — faithfulness (RAGAS),
+context attribution by ablation (ContextCite), knowledge-conflict, prior-dominance — measures
+whether context *influenced* the output, on answer text. We measure **necessity, per rule, on a
+behavioral task outcome**, and *calibrate* it by manipulating the parametric baseline directly
+(weight-level construction + unlearning) — so a fact the model already knew is not counted as one
+it relied on. No context-attribution method has that weight-level ground truth.
+
+**Where the arms fit** (so the story doesn't drift again):
+- The **hidden-hazard probe + dose-response** (`experiments/unlearning`, `PROBES=hazard`) is the
+  *validation* that the necessity measure is real (teach a fact in → reliance falls; remove it → rises).
+- The **unlearning arm** is the second, noisier direction of that same weight-level calibration — **supporting evidence, not the headline.**
+- The **localization** half of C1 (§8, Experiment 3) is the product demo (`PROBES=all` corpus-value audit).
+
+> **Experiment register & status — see [`docs/experiment-status.md`](experiment-status.md).** That
+> one page is the canonical "what each experiment is, what we have, what's next," with the critical
+> path. Keep it current; if this box and that page ever disagree on status, the register wins.
+
+Everything below is the detailed prior-art scan and evidence checklist behind this summary; if it
+disagrees with this box, this box wins.
+
+---
+
 ## 1. What is NOT novel (state this plainly, up front, in the paper)
 
 Claiming any of these as a contribution gets the paper desk-rejected on novelty:
@@ -46,16 +81,21 @@ that the literature only does separately:
 Nearest precedents, and the gap each leaves:
 | Work | What it does | What it doesn't |
 |---|---|---|
-| SeedRG — leakage-free RAG benchmarks (2026, arXiv:2605.08838) | "no-context accuracy ⇒ leaked item," filter/regen | removes *context at query time* on QA; no corpus-as-variable, **no localization** |
-| Quantifying Prior Dominance in RAG (2026, arXiv:2606.23695) | ablate context → measure degradation, aggregate "prior dominance" | system-level metric, **not per-rule**, no learner/task instrument |
-| Counterfactual-context faithfulness — NQ-Swap, ConFiQA, FaithfulRAG (2506.08938) | perturb a passage, see if model follows context | judged on *answer text*, per-item; no gap localization, no governed task metric |
+| **ContextCite** (Cohen-Wang et al., NeurIPS 2024, arXiv:2409.00729) | **ablate context sources → fit a surrogate on the output log-prob change → attribute the generation to sources** | attributes *text generation* (log-prob), per token/source; validates against ablation, **not weight-level ground truth**; measures **influence, not necessity** |
+| RAGAS / faithfulness metrics (2309.15217) | LLM-judge whether an answer's claims are grounded in context | scores *grounding of text*, not whether the model *needed* the context; no parametric baseline |
+| Knowledge-conflict (survey 2403.08319; FaithfulRAG 2506.08938) | when context contradicts memory, which wins | QA/answer-text; no per-rule localization, no governed task metric |
+| SeedRG — leakage-free RAG benchmarks (2605.08838) | "no-context accuracy ⇒ leaked item," filter/regen | removes *context at query time* on QA; no corpus-as-variable, **no localization** |
+| Quantifying Prior Dominance in RAG (2606.23695) | ablate context → measure degradation, aggregate "prior dominance" | system-level metric, **not per-rule**, no learner/task instrument |
 | Farahani & Johansson, EMNLP 2024 | parametric-vs-contextual via causal mediation | interpretability internals, not a black-box downstream instrument |
 | Error attribution — REFLECT, FALAT (2026) | attribute failures to retrieval-vs-reasoning/step | not to *specific corpus knowledge items*, no paired leakage test |
 
-**Verdict:** the *combination* — localize + leakage on **one** objective downstream
-metric over a **governed external corpus** — is, per the scan, unclaimed. The leakage
-half is the least original piece (it echoes the no-context heuristic); the
-**localize + leakage with a single instrument** synthesis is the crispest novelty.
+**Verdict:** the ablation *primitive* (remove a piece of context, watch the output move) is **not
+novel** — ContextCite is the clearest precedent. Our unclaimed ground is the *combination*:
+(a) scoring a **behavioral task outcome** vs a reference policy, not answer text; (b) attributing
+**per corpus rule** with **localization**; and (c) turning influence into **necessity** by
+calibrating against a parametric baseline we *manipulate directly* (weight-level construction +
+unlearning) — which no context-attribution method does. State (a)+(b)+(c) as the delta; do **not**
+claim the ablation idea itself.
 
 ### C2 — Reference-optimal control simulator as a transfer instrument + KC→metric identifiability  ★ strong (measurement contribution)
 Replace item-response / knowledge-tracing correctness with an **objective
@@ -156,28 +196,14 @@ Current repo status → what's still needed:
 
 ---
 
-## 5. Draft related-work paragraph (reusable in the paper)
+## 5. Related-work paragraph → see the paper (single source)
 
-> Simulated learners have long been used to author and evaluate tutoring systems, from
-> the symbolic SimStudent / Apprentice-Learner tradition [Matsuda; MacLellan] to recent
-> LLM student agents that pilot assessment items [Lu & Wang 2024] and adaptive testing
-> [Gao et al. 2025], and to LLM "students" whose knowledge is suppressed by prompting
-> [Apartsin et al. 2026] or excised by machine unlearning [Song et al. 2026]. In
-> parallel, RAG-grounded tutors abstain outside a curated corpus [LPITutor 2025;
-> DeepTutor 2026], and a separate line detects whether a model relies on provided
-> context versus parametric memory — via no-context filtering [SeedRG 2026], aggregate
-> prior-dominance [2026], counterfactual context [FaithfulRAG 2025], or causal mediation
-> [Farahani & Johansson 2024]. Objective competency instruments that score performance
-> against a reference exist in flight [Zinn et al. 2023] and surgery [Van Dongen 2007],
-> validated by novice/expert separation. **Our work differs in three coupled ways:** we
-> (1) use a continuous-control simulator with a *reference-optimal solver* as the
-> learning/transfer instrument — regret-vs-optimal and per-rule compliance, not item
-> correctness — with each knowledge component mapped to a single governed metric; (2)
-> use that one instrument *bidirectionally*, to localize which corpus rule is missing
-> from measured failures and to detect leakage by rule-ablation; and (3) exercise it
-> with two complementary proxy classes as a pre-human-trial screen. No prior work
-> combines a governed external corpus, an objective control-task outcome, and this
-> localize-plus-leakage diagnostic.
+The canonical, up-to-date related-work text lives in `docs/arxiv/main.tex`
+(§"Related work and positioning"). It positions against faithfulness (RAGAS), context attribution
+by ablation (**ContextCite** — the closest precedent), knowledge-conflict, prior-dominance, and
+SeedRG, and states the delta as (a) behavioral task-outcome scoring, (b) per-rule localization,
+(c) **necessity, not just influence**, calibrated by weight-level construction/unlearning. Do not
+maintain a second copy here — edit the paper.
 
 ---
 
@@ -372,6 +398,29 @@ base/unlearned model on the reference-optimal *instrument* (the 2×2 regret/comp
 built and a one-tap Colab notebook (`colab.ipynb`) runs it end to end. The audit-level result
 is now in hand on both CPU (1.5B) and GPU (3B); the task-level 2×2 is the outstanding piece.
 See `experiments/unlearning/README.md`.
+
+### Experiment 3 — Corpus-value audit / localization (the C1(i) half — **view built**, run on a real model)
+
+The product demo: attribute an *induced* task failure to the *specific* corpus rule, and rank the
+corpus rules by how much the learner **relies on** each — "how much of the corpus is helpful."
+
+- **Built.** `PROBES=all npm run colreg:leakage` now prints, after the per-rule detail, a
+  **corpus-value audit**: rules sorted by necessity (ablation-delta), a `governs→localizes`
+  confusion cell (the component the rule governs vs the component its ablated-failure points to),
+  the per-rule verdict, and a one-line summary (*N rules · K relied-on · M redundant/leaking*). The
+  mock recovers the ground truth (14 relied-on, 19 localizes cleanly `safeSpeed→safeSpeed`, and — a
+  real signal, not a bug — **Rule 15's starboard is redundant given Rule 14**, so it ranks last).
+- **To run on a real model.** Use the live completer (`BEDROCK_MODEL=…`) or the offline
+  DUMP→generate→REPLAY flow, `PROBES=all`. Extend the probe set beyond 14/15/19 (add role 16/17,
+  substantial 8) to widen the confusion matrix — each needs a matched scenario subset.
+- **Result to report.** (a) The **necessity ranking** = the corpus-value audit (relied-on vs
+  redundant). (b) The `governs→localizes` matrix: a clean diagonal (e.g. `safeSpeed→safeSpeed`)
+  means the instrument localizes; off-diagonal (e.g. `starboard→role`, an ablated steering rule that
+  makes the learner *freeze* rather than turn wrong) is itself informative about the failure mode.
+- **Cost.** API calls only, no training — the cheapest high-value experiment, and it complements the
+  hazard dose-response (which validates the *necessity* reading) with the *localization* reading.
+- **Confounds.** Entangled/redundant rules blur the diagonal (Rule 15 above is exactly this, and
+  the audit surfaces it); report the redundancy as the decomposability measure, don't hide it.
 
 ---
 

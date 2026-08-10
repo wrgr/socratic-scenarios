@@ -1,7 +1,7 @@
 # Paper portfolio — how the work parcels into publications
 
-A companion to [`docs/publication-plan.md`](publication-plan.md) and
-[`docs/novelty-and-positioning.md`](novelty-and-positioning.md). Those two documents plan
+A companion to [`docs/publication-plan.md`](../publication-plan.md) and
+[`docs/novelty-and-positioning.md`](../novelty-and-positioning.md). Those two documents plan
 **one flagship paper** and deliberately collapse several contributions into it to protect the
 methods claim from a systems-paper rejection. This document takes the opposite view on
 purpose: it lays out the **full menu** of separable papers latent in this work, so the choice
@@ -36,7 +36,7 @@ papers. Applied consistently, that test carves this work at the seams below.
 |---|---|---|---|---|---|
 | **P1** | *In-silico instrument + bidirectional diagnosis* ("forgetting and RAG") | Methods / measurement | Education-ML (EDM/AIED/LAK; NeurIPS/ICML AI-for-Ed workshop) | C1 (localize corpus gap **and** detect leakage on one control-task metric) + C2 (reference-optimal regret instrument, KC→single-metric identifiability) | **Built** — the flagship |
 | **P2** | *Instructional-utility retrieval* (the position) | Position | Education / learning sciences | Argument: retrieval should optimize **instructional utility, not semantic relevance**, and safety-critical domains demand **corpus-bounded** retrieval by design | Whitepaper prose exists; needs reframing as argument |
-| **P3** | *Adaptive / state-conditioned retrieval routing* ("queuing for adaptive RAG") | Methods (mechanism) | IR / ML methods | The retrieval **mechanism**: route/prioritize what to retrieve on learner state rather than query similarity. Concept spec: [`docs/p3-adaptive-retrieval-concept.md`](p3-adaptive-retrieval-concept.md) | Concept specced; not yet built |
+| **P3** | *Adaptive / state-conditioned retrieval routing* ("queuing for adaptive RAG") | Methods (mechanism) | IR / ML methods | The retrieval **mechanism**: route/prioritize what to retrieve on learner state rather than query similarity. Concept spec: [`docs/p3-adaptive-retrieval-concept.md`](../p3-adaptive-retrieval-concept.md) | Concept specced; not yet built |
 | **P4** | *TeachMe AJP — a RAG-for-training system* (the systems/demo) | Systems / demonstration | HCI / applied education systems (L@S demo, AIED tools) | The working artifact: Mentor+Narrator two-agent architecture, corpus-bound Narrator, four instructional modes | System built; `docs/whitepaper.md` |
 | **P5** | *Real functional AJP output* ("breadboard functional output") | Applied / domain | Manufacturing / printed electronics / materials | A **physically real** functional print produced under the training/knowledge regime — the one result no one else can replicate | Idea — not in repo |
 | **Pβ** | *Auditing machine unlearning with a control-task instrument* (optional) | ML safety / unlearning | ML safety (NeurIPS SoLaR-type workshop) | Use the objective instrument to distinguish **removed vs. suppressed** knowledge in an unlearned model | Exp. 2 harness built (`experiments/unlearning/`) |

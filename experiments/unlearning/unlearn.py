@@ -119,7 +119,15 @@ def main():
     ap.add_argument("--model", required=True, help="HF model id or local path")
     ap.add_argument("--data", default=os.path.join(os.path.dirname(__file__), "data"))
     ap.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "out/unlearned"))
-    ap.add_argument("--method", choices=["simnpo", "npo", "ga"], default="simnpo")
+    ap.add_argument("--method", choices=["simnpo", "npo", "ga", "sft"], default="simnpo",
+                    help="'sft' = plain supervised fine-tuning on the retain set (no forget term) — "
+                         "used to TEACH a rule in for the dose-response, e.g. --data with a teach set "
+                         "written to retain.jsonl. The forget file is ignored in sft mode.")
+    ap.add_argument("--save_every", type=int, default=0,
+                    help="also save a checkpoint adapter every N steps (0 = off) — gives the "
+                         "checkpoint gradient for the dose-response curve (DOSE_RESPONSE.md).")
+    ap.add_argument("--sft_file", default=None,
+                    help="teach-set JSONL for --method sft (default <data>/hazard_teach.jsonl).")
     ap.add_argument("--beta", type=float, default=0.1)             # NPO/SimNPO temperature
     ap.add_argument("--gamma", type=float, default=0.0)            # SimNPO reward margin
     ap.add_argument("--retain_weight", type=float, default=1.0)
@@ -173,9 +181,41 @@ def main():
         model.config.use_cache = False
     model.train()
 
+    def save_adapter(path):
+        os.makedirs(path, exist_ok=True)
+        model.save_pretrained(path)
+        tok.save_pretrained(path)
+        with open(os.path.join(path, "unlearn_config.json"), "w") as f:
+            json.dump(vars(args), f, indent=2)
+
+    opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=args.lr)
+
+    # TEACH mode (--method sft): plain supervised fine-tuning on the teach set, no forget term —
+    # injects a rule for the dose-response. Reuses the same loader/LoRA/save; forget file ignored.
+    if args.method == "sft":
+        teach_path = args.sft_file or os.path.join(args.data, "hazard_teach.jsonl")
+        loader = make_loader(load_jsonl(teach_path), tok, args.batch_size, True, args.chat)
+        step = 0
+        for epoch in range(args.epochs):
+            for ids, lab, attn in loader:
+                _, ce, _ = seq_logprob_and_ce(model, ids.to(args.device), lab.to(args.device), attn.to(args.device))
+                opt.zero_grad(); ce.backward()
+                torch.nn.utils.clip_grad_norm_([p for p in model.parameters() if p.requires_grad], 1.0)
+                opt.step(); step += 1
+                if step % 5 == 0 or step == 1:
+                    print(f"[sft] epoch {epoch} step {step}  ce {ce.item():.3f}")
+                if args.save_every and step % args.save_every == 0:
+                    save_adapter(os.path.join(args.out, f"ckpt-{step}"))
+                if args.max_steps and step >= args.max_steps:
+                    break
+            if args.max_steps and step >= args.max_steps:
+                break
+        save_adapter(args.out)
+        print(f"\n[sft] taught {teach_path} -> saved LoRA adapter to {args.out}")
+        return
+
     forget = make_loader(load_jsonl(os.path.join(args.data, "forget.jsonl")), tok, args.batch_size, True, args.chat)
     retain = make_loader(load_jsonl(os.path.join(args.data, "retain.jsonl")), tok, args.batch_size, True, args.chat)
-    opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=args.lr)
 
     step = 0
     for epoch in range(args.epochs):
@@ -215,16 +255,14 @@ def main():
             if step % 5 == 0 or step == 1:
                 print(f"epoch {epoch} step {step}  loss {loss.item():.3f}  "
                       f"forget_ce {ce_forget.item():.3f}  retain_ce {ce_retain.item():.3f}")
+            if args.save_every and step % args.save_every == 0:
+                save_adapter(os.path.join(args.out, f"ckpt-{step}"))
             if args.max_steps and step >= args.max_steps:
                 break
         if args.max_steps and step >= args.max_steps:
             break
 
-    os.makedirs(args.out, exist_ok=True)
-    model.save_pretrained(args.out)
-    tok.save_pretrained(args.out)
-    with open(os.path.join(args.out, "unlearn_config.json"), "w") as f:
-        json.dump(vars(args), f, indent=2)
+    save_adapter(args.out)
     print(f"\nsaved LoRA adapter + tokenizer to {args.out}")
 
 

@@ -65,6 +65,23 @@ export interface SimScenario {
   ownship: Vessel;
   targets: Vessel[];
   visibility: Visibility;
+  /**
+   * Optional place name rendered into the prompt (e.g. "Kessock Narrows, northbound"). It is the
+   * QUERY CUE that lets a corpus-only, location-keyed fact (a charted hazard) apply — and the same
+   * cue a model must associate the fact with if it has memorized it into weights. Names only the
+   * place, never the fact.
+   */
+  location?: string;
+  /**
+   * Static hazards the ownship must avoid (charted wreck / shoal / exclusion zone). These are
+   * scored by the objective barrier exactly like a domain incursion, but are **not** rendered into
+   * the prompt — the model can only learn of them from the CORPUS. That makes them the ideal
+   * large-effect corpus-reliance probe: a model without the corpus rule has no way to know the
+   * hazard is there, holds its default track, and grounds (full barrier penalty); a corpus-bound
+   * model reads the hazard and clears it. Corpus present-vs-ablated then swings the metric across
+   * its whole range, not a sliver. Position is SI metres in the ownship's local frame.
+   */
+  hazards?: { x: number; y: number; radiusM: number; label: string }[];
   /** Simulation horizon, seconds. */
   horizonS: number;
   /** Integration timestep, seconds. */

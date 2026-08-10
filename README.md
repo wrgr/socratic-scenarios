@@ -83,7 +83,7 @@ A **domain switcher** in the header selects the active domain; each self-registe
 
 COLREG also ships an **interactive simulator** with real kinematics — speed/heading controls, turn-radius limits, an elliptical ship domain, a Collision Risk Index, per-rule compliance scoring, and SB-MPC / velocity-obstacle reference solvers.
 
-<sub>COLREG deep-dives: [simulator design](docs/colreg-simulator-design.md) · [validation methodology](docs/colreg-validation.md) · [concept of operations](docs/colreg-conops.md) · [whitepaper](docs/colreg-whitepaper.md)</sub>
+<sub>COLREG deep-dives: [simulator design](docs/colreg-simulator-design.md) · [validation methodology](docs/colreg-validation.md) · [concept of operations](docs/colreg-conops.md) · [whitepaper](docs/planning/colreg-whitepaper.md)</sub>
 
 ## Quickstart
 
@@ -127,7 +127,7 @@ sources/                  canonical per-source provenance ledger
 | Doc | Role |
 |---|---|
 | [OVERVIEW.md](OVERVIEW.md) | The short read: how learning-science theory drove the AI architecture |
-| [docs/whitepaper.md](docs/whitepaper.md) | System design paper |
+| [docs/planning/whitepaper.md](docs/planning/whitepaper.md) | System design paper |
 | [docs/arxiv/main.pdf](docs/arxiv/main.pdf) | Method paper — the in-silico measurement instrument (C1/C2) |
 | [docs/DATA_CATALOG.md](docs/DATA_CATALOG.md) | Every data store: path, pipeline, sensitivity |
 | [docs/references.md](docs/references.md) | Annotated bibliography |

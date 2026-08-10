@@ -22,6 +22,7 @@ import {
   starboardProbe,
   crossingGiveWayProbe,
   safeSpeedProbe,
+  hazardProbe,
   boundLearnerCompleter,
   leakingLearnerCompleter,
   geminiCompleter,
@@ -32,8 +33,9 @@ import {
   type LeakageConfig,
   type LeakageReport,
 } from '../src/engine/colreg-sim';
+import type { AJPNode } from '../src/types/ajp';
 import { colregDomain } from '../src/corpus/colreg';
-import { collisionTarget, makeScenario } from '../src/corpus/colreg/benchmark-geometry';
+import { collisionTarget, makeScenario, ownship, kn } from '../src/corpus/colreg/benchmark-geometry';
 import { restrictedBenchmark } from '../src/corpus/colreg/restricted';
 
 const headOn = (id: string, range: number, speedKn: number) =>
@@ -51,20 +53,67 @@ const crossingScenarios = [crossing('XG-1', 45, 12), crossing('XG-2', 60, 11), c
 // DIFFERENT metric axis (speedFactor, not turn direction), so a genuinely independent probe.
 const fogScenarios = restrictedBenchmark.filter((s) => ['RV-01', 'RV-02', 'RV-03'].includes(s.id));
 
+// PROBES=hazard: THE corpus-reliance probe. A charted hazard sits on the ownship's track; it is
+// scored by the barrier but NOT shown to the model, so it is knowable ONLY from the corpus. A
+// model that read the corpus alters to clear; one that did not holds its default track and grounds
+// — a full-barrier swing (the largest, cleanest corpus-reliance signal, and no dangerous-refusal
+// confound since avoiding a charted danger is plainly sensible). Benign traffic (a distant vessel
+// on the far bow) keeps the scenario a routine transit so the hazard is the only thing in play.
+// The hazard's LOCATION (query cue) and its DISCLOSURE (the corpus-only fact) come from a spec.
+// Default = a synthetic hazard (probe #1). Set HAZARDS_FILE=<json> to run a REAL charted danger
+// (probe #2, external validity): {"location": "...", "disclosure": "..."} — screen it closed-book
+// first (screen_hazards.py) so the base does NOT already know it. The sim geometry is a fixed rig
+// (danger dead ahead on the track); only the place name + disclosure vary.
+type HazardSpec = { location: string; disclosure: string };
+const defaultHazard: HazardSpec = {
+  location: 'the Kessock Narrows (northbound transit)',
+  disclosure: 'a wreck lies directly ahead on the track; alter course to starboard by at least 55° to pass well clear before resuming track',
+};
+const hazardSpec: HazardSpec = process.env.HAZARDS_FILE
+  ? (JSON.parse(readFileSync(process.env.HAZARDS_FILE, 'utf8')) as HazardSpec)
+  : defaultHazard;
+
+const hazardScenario = (id: string, hy: number): SimScenario => ({
+  id, label: 'Transit past a charted hazard', description: '', difficulty: 'beginner',
+  location: hazardSpec.location, // the query cue; the hazard itself is disclosed only by the corpus
+  ownship: ownship(),
+  targets: [{ id: 'F', label: 'F', x: -9000, y: 9000, psi: Math.PI, v: kn(6), lengthM: 100 }],
+  visibility: 'clear',
+  hazards: [{ x: 0, y: hy, radiusM: 2000, label: 'charted danger' }],
+  horizonS: 1200, dt: 4, intendedHeading: 0,
+});
+const hazardScenarios = [hazardScenario('HZ-1', 3000), hazardScenario('HZ-2', 2800), hazardScenario('HZ-3', 3200)];
+const hazardRuleNode: AJPNode = {
+  id: 'RULE-HAZARD-01',
+  type: 'TheoryReference',
+  content: `CHARTED HAZARD — in ${hazardSpec.location}, ${hazardSpec.disclosure}.`,
+  confidence: 'High',
+  source: 'Notice to mariners (corpus-only; the hazard is not shown in the situation).',
+};
+
 const twoRuleProbes = [starboardProbe(scenarios[0]), crossingGiveWayProbe(crossingScenarios[0], crossingScenarios)];
-const probes =
-  process.env.PROBES === 'all'
+const isHazard = process.env.PROBES === 'hazard';
+const probes = isHazard
+  ? [hazardProbe(hazardScenarios[0], hazardScenarios)]
+  : process.env.PROBES === 'all'
     ? [...twoRuleProbes, safeSpeedProbe(fogScenarios[0], fogScenarios)]
     : process.env.PROBES === 'two'
       ? twoRuleProbes
       : [starboardProbe(scenarios[0])];
 
-const cfg: LeakageConfig = {
-  corpusNodes: colregDomain.nodes,
-  scenarios,
-  probes,
-  closedBookScenario: scenarios[0],
-};
+const cfg: LeakageConfig = isHazard
+  ? {
+      corpusNodes: [...colregDomain.nodes, hazardRuleNode],
+      scenarios: hazardScenarios,
+      probes,
+      closedBookScenario: hazardScenarios[0],
+    }
+  : {
+      corpusNodes: colregDomain.nodes,
+      scenarios,
+      probes,
+      closedBookScenario: scenarios[0],
+    };
 
 // ─── Offline scoring (no HTTP server / port) ──────────────────────────────────────────
 // The leakage prompt set is fully determined by the static scenario/corpus config — the
@@ -164,6 +213,26 @@ function print(report: LeakageReport) {
     console.log(`    → VERDICT: ${p.verdict.toUpperCase()}`);
   }
   console.log(`  closed-book (no corpus): ${report.closedBookAbstained ? 'abstained ✓ (bound)' : 'answered from priors ✗ (contamination)'}`);
+
+  // Corpus-value audit (Experiment 3, the C1(i) localization half): rank the corpus rules by how
+  // much the learner RELIES on each (the ablation-delta = necessity), and check the instrument
+  // LOCALIZES each rule's failure to its governed component. This is the North-Star read — "how
+  // much of the corpus is actually helpful": high Δ ⇒ the model needs that rule; ≈0 ⇒ redundant
+  // (already known / leaking) or inert. Shown when ≥2 rules are probed (PROBES=two|all).
+  if (report.perRule.length >= 2) {
+    const ranked = [...report.perRule].sort((a, b) => b.ablationDelta - a.ablationDelta);
+    console.log('\n  ── corpus-value audit: per-rule necessity ranking (how much of the corpus is helpful) ──');
+    console.log('     necessity(Δ)  regret(Δ)  rule              governs→localizes        verdict');
+    for (const p of ranked) {
+      // governs→localizes is the localization confusion cell: which component the rule is meant to
+      // govern, and which component the learner's failure-when-ablated actually points to.
+      const gl = `${p.governedComponent}→${p.localizedComponent ?? 'none'}`;
+      console.log(`     ${p.ablationDelta.toFixed(3).padStart(8)}   ${p.regretDelta.toFixed(1).padStart(7)}   ${p.ruleId.padEnd(16)} ${gl.padEnd(24)} ${p.verdict}`);
+    }
+    const relied = ranked.filter((p) => p.verdict === 'corpus-bound').length;
+    const leaked = ranked.filter((p) => p.verdict === 'leaking').length;
+    console.log(`     → ${ranked.length} rules · ${relied} relied-on (corpus adds value) · ${leaked} redundant/leaking (model already knows / rule adds nothing) · ${ranked.length - relied - leaked} inconclusive`);
+  }
 }
 
 async function main() {
@@ -183,7 +252,13 @@ async function main() {
   }
 
   console.log('Deterministic dry-run (no key needed) — the instrument must recover the known ground truth:');
-  print(await runLeakageExperiment(boundLearnerCompleter(['RULE-COLREG-14'], ['RULE-COLREG-19']), 'mock: corpus-bound learner', cfg));
+  // The bound learner reads whichever rules the mode's corpus provides. Under PROBES=hazard it
+  // reads ONLY the charted-hazard rule (a benign transit — no give-way steering to apply), so with
+  // the hazard ablated it holds its track and grounds; otherwise it reads Rule 14 / Rule 19.
+  const boundMock = isHazard
+    ? boundLearnerCompleter([], [], ['RULE-HAZARD-01'])
+    : boundLearnerCompleter(['RULE-COLREG-14'], ['RULE-COLREG-19']);
+  print(await runLeakageExperiment(boundMock, 'mock: corpus-bound learner', cfg));
   print(await runLeakageExperiment(leakingLearnerCompleter(), 'mock: leaking learner', cfg));
 
   const real = realCompleter();

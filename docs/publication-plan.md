@@ -14,7 +14,7 @@ this document says *what to ship, in what order, and what still has to be built.
 
 > **Scope note — this plan is the *single collapsed flagship* view.** It deliberately folds
 > several contributions into one paper to protect the methods claim from a systems-paper
-> rejection. [`docs/paper-portfolio.md`](paper-portfolio.md) takes the opposite, *fan-out* view —
+> rejection. [`docs/planning/paper-portfolio.md`](planning/paper-portfolio.md) takes the opposite, *fan-out* view —
 > the full menu of separable papers (P1 flagship, P2 position, P3 adaptive-retrieval mechanism,
 > P4 systems/demo, P5 applied functional result, optional Pβ unlearning-audit and P6 benchmark).
 > The two are intentionally in tension, not contradictory: this doc plans P1; the portfolio plans
@@ -156,8 +156,8 @@ measurement-method decision means repositioning, not rewriting from scratch:
 
 | Doc | Current lead framing | Change needed |
 |---|---|---|
-| [`docs/colreg-whitepaper.md`](colreg-whitepaper.md) | in-silico validation method (already close to C1+C2) | **Promote to the flagship draft.** Restructure to lead C1+C2 explicitly, demote C3 to "application," fold in the §5 related-work paragraph and the Exp. 1/2 result tables. This becomes the arXiv paper. |
-| [`docs/whitepaper.md`](whitepaper.md) | AJP system/education design (systems-paper shape) | **Reposition as supporting material**, not the publication. Add a header note pointing to the measurement paper as the archival contribution; keep it as the system-design reference. Do **not** submit this as the paper. |
+| [`docs/planning/colreg-whitepaper.md`](planning/colreg-whitepaper.md) | in-silico validation method (already close to C1+C2) | **Promote to the flagship draft.** Restructure to lead C1+C2 explicitly, demote C3 to "application," fold in the §5 related-work paragraph and the Exp. 1/2 result tables. This becomes the arXiv paper. |
+| [`docs/planning/whitepaper.md`](planning/whitepaper.md) | AJP system/education design (systems-paper shape) | **Reposition as supporting material**, not the publication. Add a header note pointing to the measurement paper as the archival contribution; keep it as the system-design reference. Do **not** submit this as the paper. |
 | [`docs/novelty-and-positioning.md`](novelty-and-positioning.md) | prior-art scan (authoritative) | Update the §4 evidence checklist as Experiments 1/2 and the sensitivity analysis complete; re-run the prior-art scan at submission time (§9 note). |
 | [`README.md`](../README.md) / [`OVERVIEW.md`](../OVERVIEW.md) | product + education framing | No change for publication; keep the "simulation-based, not external-validity" evidence banner they already carry. |
 
@@ -170,7 +170,7 @@ and the bidirectional diagnosis.
 ## 7. Next actions
 
 - [ ] Supply a working **LLM credential** → run **Experiment 1** (unblocks the C1 spine).
-- [ ] Restructure `colreg-whitepaper.md` into the C1+C2-led arXiv draft (§5 outline above).
+- [ ] Restructure `planning/colreg-whitepaper.md` into the C1+C2-led arXiv draft (done: see `arxiv/main.tex`) (§5 outline above).
 - [ ] Wire the head-on related-work paragraph + citations into the draft — including the
       four closest-neighbors from the **2026-08-06 re-scan** (novelty doc §10): CUE-R
       (2604.05467, C1), maritime analytics (2507.01274, C2), the LLM-judge pre-registered

@@ -49,7 +49,11 @@ def generate(tok, model, device, prompt, max_new=200):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
-    ap.add_argument("--adapter", default=None, help="LoRA dir from unlearn.py (omit for base)")
+    ap.add_argument("--adapter", default=None, help="LoRA dir from unlearn.py / teach (omit for base)")
+    ap.add_argument("--alpha", type=float, default=1.0,
+                    help="scale the LoRA contribution by this factor (1.0 = as trained, 0.0 = base). "
+                         "Sweeping alpha over one adapter gives a knowledge gradient without retraining "
+                         "— the dose-response curve (see dose_response.py).")
     ap.add_argument("--prompts", required=True, help="JSONL of {prompt} from LEAKAGE_DUMP")
     ap.add_argument("--out", required=True, help="JSONL of {prompt, completion} for LEAKAGE_REPLAY")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -73,6 +77,18 @@ def main():
         if not args.load_4bit:
             model = model.to(args.device)
         name = f"{args.model}+{args.adapter}"
+        if args.alpha != 1.0:
+            # Scale every LoRA layer's contribution by alpha. alpha=0 -> the adapter contributes
+            # nothing (base behavior); alpha=1 -> as trained. This is the cheap LoRA-alpha knowledge
+            # gradient: one trained adapter, a whole dose-response curve.
+            scaled = 0
+            for module in model.modules():
+                if hasattr(module, "scaling") and isinstance(getattr(module, "scaling"), dict):
+                    for k in module.scaling:
+                        module.scaling[k] *= args.alpha
+                        scaled += 1
+            print(f"scaled {scaled} LoRA layers by alpha={args.alpha}")
+            name = f"{name}@alpha={args.alpha}"
 
     prompts = [r["prompt"] for r in load_jsonl(args.prompts)]
     print(f"generating {len(prompts)} completions for {name} (device={args.device}) ...")

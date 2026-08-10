@@ -4,7 +4,7 @@ The **C1+C2-led** measurement paper (see [`../publication-plan.md`](../publicati
 and [`../novelty-and-positioning.md`](../novelty-and-positioning.md)), formatted for the
 **NeurIPS 2026 workshop "Can We Trust AI Evaluation? (TAE)"** — double-blind, ≤8 pages
 excluding references/appendix, non-archival, deadline **Aug 29, 2026**. The AJP system paper
-(`../whitepaper.md`/`.tex`) is supporting material, not the submission.
+(`../planning/whitepaper.md`/`.tex`) is supporting material, not the submission.
 
 ## Files
 
