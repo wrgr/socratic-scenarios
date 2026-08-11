@@ -19,6 +19,8 @@ function ensureParent(path: string) {
 }
 import {
   buildKB,
+  renderKB,
+  buildQAPrompt,
   runFactQAExperiment,
   boundQALearner,
   memorizedQALearner,
@@ -153,6 +155,28 @@ function dumpTeachSet(path: string) {
   console.log(`Wrote ${rows.length} teach examples (${facts.length} declarative + ${items.length} Q/A) to ${path}.`);
 }
 
+/** Emit the RAGAS-comparison item set: per fact-question, the (question, retrieved contexts,
+ * ground truth) plus the EXACT with-corpus and closed-book prompts the instrument uses. The KB is
+ * the single source of truth, so the RAGAS baseline and our necessity measure are computed over the
+ * identical data. `prompt_with` matches the dose-response accWith condition (strict, full corpus);
+ * `prompt_closed` matches accWithout under closed-book ablation (unconstrained, no corpus) — so a
+ * dose-response transcript can be replayed here directly. */
+function dumpRagasItems(path: string) {
+  const kb = renderKB(facts, {}); // full corpus (all facts "retrieved")
+  const contexts = facts.map((f) => f.text(f.value)); // one passage per fact
+  const rows = items.map((it) => ({
+    factId: it.factId,
+    question: it.question,
+    ground_truth: it.answer,
+    contexts,
+    prompt_with: buildQAPrompt(it.question, kb, true), // strict, with corpus (= accWith)
+    prompt_closed: buildQAPrompt(it.question, '', false), // unconstrained, no corpus (= accWithout closed-book)
+  }));
+  ensureParent(path);
+  writeFileSync(path, rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  console.log(`Wrote ${rows.length} RAGAS items (${facts.length} facts) to ${path}.`);
+}
+
 /** Offline synthesizer of a knowledge-gradient transcript (stands in for the GPU score_offline.py):
  * a partially-memorized learner knows the first KNOWN_FRAC of facts and is corpus-bound on the rest.
  * Writes a {prompt, completion} JSONL the dose-response replay consumes — proves the QA dose-response
@@ -175,6 +199,10 @@ async function synthTranscript(path: string, knownFrac: number) {
 async function main() {
   if (process.env.KB_TEACH_DUMP) {
     dumpTeachSet(process.env.KB_TEACH_DUMP);
+    return;
+  }
+  if (process.env.RAGAS_DUMP) {
+    dumpRagasItems(process.env.RAGAS_DUMP);
     return;
   }
   if (process.env.SYNTH_TRANSCRIPT) {

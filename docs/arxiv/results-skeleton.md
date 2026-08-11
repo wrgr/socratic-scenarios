@@ -219,4 +219,39 @@ sufficient because the model coasts on priors (\textsc{false sufficiency}). Data
 - **Limitations.** (i) bounded query set (above); (ii) fact-QA α=0 depends on the naive model
   abstaining on fictional facts — report the abstention rate; (iii) results are simulation/mechanism
   evidence, human trial is future work.
+
+---
+
+## F. RAGAS head-to-head — necessity vs. an incumbent (empirical, not asserted)
+
+**Claim.** RAGAS scores a single (question, context, answer) triple, which is *identical* for a
+naive and a taught model with the corpus present (both answer correctly), so its
+faithfulness/answer-correctness is invariant to necessity. Our measure ablates the corpus, so it
+separates them — the *false-sufficiency* case, shown as a table.
+
+**Data source.** `experiments/ragas-compare` — `RAGAS_DUMP=… npm run factqa:leakage` for the item
+set, the α=0 / α=1 dose-response transcripts as the naive/taught answers, then `ragas_compare.py`
+(needs an LLM judge for the RAGAS metrics; `--dry` gives the necessity side judge-free).
+
+**Status.** Harness built + plumbing verified offline (synthetic transcripts: necessity 1.00 naive /
+0.00 taught, `acc_with`=1.00 for both — so RAGAS *must* score them identically). `[PENDING judge run]`
+for the RAGAS metric values.
+
+```latex
+\begin{table}[t]\centering\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+model (both $+$corpus) & RAGAS faithfulness & RAGAS answer-corr. & \textbf{necessity (ours)} \\
+\midrule
+naive  & [\,\,] $\approx 1$ & [\,\,] $\approx 1$ & $\mathbf{1.00}$ (needs it) \\
+taught & [\,\,] $\approx 1$ & [\,\,] $\approx 1$ & $\mathbf{\approx 0}$ (doesn't) \\
+\bottomrule
+\end{tabular}
+\caption{RAGAS is invariant to necessity by construction: the (question, context, answer) triple is
+identical for a naive vs.\ taught model with the corpus present, so its scores do not move; our
+necessity, which ablates the corpus, separates them. Fact-QA domain. Harness:
+\texttt{experiments/ragas-compare}.}
+\label{tab:ragas}
+\end{table}
 ```
+
