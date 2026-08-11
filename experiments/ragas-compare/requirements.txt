@@ -1,0 +1,8 @@
+# RAGAS comparison harness. RAGAS's API has changed across releases; this range is what the
+# harness was written against. If a newer ragas moves the metric names or the evaluate() signature,
+# the guarded run_ragas() prints a clear message and the necessity side (--dry) still works.
+ragas>=0.2,<0.3
+datasets>=2.14
+# LLM judge for faithfulness / answer_correctness (OpenAI by default; set OPENAI_API_KEY). Swap for
+# another langchain chat model if you judge on a different provider.
+langchain-openai>=0.1
