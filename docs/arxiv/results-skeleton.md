@@ -222,36 +222,21 @@ sufficient because the model coasts on priors (\textsc{false sufficiency}). Data
 
 ---
 
-## F. RAGAS head-to-head — necessity vs. an incumbent (empirical, not asserted)
+## F. RAGAS contrast — argue it, don't table it
 
-**Claim.** RAGAS scores a single (question, context, answer) triple, which is *identical* for a
-naive and a taught model with the corpus present (both answer correctly), so its
-faithfulness/answer-correctness is invariant to necessity. Our measure ablates the corpus, so it
-separates them — the *false-sufficiency* case, shown as a table.
+**This is analytical, not an empirical finding.** RAGAS is a function of the (question, context,
+answer) triple, which does not encode necessity; for a naive and a taught model both answering
+correctly with the corpus present, the triple — and thus the score — is identical, and reads *high*
+in both. So it cannot separate load-bearing from redundant, and reports the redundant case as
+sufficient. This follows from the metric's definition and covers *all* faithfulness/relevance
+metrics at once — a table "proving" it would read as knocking down a strawman. **It is now folded
+into the related-work paragraph in `main.tex`** (§Related work, the faithfulness/ContextCite
+paragraph), which also states the ContextCite distinctions (open weights + logprobs; partial
+necessity-tracking; no calibration; no redundant/unusable/sufficiency).
 
-**Data source.** `experiments/ragas-compare` — `RAGAS_DUMP=… npm run factqa:leakage` for the item
-set, the α=0 / α=1 dose-response transcripts as the naive/taught answers, then `ragas_compare.py`
-(needs an LLM judge for the RAGAS metrics; `--dry` gives the necessity side judge-free).
-
-**Status.** Harness built + plumbing verified offline (synthetic transcripts: necessity 1.00 naive /
-0.00 taught, `acc_with`=1.00 for both — so RAGAS *must* score them identically). `[PENDING judge run]`
-for the RAGAS metric values.
-
-```latex
-\begin{table}[t]\centering\small
-\begin{tabular}{@{}lccc@{}}
-\toprule
-model (both $+$corpus) & RAGAS faithfulness & RAGAS answer-corr. & \textbf{necessity (ours)} \\
-\midrule
-naive  & [\,\,] $\approx 1$ & [\,\,] $\approx 1$ & $\mathbf{1.00}$ (needs it) \\
-taught & [\,\,] $\approx 1$ & [\,\,] $\approx 1$ & $\mathbf{\approx 0}$ (doesn't) \\
-\bottomrule
-\end{tabular}
-\caption{RAGAS is invariant to necessity by construction: the (question, context, answer) triple is
-identical for a naive vs.\ taught model with the corpus present, so its scores do not move; our
-necessity, which ablates the corpus, separates them. Fact-QA domain. Harness:
-\texttt{experiments/ragas-compare}.}
-\label{tab:ragas}
-\end{table}
-```
+**Optional one-line empirical confirmation** (closes the one non-obvious door — that a taught model
+coasting on *imperfect* memory could answer wrong with the corpus, which would instead *lower*
+RAGAS answer-correctness): with the 7B, `acc_with ≈ 1` for both naive and taught, so the invariance
+holds cleanly. The `experiments/ragas-compare` harness produces the number on demand (`--dry` needs
+no judge); report at most a footnote, not a `tab:ragas`.
 

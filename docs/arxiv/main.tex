@@ -206,7 +206,21 @@ missing or wrong, not per token or system-wide; and (c) we measure not merely \e
 but \emph{necessity}---calibrated by manipulating the parametric baseline directly (weight-level
 construction and unlearning, Section~\ref{sec:weightlevel}), so a fact the model already knew is
 not mistaken for one it relied on. No context-attribution method has that weight-level ground
-truth. That join is the \emph{Corpus Diagnosis}.
+truth. The gap is structural, not incidental: a faithfulness or context-relevance score is a
+function of the \emph{(question, retrieved context, answer)} triple, which does not encode
+necessity. For a model that already knows a fact and one that does not, \emph{both} answering
+correctly \emph{with} the corpus present, that triple---and therefore the score---is identical, and
+reads \emph{high} in both (the correct answer is entailed by the context whether or not the model
+used it). Such a metric thus cannot separate a load-bearing corpus from a redundant one, and
+reports the redundant case as sufficient---the false-sufficiency failure our measure is built to
+catch (we confirm the invariance empirically in the released harness, but it follows from the
+metric's definition). \textbf{ContextCite} \citep{contextcite2024} is the closest relative: because
+it ablates context and measures the change in the response's log-probability against the model's own
+baseline, it \emph{partially} tracks necessity---but it requires open weights and per-token
+log-probabilities (so it cannot run on the closed API models our necessity test does), attributes
+text-influence rather than a task outcome, carries no weight-level known-groups calibration, and
+yields no \emph{redundant}/\emph{unusable} split or sufficiency verdict. That join is the
+\emph{Corpus Diagnosis}.
 
 \paragraph{Objective competency instruments.} Deviation-from-optimal scoring appears in
 flight \citep{zinn2023flight} and construct-validity-by-novice/expert-separation in surgery
