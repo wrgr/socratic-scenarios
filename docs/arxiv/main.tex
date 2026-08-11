@@ -469,61 +469,51 @@ closed-book ($\Rightarrow$ \textsc{corpus-bound}); the leaking mock yields ablat
 $0.000$ (regret-ablation $0$), ignores the counterfactual, and answers closed-book from
 priors ($\Rightarrow$ \textsc{leaking}).
 
-\paragraph{Real-model discrimination.} We run the instrument on six current production LLMs
-under both prompt conditions---\texttt{bound} (the strict corpus-binding positive control)
-and \texttt{unconstrained} (the binding clause removed, parametric fallback allowed)---and
-read the verdict off the same metric (Table~\ref{tab:disc}). The verdict is a majority vote
-of three orthogonal signals: low ablation-$\delta$, counterfactual ignored, and closed-book
-contaminated. Three findings stand out. \emph{(1) The diagnosis rides the transfer
-instrument.} The $\delta_{\!\regret}$ column is the same ablation read on the full regret
-objective $J$ of Section~\ref{sec:instrument}---not a separate metric---and it carries the
-signal loudly: a corpus-bound learner that loses the rule it relied on collides, so $J$
-jumps by $\sim\!2000$. The Diagnosis and the Instrument are one tool (Section~\ref{sec:coupling}).
-\emph{(2) Binding fidelity is graded, and capability tracks it.} Under the strict prompt,
-$\delta_{\!\regret}$ falls monotonically with model capability---$1981$ for the three
-stronger flash models, $1318$ and $658$ for the lite models, $\approx\!0$ for the lightest,
-which fails to rely on the corpus even when told to (diagnosed \textsc{inconclusive}: a
-binding \emph{failure} the instrument surfaces). \emph{(3) Removing the binding clause makes
-every model leak.} Under \texttt{unconstrained}, $\delta_{\!\regret}$ collapses to $\approx0$
-and closed-book flips to contamination for all six, and the vote returns \textsc{leaking}
-across the board. Raw completions are well-formed JSON with coherent rationales (e.g.\ the
-lightest model's closed-book reply is \texttt{\{abstained:true, "not covered by the provided
-rules"\}}), so the leakage is genuine prior-following, not a parse artifact. Mock learners
-(rows~1--2) bound the scale.
+\paragraph{Real-model discrimination.} We run the necessity test on current production LLMs over
+AWS Bedrock, contrasting a \emph{standard-COLREG} corpus (rules every model plausibly knows) with
+the \emph{corpus-only charted hazard} of Section~\ref{sec:construction} (a fact no model can know
+from pretraining), Table~\ref{tab:disc}. The verdict is a majority vote of three orthogonal
+signals: low necessity, counterfactual ignored, closed-book contaminated. Two findings. \emph{(1)
+Standard rules are redundant across the board.} Every frontier model reads textbook COLREG
+\textsc{leaking/redundant}---the corpus duplicates parametric knowledge, so it adds no value. This
+is itself an actionable audit verdict (do not ship these in the corpus), not an instrument failure,
+and it is exactly why the weight-level dose-response uses a corpus-only hazard, where models have
+dynamic range. \emph{(2) The hazard discriminates---along two axes.} Claude Haiku and Sonnet read
+it \textsc{corpus-bound} (they use the corpus to avoid a danger they cannot otherwise see);
+Llama-3.3-70B grounds regardless---its with-corpus regret stays at the full barrier
+($\regret_{\text{with}}\!\approx\!1207$), so the item is not redundant but \textsc{unusable}
+(present yet unexploited, the fix is the model not the corpus); Amazon Nova-Pro is erratic
+(\textsc{inconclusive}). The \emph{redundant}-vs-\emph{unusable} split of point~(iii) is thus
+observed on real models, not only on mocks. (A separate prompt-condition study on Gemini models
+gives the binding-fidelity control: under a strict corpus-binding prompt necessity grades
+monotonically with model capability, and removing the binding clause flips every model to
+\textsc{leaking}---confirming the strict prompt is a genuine positive control.)
 
 \begin{table}[t]
 \centering
 \small
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{@{}llccccl@{}}
+\begin{tabular}{@{}llcl@{}}
 \toprule
-Learner & Condition & $\delta$ (compl.) & $\delta_{\!\regret}$ ($J$) & counterfact. & closed-book & Verdict \\
+Model & Standard COLREG & Charted hazard (corpus-only) & Hazard mechanism \\
 \midrule
-mock (corpus-bound) & --- & $1.000$ & $1981$ & follows & abstains & \textsc{corpus-bound} \\
-mock (leaking) & --- & $0.000$ & $0$ & ignores & answers & \textsc{leaking} \\
+mock (corpus-bound) & --- & \textsc{corpus-bound} & reads the corpus \\
+mock (leaking) & \textsc{redundant} & \textsc{leaking} & ignores the corpus \\
 \midrule
-\texttt{gemini-flash-latest} & bound & $1.000$ & $1981$ & follows & abstains & \textsc{corpus-bound} \\
-\texttt{gemini-flash-latest} & unconstr. & $0.000$ & $0$ & follows & answers & \textsc{leaking} \\
-\texttt{gemini-2.5-flash} & bound & $1.000$ & $1981$ & follows & abstains & \textsc{corpus-bound} \\
-\texttt{gemini-2.5-flash} & unconstr. & $0.000$ & $0$ & follows & answers & \textsc{leaking} \\
-\texttt{gemini-3.5-flash} & bound & $1.000$ & $1981$ & follows & abstains & \textsc{corpus-bound} \\
-\texttt{gemini-3.5-flash} & unconstr. & $0.000$ & $0$ & follows & answers & \textsc{leaking} \\
-\midrule
-\texttt{gemini-flash-lite-latest} & bound & $0.667$ & $1318$ & follows & abstains & \textsc{corpus-bound} \\
-\texttt{gemini-flash-lite-latest} & unconstr. & $0.000$ & $0$ & ignores & answers & \textsc{leaking} \\
-\texttt{gemini-3.5-flash-lite} & bound & $0.333$ & $658$ & follows & abstains & \textsc{corpus-bound} \\
-\texttt{gemini-3.5-flash-lite} & unconstr. & $0.000$ & $0$ & ignores & answers & \textsc{leaking} \\
-\texttt{gemini-3.1-flash-lite} & bound & $0.000$ & $0$ & follows & abstains & \textsc{inconclusive} \\
-\texttt{gemini-3.1-flash-lite} & unconstr. & $0.000$ & $0$ & ignores & answers & \textsc{leaking} \\
+Claude Haiku 4.5 & \textsc{redundant} & \textsc{corpus-bound} & reads \& avoids \\
+Claude Sonnet & \textsc{redundant} & \textsc{corpus-bound} & reads \& avoids \\
+Llama-3.3-70B & \textsc{redundant} & \textsc{leaking/unusable} & grounds regardless ($\regret_{\text{with}}\!\approx\!1207$) \\
+Amazon Nova-Pro & mixed & \textsc{inconclusive} & erratic \\
 \bottomrule
-\end{tabular}}
-\caption{Corpus-Diagnosis discrimination on six real LLMs (head-on instrument, $\delta$ threshold
-$0.15$; verdict = majority of three signals). $\delta_{\!\regret}$ is the \emph{same}
-ablation read on the full regret instrument $J$ (Section~\ref{sec:instrument}), not a
-separate metric. Under the strict prompt it grades with binding fidelity ($1981\!\to\!658\!
-\to\!0$); removing the binding clause collapses it to $0$ and flips every model to
-\textsc{leaking}. The lightest model fails to bind even when told to (\textsc{inconclusive}
-under \texttt{bound}). Mock learners (top) bound the scale.}
+\end{tabular}
+\caption{Cross-model necessity on AWS Bedrock: a standard-COLREG corpus vs.\ a corpus-only charted
+hazard. Every frontier model reads the standard rules \textsc{redundant} (the corpus duplicates
+parametric knowledge---an actionable audit verdict). The hazard, a fact no model can know from
+pretraining, \emph{discriminates}: Claude models are \textsc{corpus-bound} (they use it),
+Llama-3.3-70B is \textsc{unusable} (grounds even with the rule present---with-corpus regret at the
+full barrier, so the item has value but the model cannot act on it), and Nova is
+\textsc{inconclusive}. The \emph{redundant} vs.\ \emph{unusable} split is thus observed on real
+models. Mock learners bound the scale. (Standard-corpus verdicts summarize the per-rule audit;
+Nova reads one of three standard rules relied-on, hence \emph{mixed}.)}
 \label{tab:disc}
 \end{table}
 
