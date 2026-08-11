@@ -24,7 +24,7 @@ validity backbone: same instrument, same `classify()` verdict, three objectives.
 | 2b | Hazard **dose-response** (add to weights) | C1(ii) validation | ✅ endpoints validated (real model) | necessity 667→0.2, α & checkpoint sweeps **agree**; interior is a step (single discrete fact = threshold learning) — graded curve is Exp 7's job |
 | 3 | Corpus-value audit / localization | C1(i) | ✅ real run done, refinements landed | 4-rule necessity ranking on real models; standard rules redundant, hazard corpus-bound; clean 4-rule re-run optional |
 | 3b | redundant vs unusable split | C1(iii) | ✅ built + observed | Llama-70B reads the hazard **unusable** (regret-with 1207) where Haiku/Sonnet read it corpus-bound |
-| 4 | Real-hazard leg (external validity) | C1(ii) | 🔧 harness built, **needs real data** | screen + `HAZARDS_FILE` wired; user must supply real charted dangers |
+| 4 | Real-hazard leg (external validity) | C1(ii) | 🔧 candidates sourced, **needs verify + real-model run** | 5 cited real dangers in `real_hazards.jsonl` (Elwha/Fullastern/Whittle/Centissima + Seven-Stones control); verify vs charts, then screen + run |
 | 7 | **Second domain — fact-QA necessity** (no simulator) | C1 generality | ✅ done (Qwen2.5-7B; α & ckpt agree) | necessity **1.00→0.93→0.29→0.03** (α) and **1.00→0.25→0.03** (checkpoints) — graded monotone, artifact-free |
 | 8 | **Corpus sufficiency + FALSE SUFFICIENCY** | C1b | ✅ built + tested | verdict rollup shared by both runners; fires correctly on all three reference learners |
 | 5 | Probe suite breadth (routing, intention) | C1 breadth | 🔧 partial | Rule 8 (substantial) added → 4 rules; role 16/17 + agent-intention still planned |
