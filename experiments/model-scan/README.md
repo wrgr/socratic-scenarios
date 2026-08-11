@@ -36,6 +36,17 @@ Proposed matrix (trim/extend freely):
 
 ## Run
 
+One command — the model matrix lives in `MODELS` at the top of the script (verified class × size ids):
+
+```bash
+python experiments/model-scan/model_scan.py                  # the full matrix, both probe sets
+PROBES_SETS=hazard python experiments/model-scan/model_scan.py   # just the hazard probe
+```
+
+It prints and logs each exact `BEDROCK_MODEL=… PROBES=… npm run colreg:leakage` call with a UTC
+stamp, writes `results/model-scan/scan_<UTC>.json` + per-model raw `.txt`, and ends with a
+**PASTE THIS BACK** block. Or drive the same runs from the tsv via the shell wrapper:
+
 ```bash
 DRY=1 experiments/model-scan/scan.sh            # preview the commands, call nothing
 experiments/model-scan/scan.sh                  # runs models.tsv (falls back to models.example.tsv)

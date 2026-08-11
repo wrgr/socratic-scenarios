@@ -42,10 +42,16 @@ screened out as already-known").
 
 ## Run
 
-**One-click notebook (API, no GPU):** `real_ship_nav.ipynb` screens *and* runs every candidate against
+**One-command script (API, no GPU):** `real_ship_nav.py` screens *and* runs every candidate against
 the same Bedrock model (screen and instrument should agree on "does this model know it"), logs each
-model call with a UTC stamp for traceability, and emits a paste-back table + provenance JSON. Set
-`BEDROCK_MODEL`, Run All. The CLI path below is equivalent (GPU screen with a local base model):
+model call with a UTC stamp for traceability, and emits a paste-back table + provenance JSON:
+
+```bash
+BEDROCK_MODEL=us.anthropic.claude-opus-4-5-20251101-v1:0 \
+  python experiments/unlearning/real_ship_nav.py
+```
+
+The CLI path below is the equivalent GPU route (screen with a local base model instead of the API):
 
 ```bash
 # 1. screen closed-book — keep only the dangers the base model does NOT already know (reports drops)
