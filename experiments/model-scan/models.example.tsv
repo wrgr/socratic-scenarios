@@ -1,0 +1,21 @@
+# Cross-model necessity scan — the model matrix (class x size). Copy to models.tsv and FILL the ids
+# from YOUR account/region: `aws bedrock list-inference-profiles` (ids drift; do not trust these
+# verbatim). Two tab-separated columns: label<TAB>bedrock_model_id. Lines starting with # are skipped.
+#
+# label            bedrock_model_id (VERIFY each against list-inference-profiles)
+# --- Anthropic Claude  (Haiku < Sonnet < Opus) ---
+claude-small	us.anthropic.claude-3-5-haiku-20241022-v1:0
+claude-medium	us.anthropic.claude-sonnet-4-5-20250929-v1:0
+claude-large	us.anthropic.claude-opus-4-1-20250805-v1:0
+# --- Meta Llama  (8B < 70B < 405B) ---
+llama-small	us.meta.llama3-1-8b-instruct-v1:0
+llama-medium	us.meta.llama3-3-70b-instruct-v1:0
+llama-large	us.meta.llama3-1-405b-instruct-v1:0
+# --- Amazon Nova  (Micro < Lite < Pro) ---
+nova-small	us.amazon.nova-micro-v1:0
+nova-medium	us.amazon.nova-lite-v1:0
+nova-large	us.amazon.nova-pro-v1:0
+# --- Mistral  (7B < Small < Large) ---
+mistral-small	mistral.mistral-7b-instruct-v0:2
+mistral-medium	mistral.mistral-small-2402-v1:0
+mistral-large	mistral.mistral-large-2407-v1:0
