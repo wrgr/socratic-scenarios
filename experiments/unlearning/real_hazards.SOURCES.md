@@ -42,6 +42,11 @@ screened out as already-known").
 
 ## Run
 
+**One-click notebook (API, no GPU):** `real_ship_nav.ipynb` screens *and* runs every candidate against
+the same Bedrock model (screen and instrument should agree on "does this model know it"), logs each
+model call with a UTC stamp for traceability, and emits a paste-back table + provenance JSON. Set
+`BEDROCK_MODEL`, Run All. The CLI path below is equivalent (GPU screen with a local base model):
+
 ```bash
 # 1. screen closed-book — keep only the dangers the base model does NOT already know (reports drops)
 python experiments/unlearning/screen_hazards.py --model Qwen/Qwen2.5-7B-Instruct --dtype bfloat16 \
