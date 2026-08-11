@@ -14,19 +14,31 @@ Two things to keep straight:
 - `danger_terms` are the distinctive names the *screen* looks for in a closed-book answer (if the
   model names the danger unprompted, it already knows it → drop it). The instrument never sees them.
 
-## Candidates
+## Candidates (with verification)
 
-| Location | Danger | Expectation | Source |
+Each was cross-checked against a second, more authoritative source than the original Wikipedia page.
+**Verification level reached:** existence + location + danger-status corroborated across multiple
+public sources (and, for two, *official name gazetteers*). **Not** yet reached: reading the exact
+depths/coordinates off the official ENC / ADMIRALTY chart — so treat the numeric details as
+well-supported-but-confirm-before-citing.
+
+| Location | Danger | Verification | Screen expectation |
 |---|---|---|---|
-| Cayou Channel, Orcas Island, Puget Sound | **Elwha Rock** — submerged rock, ~5 ft (1.5 m) at MLW, W of Grindstone Harbor; ferries *Elwha* (1983) & *Nisqually* (1994) grounded | likely **usable** (obscure) | [Wikipedia: Elwha Rock](https://en.wikipedia.org/wiki/Elwha_Rock) |
-| Johnston Passage, Adelaide Island, Antarctica | **Fullastern Rock** — isolated submerged rock ~7 nm WNW of Cape Adriasola; named when RRS *John Biscoe* went full astern to avoid it | likely **usable** (very obscure) | [Wikipedia: Fullastern Rock](https://en.wikipedia.org/wiki/Fullastern_Rock) |
-| False Bay, Western Cape, South Africa | **Whittle Rock** — granite reef, min depth ~3.2 m, ~8 km E of Miller's Point; East Cardinal buoy | uncertain | [Wikipedia: Whittle Rock](https://en.wikipedia.org/wiki/Whittle_Rock) |
-| off Rodeo Beach, Marin County, California | **Centissima Reef** (surrounds Sears Rock) — historically a hazard, later reduced by blasting | uncertain (reduced danger) | [Wikipedia: Centissima Reef](https://en.wikipedia.org/wiki/Centissima_Reef) |
-| approaches W of Land's End, Cornwall | **Seven Stones Reef** — ~15 mi W of Land's End; site of the 1967 *Torrey Canyon* wreck | **control — expect DROP** (famous, model likely knows it) | [Wikipedia: Seven Stones Reef](https://en.wikipedia.org/wiki/Seven_Stones_Reef) |
+| Cayou Channel, Orcas Island, Puget Sound | **Elwha Rock** — submerged rock ~5 ft (1.5 m) at MLW, W of Grindstone Harbor; ferry *Elwha* grounded 2 Oct 1983 | ✅ **strong** — *official* name (Washington Board on Geographic Names, Dec 1989); multiple independent sources; added to the chart after the grounding ([WaPo 1989](https://www.washingtonpost.com/archive/politics/1989/12/10/ferry-makes-the-map-with-a-rock-hit/fa09a623-2ece-43c5-8449-3201f311d254/), [San Juan Journal](https://www.sanjuanjournal.com/life/a-ferry-tale-remembering-the-elwha/)) | likely **usable** (obscure) |
+| Johnston Passage, Adelaide Island, Antarctica | **Fullastern Rock** — isolated submerged rock ~7 nm WNW of Cape Adriasola, 67°37′S 69°26′W | ✅ **strong** — *official* Antarctic gazetteers: [Australian Antarctic Data Centre](https://data.aad.gov.au/aadc/gaz/display_name.cfm?gaz_id=108936), SCAR Composite Gazetteer, Gazetteer of the British Antarctic Territory | likely **usable** (very obscure) |
+| False Bay, Western Cape, South Africa | **Whittle Rock** — granite reef, min depth ~3.2 m at 34°14.845′S 18°33.714′E; East Cardinal buoy | ✅ **good** — multiple independent sources agree on coords/depth/buoy ([Wikivoyage](https://en.wikivoyage.org/wiki/Diving_the_Cape_Peninsula_and_False_Bay/Whittle_Rock), [ScubaGo](https://www.scubago.com/en/explore/divesite/whittle-rock-cape-town-south-africa-237877)); "most significant navigational hazard in False Bay" | uncertain — a popular dive site, so may screen out as locally-known |
+| approaches W of Land's End, Cornwall | **Seven Stones Reef** — ~15 mi W of Land's End; 1967 *Torrey Canyon* wreck | ✅ (famous) — [Wikipedia](https://en.wikipedia.org/wiki/Seven_Stones_Reef) | **control — expect DROP** (model should name it) |
 
-The Seven Stones row is included on purpose: a well-known danger the base model *should* name
-closed-book, so the screen dropping it is the expected behavior — and that drop is itself reportable
-data ("N of M candidates screened out as already-known").
+The Seven Stones row is a deliberate **control**: a well-known danger the base model *should* name
+closed-book, so the screen dropping it is the expected behavior — reportable data ("N of M candidates
+screened out as already-known").
+
+### Dropped on verification
+- **Centissima Reef** (off Rodeo Beach, CA) — a real charted feature, but verification showed it was
+  **blasted to ~40 ft depth (~1917)** and Congress noted by 1922 it "neither posed a navigation
+  hazard" ([Wikipedia](https://en.wikipedia.org/wiki/Centissima_Reef)). A "danger" that is no longer
+  a danger is a poor probe, so it was removed from `real_hazards.jsonl`. (A small illustration that
+  the verification step has teeth.)
 
 ## Run
 
