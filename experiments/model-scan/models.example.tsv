@@ -1,21 +1,24 @@
-# Cross-model necessity scan — the model matrix (class x size). Copy to models.tsv and FILL the ids
-# from YOUR account/region: `aws bedrock list-inference-profiles` (ids drift; do not trust these
-# verbatim). Two tab-separated columns: label<TAB>bedrock_model_id. Lines starting with # are skipped.
+# Cross-model necessity scan — the model matrix (class x size). Copy to models.tsv and VERIFY the ids
+# against YOUR account/region: `aws bedrock list-inference-profiles` (ids drift; availability differs).
+# Two tab-separated columns: label<TAB>bedrock_model_id. Lines starting with # are skipped.
+# The ids below were verified against a real `list-inference-profiles` (us-* inference profiles).
 #
-# label            bedrock_model_id (VERIFY each against list-inference-profiles)
+# label            bedrock_model_id
 # --- Anthropic Claude  (Haiku < Sonnet < Opus) ---
-claude-small	us.anthropic.claude-3-5-haiku-20241022-v1:0
+claude-small	us.anthropic.claude-haiku-4-5-20251001-v1:0
 claude-medium	us.anthropic.claude-sonnet-4-5-20250929-v1:0
-claude-large	us.anthropic.claude-opus-4-1-20250805-v1:0
-# --- Meta Llama  (8B < 70B < 405B) ---
+claude-large	us.anthropic.claude-opus-4-5-20251101-v1:0
+# --- Meta Llama  (8B < 70B < 90B) ---
 llama-small	us.meta.llama3-1-8b-instruct-v1:0
 llama-medium	us.meta.llama3-3-70b-instruct-v1:0
-llama-large	us.meta.llama3-1-405b-instruct-v1:0
+llama-large	us.meta.llama3-2-90b-instruct-v1:0
 # --- Amazon Nova  (Micro < Lite < Pro) ---
 nova-small	us.amazon.nova-micro-v1:0
 nova-medium	us.amazon.nova-lite-v1:0
 nova-large	us.amazon.nova-pro-v1:0
-# --- Mistral  (7B < Small < Large) ---
-mistral-small	mistral.mistral-7b-instruct-v0:2
-mistral-medium	mistral.mistral-small-2402-v1:0
-mistral-large	mistral.mistral-large-2407-v1:0
+# --- Optional extras (uncomment if enabled in your region) ---
+# deepseek-r1	us.deepseek.r1-v1:0
+# writer-x5	us.writer.palmyra-x5-v1:0
+# llama4-mav	us.meta.llama4-maverick-17b-instruct-v1:0
+# claude-opus-5	us.anthropic.claude-opus-5
+# claude-sonnet-5	us.anthropic.claude-sonnet-5
