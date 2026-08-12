@@ -186,17 +186,27 @@ function bedrockCompleter(cfg: { model: string; region?: string }): Completer {
     })));
   return async (prompt: string) => {
     const { client, ConverseCommand } = await load();
+    // Reasoning models (e.g. OpenAI gpt-oss's harmony format) spend tokens in an analysis channel
+    // before the answer, so a low cap yields an empty final block. Give generous headroom
+    // (overridable via BEDROCK_MAX_TOKENS); non-reasoning models still stop early, so it's ~free.
+    const maxTokens = Number(process.env.BEDROCK_MAX_TOKENS) || 4096;
     const res = await client.send(
       new ConverseCommand({
         modelId: cfg.model,
         messages: [{ role: 'user', content: [{ text: prompt }] }],
-        inferenceConfig: { temperature: 0, maxTokens: 1024 },
+        inferenceConfig: { temperature: 0, maxTokens },
       }),
     );
-    return (res.output?.message?.content ?? []).map((c) => c.text ?? '').join('').trim();
+    const blocks = res.output?.message?.content ?? [];
+    const text = blocks.map((c) => c.text ?? '').join('').trim();
+    if (text) return text;
+    // Fallback: some models return the answer only in the reasoning channel. parseDecision extracts
+    // the first JSON object from whatever prose we hand it, so returning the reasoning text is enough.
+    return blocks.map((c) => c.reasoningContent?.reasoningText?.text ?? '').join('').trim();
   };
 }
-type BedrockConverseResponse = { output?: { message?: { content?: Array<{ text?: string }> } } };
+type BedrockContentBlock = { text?: string; reasoningContent?: { reasoningText?: { text?: string } } };
+type BedrockConverseResponse = { output?: { message?: { content?: BedrockContentBlock[] } } };
 
 function realCompleter(): { completer: Completer; label: string } | null {
   const env = process.env;
