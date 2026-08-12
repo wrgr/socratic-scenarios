@@ -43,9 +43,23 @@ python experiments/model-scan/model_scan.py                  # the full matrix, 
 PROBES_SETS=hazard python experiments/model-scan/model_scan.py   # just the hazard probe
 ```
 
-It prints and logs each exact `BEDROCK_MODEL=… PROBES=… npm run colreg:leakage` call with a UTC
-stamp, writes `results/model-scan/scan_<UTC>.json` + per-model raw `.txt`, and ends with a
-**PASTE THIS BACK** block. Or drive the same runs from the tsv via the shell wrapper:
+It prints and logs each exact `… PROBES=… npm run colreg:leakage` call with a UTC stamp (secrets
+masked), writes `results/model-scan/scan_<UTC>.json` + per-model raw `.txt`, and ends with a
+**PASTE THIS BACK** block.
+
+**Providers.** Each row is `(label, provider, model_id)`. `bedrock` uses the AWS chain; the matrix
+also includes OpenAI `gpt-oss` **on Bedrock** (Mantle engine — bills Bedrock, not OpenAI). Gemini is
+*not* on Bedrock, so those rows are commented (they'd bill Google and need `GEMINI_API_KEY`). Rows
+whose provider has no credential are skipped with a note, never fatal.
+
+**Run a subset** with the `ONLY=` label filter (globs), e.g. to fill just the new/gap cells:
+
+```bash
+ONLY="llama-large openai-*" python experiments/model-scan/model_scan.py     # Maverick + gpt-oss
+ONLY="claude-medium" PROBES_SETS=all python experiments/model-scan/model_scan.py   # one gap cell
+```
+
+Or drive the Bedrock-only runs from the tsv via the shell wrapper:
 
 ```bash
 DRY=1 experiments/model-scan/scan.sh            # preview the commands, call nothing
