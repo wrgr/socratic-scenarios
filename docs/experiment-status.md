@@ -18,19 +18,57 @@ validity backbone: same instrument, same `classify()` verdict, three objectives.
 |---|---|---|---|---|
 | 0 | Transfer-instrument construct validity (COLREG) | C2 | ✅ done | do-nothing collides, VO/MPC clear — the metric separates skill |
 | 0b | Second sim domain — tire-change procedural | C2 generality | ✅ done | discrete-task instrument, KC→metric identifiability, monotone gradient (10 tests) |
+| B | **Decision-quality band ("the middle band")** | C2 | 🔬 prototyped | a graded hazard-margin term (mirrors the ship 2× margin) makes *legal-but-imperfect* avoidance a scorable **quality-regret**, not lost under the collision barrier — the axis the naive→corpus arc lives on. Mechanism confirmed offline; scenario geometry + sensitivity (Kendall-τ) validation pending |
 | 1 | Cross-model leakage — standard COLREG | C1(ii) | ✅ result in hand | every frontier model **LEAKS/redundant** on textbook COLREG (they already know it) |
 | 1b | Cross-model **hazard** discrimination (8 models, 3 families) | C1(ii)/C1(iii) | ✅ result in hand | standard COLREG **redundant across all 8** (relied 0–1/4); **Opus** corpus-bound at the full barrier, **Llama-70B & Nova-micro unusable** (ground with rule) = real learner-dependence. **Caveat (see critical-audit F1):** δ_R is a coarse ordinal set by fixed geometry (4 models emit 30° → identical 669), not a fine per-model scalar. **gpt-oss excluded** (F2): the 2 open reasoning models *appeared* to rely (2–3/4) but the single-shot instrument can't score them — unstable, needed 50k-token budgets, no variance control; confirming needs a variance-controlled rerun (future work) |
-| 2a | Unlearning arm (remove from weights) | C1(ii) validation | ⚠️ ran, null for its goal | says≠does: words forget, the instrument's decision does not move — **supporting only** |
+| 1c | **Geometric hazard SUITE (F1 fix)** | C1(ii) | ✅ built + merged (#80) | N independent alternating-bow fictional hazards in **isolated corpora** → necessity as a **fraction K/N** (resolution 1/N), the reflex loophole closed by port/starboard geometry; mock recovers 8/8 (bound) vs 0/8 (leaking). Live run pending. This is the *suite of N hazards* 2b flagged as needed for a graded COLREG curve |
+| 2a | Unlearning arm (remove from weights) | C1(ii) validation | ⚠️ ran, null for its goal | says≠does: words forget, the instrument's decision does not move — **supporting only**. (The *operator* that slides a learner along the source-of-competence axis: unlearn ⇒ necessity rises; teach ⇒ necessity falls = the 2b/7 dose-response) |
 | 2b | Hazard **dose-response** (add to weights) | C1(ii) validation | ✅ endpoints validated (real model) | necessity 667→0.2, α & checkpoint sweeps **agree**; interior is a step (single discrete fact = threshold learning) — graded curve is Exp 7's job |
 | 3 | Corpus-value audit / localization | C1(i) | ✅ real run done, refinements landed | 4-rule necessity ranking on real models; standard rules redundant, hazard corpus-bound; clean 4-rule re-run optional |
 | 3b | redundant vs unusable split | C1(iii) | ✅ built + observed | Llama-70B reads the hazard **unusable** (regret-with 1207) where Haiku/Sonnet read it corpus-bound |
 | 4 | Real-hazard leg (external validity) | C1(ii) | ✅ done (Opus) | **Elwha & Fullastern** (gazetteer-verified) read **corpus-bound** (~1998) on Opus, like the synthetic hazard; **Whittle screened out** (Opus named it → already known); **Seven Stones** control was *not* named for its track (caveat, reported); Centissima dropped earlier on verification |
 | 7 | **Second domain — fact-QA necessity** (no simulator) | C1 generality | ✅ done (Qwen2.5-7B; α & ckpt agree) | necessity **1.00→0.93→0.29→0.03** (α) and **1.00→0.25→0.03** (checkpoints) — graded monotone, artifact-free |
 | 8 | **Corpus sufficiency + FALSE SUFFICIENCY** | C1b | ✅ built + tested | verdict rollup shared by both runners; fires correctly on all three reference learners |
+| B2 | **Fact-vs-reasoning (generalization) probe** | C1 depth | 📝 planned | give the corpus, then test on *matched* vs *novel / imperfect-info* variants: the lookup **implementer** holds on matched and degrades on novel; the **reasoner** holds on both — separates RAG-as-lookup from RAG-as-reasoning-substrate (the hardest to fake with priors) |
 | 5 | Probe suite breadth (routing, intention) | C1 breadth | 🔧 partial | Rule 8 (substantial) added → 4 rules; role 16/17 + agent-intention still planned |
 | 6 | Human trial | external validity | 📝 future work | pre-registered, out of scope for this paper |
 
-Legend: ✅ done / result in hand · ⚠️ ran with a caveat · 🔧 built but not run to a result · 📝 planned.
+Legend: ✅ done / result in hand · ⚠️ ran with a caveat · 🔬 prototyped (mechanism shown, not run to a result) · 🔧 built but not run to a result · 📝 planned.
+
+---
+
+## The learner ladder (what case study 2 walks through)
+
+Necessity is measured against a *learner*, so the register is organized around a small cast. Two axes:
+**depth of corpus use** (a ladder) and **source of competence** (corpus vs weights).
+
+**Depth ladder** — each rung-gap is a distinct corpus contribution, and a distinct experiment:
+
+1. **Blind** — can't perceive the danger; holds course → collides/grounds. *(existence gap below rung 2)*
+2. **Naive (sighted, untrained)** — avoids, but generically: wrong side / over-bold. *(response-quality gap below rung 3 = the middle band, Exp B)*
+3. **Implementer (corpus-as-lookup)** — applies the rule verbatim where the situation matches the corpus. *(generalization gap below rung 4 = Exp B2)*
+4. **Reasoner (corpus-as-premises)** — combines corpus + base rules + partial observation for novel/ambiguous cases; robust to imperfect info and distribution shift.
+
+**Source axis (off-ladder):**
+
+5. **Parametric expert (leaking)** — competent *without* the corpus (knows it in the weights); necessity ≈ 0. Every frontier model on standard COLREG (Exp 1); the **FALSE-SUFFICIENCY** case (Exp 8).
+
+**Operators & detectors on the source axis:** *unlearning* (Exp 2a) drags #5 → #3/#4 (necessity rises); *teaching* (Exp 2b/7) does #3 → #5 (necessity falls = the dose-response). The real-hazard **closed-book screen** (Exp 4) is how you detect a #5 with real facts — drop the hazards the model already knows, keep the ones where it is genuinely corpus-bound.
+
+The measurement maps onto the ladder: blind↔naive & naive↔implementer are the **existence** and **quality** axes (Exp B); implementer↔reasoner is the **generalization** axis (Exp B2); anything↔parametric-expert is **necessity** itself (Exp 1/1b/3, continuous in 2b/7).
+
+### Perception × corpus-content — why the hazard is hidden in one study and shown in the other
+
+The corpus is *necessary* only when it supplies what the learner can't get otherwise, and **perception is a second source of the same information**. So usefulness depends on what the corpus carries vs. what the eyes already give:
+
+|  | corpus carries EXISTENCE ("a danger is there") | corpus carries QUALITY ("the right way to pass it") |
+|---|---|---|
+| **blind** | **necessary** — corpus is the only signal (case study 1) | **inert** — can't apply a response-rule to an unperceived thing |
+| **sighted** | **redundant** — perception already gave existence | **necessary** — perception can't say which-side / how-much (case study 2) |
+
+Useful probes live on the **diagonal**, which is why the designs force it: case study 1 **hides** the hazard (existence-corpus necessary ⇒ learner must be blind); case study 2 **shows** it (existence is free ⇒ corpus must carry quality ⇒ learner must be sighted). The two off-diagonal cells are degenerate.
+
+Consequence: there are **two kinds of redundancy** — redundant to *priors* (the parametric expert, #5) and redundant to *perception* (sighted + existence-corpus). Same verdict ("not necessary"), two reasons — a clean generalization of the redundant/unusable split (C1(iii)).
 
 ---
 
