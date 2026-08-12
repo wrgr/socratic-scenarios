@@ -9,7 +9,8 @@
  */
 import { geminiCompleter, openAiCompatCompleter, type Completer } from './colreg-sim';
 
-type BedrockConverseResponse = { output?: { message?: { content?: Array<{ text?: string }> } } };
+type BedrockContentBlock = { text?: string; reasoningContent?: { reasoningText?: { text?: string } } };
+type BedrockConverseResponse = { output?: { message?: { content?: BedrockContentBlock[] } } };
 
 /** AWS Bedrock via the Converse API. Lazy-imports the SDK so it's only required when used. */
 export function bedrockCompleter(cfg: { model: string; region?: string; maxTokens?: number }): Completer {
@@ -25,10 +26,15 @@ export function bedrockCompleter(cfg: { model: string; region?: string; maxToken
       new ConverseCommand({
         modelId: cfg.model,
         messages: [{ role: 'user', content: [{ text: prompt }] }],
-        inferenceConfig: { temperature: 0, maxTokens: cfg.maxTokens ?? 256 },
+        // Reasoning models (e.g. gpt-oss) need headroom past the analysis channel or the answer
+        // block comes back empty; non-reasoning models still stop early.
+        inferenceConfig: { temperature: 0, maxTokens: cfg.maxTokens ?? Number(process.env.BEDROCK_MAX_TOKENS) || 4096 },
       }),
     );
-    return (res.output?.message?.content ?? []).map((c) => c.text ?? '').join('').trim();
+    const blocks = res.output?.message?.content ?? [];
+    const text = blocks.map((c) => c.text ?? '').join('').trim();
+    // Fallback: some models return the answer only in the reasoning channel.
+    return text || blocks.map((c) => c.reasoningContent?.reasoningText?.text ?? '').join('').trim();
   };
 }
 
