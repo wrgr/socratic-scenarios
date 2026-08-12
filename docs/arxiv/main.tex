@@ -497,9 +497,12 @@ the full barrier ($\delta_{\regret}{=}1998$, $\regret_{\text{with}}{=}0.2$)---th
 
 \emph{(3) The redundant-vs-unusable split shows on real models.} With-corpus regret separates
 \emph{usable} from \emph{unusable}: all clear once given the rule ($\regret_{\text{with}}\!\approx\!0.2$)
-\emph{except} Llama-3.3-70B ($457$), Nova-micro ($670$), and \texttt{gpt-oss}-120B ($431$), which ground
-\emph{even with the rule present}---the content has value but the model cannot act on it
-(\textsc{unusable}; fix the model, not the corpus). (A prompt-condition study on Gemini gives the
+\emph{except} Llama-3.3-70B ($457$), Nova-micro ($670$), and both \texttt{gpt-oss} models ($431$ for
+120B, $856$ for 20B), which ground \emph{even with the rule present}---the content has value but the
+model cannot act on it (\textsc{unusable}; fix the model, not the corpus). \texttt{gpt-oss}-20B is the
+telling extreme: it \emph{relies} most on the standard corpus (relied $3$/$4$) yet grounds \emph{hardest}
+on the hazard ($\regret_{\text{with}}{=}856$)---it exploits the easy corpus but cannot act on the harder
+corpus-only fact. (A prompt-condition study on Gemini gives the
 binding-fidelity control: under a strict binding prompt necessity grades monotonically with capability;
 removing the clause flips every model to \textsc{leaking}.) The continuous $\delta_{\regret}$ and
 $\regret_{\text{with}}$ are more reliable than the categorical verdict, a noisier three-signal majority
@@ -529,7 +532,7 @@ Nova-lite          & $0$ & $145$          & $0.2$          & \textsc{inconcl.} \
 Nova-pro           & $1$ & $669$          & $0.2$          & \textsc{inconcl.} \\
 \addlinespace
 \texttt{gpt-oss}-120B & $2$          & $932$ & $\mathbf{431}$ & \textsc{inconcl.} (grounds) \\
-\texttt{gpt-oss}-20B  & $\mathbf{3}$ & \multicolumn{2}{c}{\emph{n/a}} & \emph{n/a} \\
+\texttt{gpt-oss}-20B  & $\mathbf{3}$ & $485$          & $\mathbf{856}$ & \textsc{inconcl.} (grounds) \\
 \bottomrule
 \end{tabular}
 \caption{Cross-model necessity on AWS Bedrock (ten models). \textbf{relied/4}: standard-COLREG rules
@@ -540,10 +543,10 @@ the corpus-only rule is ablated); $\regret_{\text{with}}$ is regret \emph{with} 
 COLREG is \emph{redundant} for the frontier models but \emph{relied-upon} by the open \texttt{gpt-oss}
 models---necessity is a property of the (corpus, learner) pair. On the hazard, necessity spans $0$
 (Nova-micro ignores it) to $1998$ (Opus, full-barrier \textsc{corpus-bound}), and $\regret_{\text{with}}$
-exposes three models that ground even with the rule. Mock learners bound the scale; \texttt{gpt-oss}-20B's
-hazard cell is \emph{n/a}---on the harder hazard scenario its analysis-channel reasoning did not
-terminate within the decode budget, a capability-linked effect absent in the larger 120B. The
-continuous $\delta_{\regret}$/$\regret_{\text{with}}$ are more reliable than the categorical verdict.}
+exposes four models that ground even with the rule. Mock learners bound the scale; \texttt{gpt-oss}-20B
+needed a $50$k-token decode budget for its hazard cell to terminate (vs.\ $<\!4$k for the others)---a
+capability-linked reasoning-length effect. The continuous $\delta_{\regret}$/$\regret_{\text{with}}$ are
+more reliable than the categorical verdict.}
 \label{tab:disc}
 \end{table}
 
