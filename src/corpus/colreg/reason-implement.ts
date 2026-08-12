@@ -70,7 +70,7 @@ export function conflictScenario(c: ReasonCase): SimScenario {
  * necessity probe: a reasoner reads it and alters to the deep side; a reflex implementer ignores it,
  * applies Rule 14 starboard, and grounds where the rule overrides. Fixed id so `hazardProbe` ablates it.
  */
-export function localRuleNode(c: ReasonCase, ruleId = 'RULE-LOCAL-01'): AJPNode {
+export function localRuleNode(c: ReasonCase, ruleId = 'RULE-HAZARD-01'): AJPNode {
   return {
     id: ruleId,
     type: 'TheoryReference',

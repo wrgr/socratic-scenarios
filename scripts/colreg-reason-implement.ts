@@ -80,16 +80,22 @@ async function runLive() {
 
   console.log(`\nLive run (${real.label}, throttled ~${rpm}/min, temp ${temp}) — does the model USE the local rule or apply the reflex?`);
   if (temp === 0) console.log('  (single-shot at temp 0 — set TEMP=0.7 and re-run for a variance-controlled ensemble; a lone negative necessity is a noise spike, not signal.)');
-  console.log(`  ${'reach'.padEnd(30)} ${'verdict'.padStart(13)}  ${'necessity(δregret)'.padStart(18)}`);
+  // Reliance is read from the ablation-delta (necessity) itself, NOT the leakage `verdict`: that
+  // verdict is the hidden-hazard probe's majority vote (hold-course counterfactual + closed-book
+  // abstention), which is meaningless for a rule-OVERRIDE probe. A large positive necessity on an
+  // override reach = the model altered per the local rule with it present and grounded without it.
+  const RELY = 100; // regret units; the signal is ~1400 (grounds vs clears), noise is ~0
+  console.log(`  ${'reach'.padEnd(30)} ${'used rule?'.padStart(11)}  ${'necessity(δregret)'.padStart(18)}`);
   let overrideRelied = 0, redundantRelied = 0;
   for (const rc of REASON_SUITE) {
     const rep = await runLeakageExperiment(completer, real.label, { ...cfgFor(rc), onAudit: onAudit(rc) });
     const v = rep.perRule[0];
-    if (v.verdict === 'corpus-bound') {
+    const relied = v.regretDelta > RELY;
+    if (relied) {
       if (rc.safeSide === 'port') overrideRelied++;
       else redundantRelied++;
     }
-    console.log(`  ${rc.id} ${('deep water to ' + rc.safeSide).padEnd(22)} ${v.verdict.padStart(13)}  ${v.regretDelta.toFixed(1).padStart(18)}`);
+    console.log(`  ${rc.id} ${('deep water to ' + rc.safeSide).padEnd(22)} ${(relied ? 'USED' : 'ignored').padStart(11)}  ${v.regretDelta.toFixed(1).padStart(18)}`);
   }
   const override = REASON_SUITE.filter((rc) => rc.safeSide === 'port').length;
   console.log(
