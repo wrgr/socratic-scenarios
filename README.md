@@ -95,33 +95,52 @@ contributions: **C1** Corpus Diagnosis (localize a gap · per-item necessity/lea
 item into *redundant* vs *unusable*) · **C1b** Corpus Sufficiency (incl. **FALSE SUFFICIENCY**) ·
 **C2** the Transfer Instrument (the regret-vs-reference objective that makes C1 scorable).
 
-Every result below is **simulation / mechanism evidence**; the human trial is future work. **How to
-run each one** (exact call + expected result): [`experiments/README.md`](experiments/README.md) ·
-canonical status register: [`docs/experiment-status.md`](docs/experiment-status.md) · paper:
-[`docs/arxiv/main.pdf`](docs/arxiv/main.pdf).
+Every result below is **simulation / mechanism evidence**; the human trial is future work. Experiments
+are numbered by **case study** (CS). **How to run each one** (exact call + expected result):
+[`experiments/README.md`](experiments/README.md) · canonical register:
+[`docs/experiment-status.md`](docs/experiment-status.md) · paper: [`docs/arxiv/main.pdf`](docs/arxiv/main.pdf).
+The whole **offline backbone reproduces in one command** — `npm run reproduce` (deterministic, LLM-free,
+8/8 checks) — with the credentialed arms (cross-model sweep, GPU dose-response) as a separate opt-in tier.
 
-**Main spine — the instrument, the diagnosis, and its weight-level validation**
-
-| Exp | Purpose | Core result |
-|---|---|---|
-| **0 · Instrument construct validity** (COLREG, C2) | does the metric separate skill? | do-nothing collides, velocity-obstacle / MPC clear; ranking + gradient invariant over 232 weight perturbations (Kendall τ = 1.00) |
-| **0b · Second sim domain** (tire-change, C2) | does it generalize past continuous control? | discrete procedural instrument: expert J=0 vs reckless J=200, exact knowledge-component→metric identifiability, monotone gradient |
-| **1 · Cross-model leakage**, standard COLREG (C1ii) | is a textbook corpus necessary? | every frontier model reads standard COLREG **redundant** — the corpus duplicates parametric knowledge (an actionable "don't ship it") |
-| **1b · Cross-model hazard discrimination** (8 models, C1ii/iii) | does necessity discriminate models on a corpus-only fact? | **Opus** reads the hazard corpus-bound (full barrier); **Llama-70B & Nova-micro unusable** (ground even with the rule) = real learner-dependence; standard rules redundant/FALSE-SUFFICIENCY across the board. *Caveat:* δ_R is a coarse geometric ordinal, not a fine per-model scalar; open gpt-oss models excluded as unscoreable by the single-shot instrument (see [`critical-audit.md`](docs/planning/critical-audit.md), F1/F2) |
-| **3 · Corpus-value audit / localization** (C1i) | attribute reliance to a *specific* rule | 4-rule necessity ranking on real models; standard rules redundant, hazard corpus-bound; Rule 15 reads redundant given Rule 14 (decomposability) |
-| **3b · redundant vs *unusable* split** (C1iii) | is a leaking item drop-it or fix-the-model? | split by with-corpus performance; observed on a real model (Llama-70B hazard = unusable, with-corpus regret at the full barrier) |
-| **8 · Corpus sufficiency + FALSE SUFFICIENCY** (C1b) | roll per-item verdicts into a corpus-level verdict | `contributing`/`partial`/`unusable`/**FALSE SUFFICIENCY** (looks sufficient, necessity ≈ 0 → coasts on priors, fragile to shift); fires on all three reference learners |
-| **2b · Hazard dose-response** (teach the fact in, C1ii) | does necessity fall when the fact is learned? | necessity **667 → 0.2** (Qwen2.5-3B); α-sweep and checkpoint-sweep **agree** (rules out a gradient artifact); interior is a step — one discrete fact = threshold learning |
-| **7 · Second domain — fact-QA**, simulator-free (C1) | a *graded* curve on a verifiable answer objective | necessity **1.00→0.93→0.29→0.03** (α) and **1.00→0.25→0.03** (checkpoints), Qwen2.5-7B — the two gradients agree ⇒ artifact-free |
-
-**Supporting / external validity**
+**CS1 — Measuring corpus necessity (COLREG core)**
 
 | Exp | Purpose | Core result |
 |---|---|---|
-| **4 · Real charted-hazard leg** (C1ii, external validity) | does the instrument work on real, verified dangers? | **Elwha Rock** & **Fullastern Rock** (official-gazetteer-verified) read **corpus-bound** (necessity ≈ 1998) on Opus; **Whittle Rock** screened out as already-known (the screen has teeth); the famous **Seven Stones** control was *not* named for that track (caveat, not headline) |
-| **2a · Unlearning arm** (remove from weights, C1ii) | does forgetting move the decision? | **says ≠ does**: words-level metrics register forgetting, the instrument's decision does not — a caution on naive unlearning (**supporting**, not a clean validation) |
-| **5 · Probe-suite breadth** (C1) | necessity as a distribution across probe kinds | Rule 8 (substantial-action) added → 4 auditable rules; role / routing / agent-intention probes planned |
-| **6 · Human trial** | external validity on people | pre-registered; **future work** — the point of 0–8 is to falsify the value prop in silico first |
+| **1.1 · Reference-learner recovery** (C1ii/C2) | can the instrument separate the hypotheses? | bound → corpus-bound, leaking → leaking; recovered offline by `npm run reproduce` |
+| **1.2 · Cross-model leakage**, standard COLREG (C1ii) | is a textbook corpus necessary? | every frontier model reads standard COLREG **redundant** — the corpus duplicates parametric knowledge |
+| **1.3 · Cross-model hazard discrimination** (8 models, C1ii/iii) | does necessity discriminate models on a corpus-only fact? | **Opus** corpus-bound (full barrier); **Llama-70B & Nova unusable** (ground even with the rule); standard rules redundant across the board (`npm run colreg:cross-model`). *Caveat F1 superseded by 1.4; gpt-oss excluded, F2* |
+| **1.4 · Geometric hazard suite** — necessity as a fraction (C1ii, **F1 fix**) | a fine-grained, fraction-valued necessity | N alternating-bow fictional hazards in isolated corpora → necessity = fraction relied-upon; mock **8/8** (bound) vs **0/8** (leaking); reflex loophole closed |
+| **1.5 · redundant vs *unusable* split** (C1iii) | is a leaking item drop-it or fix-the-model? | split by with-corpus performance; Llama-70B hazard = unusable (with-corpus regret at the full barrier) |
+| **1.6 · Corpus-value audit / localization** (C1i) | attribute reliance to a *specific* rule | 4-rule necessity ranking; standard rules redundant, hazard corpus-bound; Rule 15 redundant given Rule 14 |
+| **1.7 · Hazard dose-response** (teach the fact in, C1ii) | does necessity fall when the fact is learned? | necessity **667 → 0.2** (Qwen2.5-3B); α- and checkpoint-sweeps **agree**; interior a step (one fact = threshold) |
+| **1.8 · Corpus sufficiency + FALSE SUFFICIENCY** (C1b) | roll per-item verdicts into a corpus-level verdict | `contributing`/`partial`/`unusable`/**FALSE SUFFICIENCY** (looks sufficient, necessity ≈ 0 → coasts on priors) |
+
+**CS2 — From blind to expert (quality → reasoning)**
+
+| Exp | Purpose | Core result |
+|---|---|---|
+| **2.1 · Decision-quality band** (C2) | does the instrument read avoidance *quality*, not just collision? | quality-regret on its own axis: **blind collides · naive middle 0.87 · trained floor 0.01** (`npm run colreg:quality-band`) |
+| **2.2 · Reason-vs-implement** (C1 depth) | lookup vs reasoning — does the model *use* a local rule that overrides the reflex? | matched: implementer ≡ reasoner (Δ0.00); conflict: **reasoner 6/6, implementer 3/6** (grounds where the rule overrides); necessity 3/6 (`npm run colreg:reason-implement`) |
+
+**CS3 — Enrichments (reach & generality)**
+
+| Exp | Purpose | Core result |
+|---|---|---|
+| **3.1 · Real charted-hazard leg** (C1ii) | can a *real* fact be corpus-only for a frontier model? | Elwha & Fullastern read **corpus-bound** (~1998) on Opus; Whittle **screened out** as already-known (validates the screen; magnitude is invariant by construction) |
+| **3.2 · Second domain — fact-QA**, simulator-free (C1) | a *graded* curve on a verifiable answer objective | necessity **1.00→0.93→0.29→0.03** (α), **1.00→0.25→0.03** (ckpt), Qwen2.5-7B — gradients agree ⇒ artifact-free (the strongest graded leg) |
+| **3.3 · Second sim domain** (tire-change, C2) | does it generalize past continuous control? | discrete procedural instrument: expert J=0 vs reckless J=200, KC→metric identifiability, monotone gradient |
+| **3.4 · Probe-suite breadth** (C1) | necessity as a distribution across probe kinds | Rule 8 added → 4 auditable rules; role / routing / agent-intention probes planned |
+
+**CS4 — Validations (does the instrument hold up?)**
+
+| Exp | Purpose | Core result |
+|---|---|---|
+| **4.1 · Construct validity** (COLREG, C2) | does the metric separate skill? | do-nothing collides (9% cleared), velocity-obstacle / MPC clear (100%) |
+| **4.2 · Reweighting sensitivity** (C2) | are the conclusions an artifact of the weights? | ranking + gradient invariant over **232 perturbations (Kendall τ = 1.00)** |
+| **4.3 · Unlearning arm** (remove from weights, C1ii) | does forgetting move the decision? | **says ≠ does**: words forget, the decision doesn't — a caution on naive unlearning (**supporting**) |
+| **4.4 · Reproduce runner** (offline backbone) | one-command regeneration of every offline result | `npm run reproduce`: 8/8 deterministic checks, non-zero exit on drift |
+
+*Future work:* human trial (external validity on people) — pre-registered; the point of CS1–4 is to falsify the value prop in silico first.
 
 ## Quickstart
 
@@ -184,6 +203,9 @@ sources/                  canonical per-source provenance ledger
 | `npm run lint` | Run ESLint |
 | `npm run ingest` | Rebuild the dense corpus + embeddings (needs a Gemini key + local sources) |
 | `npm run colreg:construct` · `colreg:sensitivity` · `colreg:leakage` | COLREG measurement-instrument harnesses |
+| `npm run reproduce` | Regenerate the whole **offline experiment backbone** (deterministic, LLM-free; 8/8 checks) |
+| `npm run colreg:hazard-suite` · `colreg:cross-model` | Necessity as a fraction (CS1.4) · per-model discrimination table (CS1.2/1.3) |
+| `npm run colreg:quality-band` · `colreg:reason-implement` | The middle band (CS2.1) · reason-vs-implement (CS2.2) |
 
 <details>
 <summary><b>Configuration &amp; knowledge stores</b></summary>
