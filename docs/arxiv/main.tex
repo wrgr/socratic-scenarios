@@ -476,20 +476,21 @@ closed-book ($\Rightarrow$ \textsc{corpus-bound}); the leaking mock yields ablat
 $0.000$ (regret-ablation $0$), ignores the counterfactual, and answers closed-book from
 priors ($\Rightarrow$ \textsc{leaking}).
 
-\paragraph{Real-model discrimination.} We run the necessity test on ten production models over AWS
-Bedrock---Claude Haiku/Sonnet/Opus~4.5, Llama-3.1-8B / 3.3-70B, Nova micro/lite/pro, and OpenAI
-\texttt{gpt-oss} 20B/120B---contrasting a \emph{standard-COLREG} corpus with the \emph{corpus-only
-charted hazard} of Section~\ref{sec:construction} (Table~\ref{tab:disc}, Figure~\ref{fig:plane}). Three findings.
+\paragraph{Real-model discrimination.} We run the necessity test on eight production models over AWS
+Bedrock---Claude Haiku/Sonnet/Opus~4.5, Llama-3.1-8B / 3.3-70B, and Nova micro/lite/pro---contrasting a
+\emph{standard-COLREG} corpus with the \emph{corpus-only charted hazard} of Section~\ref{sec:construction}
+(Table~\ref{tab:disc}, Figure~\ref{fig:plane}). Three findings.
 
-\emph{(1) ``Redundant'' is a property of the (corpus, learner) pair, not the corpus.} The frontier
-models rely on little of the standard corpus (relied $0$--$1$ of $4$; it duplicates their parametric
-COLREG---\emph{redundant}, an actionable ``do not ship'' verdict), yet the open \texttt{gpt-oss}
-reasoning models genuinely \emph{rely} on the \emph{same} corpus (relied $2$/$4$ for 120B, $3$/$4$ for
-20B $\Rightarrow$ \textsc{contributing})---their COLREG priors are less complete and, being reasoning
-models, they can exploit the retrieved rule. The identical corpus is redundant for one learner and
-necessary for another, so necessity must be read per learner---the point of a per-item diagnosis.
-(Within \texttt{gpt-oss} the \emph{smaller} model relies \emph{more}: a larger knowledge gap at equal
-exploit-ability.)
+\emph{(1) Standard rules are redundant for these frontier models.} Every model relies on little of the
+standard corpus (relied $0$--$1$ of $4$; it duplicates their parametric COLREG---\emph{redundant}, an
+actionable ``do not ship'' verdict). We also ran two open reasoning models (OpenAI \texttt{gpt-oss}
+20B/120B) that \emph{appeared} to rely on the same corpus (relied $2$--$3$/$4$), but we exclude them from
+Table~\ref{tab:disc}: the single-shot instrument cannot score them reliably. Their harmony-format
+reasoning frequently failed to terminate within the decode budget (the 20B needed a $50$k-token budget
+where every other model used $<\!4$k), and with no repeat/variance control an unstable output yields
+ablation deltas indistinguishable from genuine reliance. Whether such models truly rely on standard
+COLREG---i.e.\ whether necessity is a property of the (corpus, learner) pair and not the corpus alone---is
+a real question, but confirming it needs a variance-controlled, parse-budget-matched rerun (future work).
 
 \emph{(2) Necessity has wide dynamic range on the hazard.} $\delta_{\regret}$ spans $0$ to
 $\sim\!2000$: Nova-micro ignores the corpus ($\delta_{\regret}{=}0$) while Opus reads it and clears at
@@ -498,16 +499,13 @@ the full barrier ($\delta_{\regret}{=}1998$, $\regret_{\text{with}}{=}0.2$)---th
 
 \emph{(3) The redundant-vs-unusable split shows on real models} (Figure~\ref{fig:plane}). With-corpus
 regret separates \emph{usable} from \emph{unusable}: all clear once given the rule ($\regret_{\text{with}}\!\approx\!0.2$)
-\emph{except} Llama-3.3-70B ($457$), Nova-micro ($670$), and both \texttt{gpt-oss} models ($431$ for
-120B, $856$ for 20B), which ground \emph{even with the rule present}---the content has value but the
-model cannot act on it (\textsc{unusable}; fix the model, not the corpus). \texttt{gpt-oss}-20B is the
-telling extreme: it \emph{relies} most on the standard corpus (relied $3$/$4$) yet grounds \emph{hardest}
-on the hazard ($\regret_{\text{with}}{=}856$)---it exploits the easy corpus but cannot act on the harder
-corpus-only fact. (A prompt-condition study on Gemini gives the
-binding-fidelity control: under a strict binding prompt necessity grades monotonically with capability;
-removing the clause flips every model to \textsc{leaking}.) The continuous $\delta_{\regret}$ and
-$\regret_{\text{with}}$ are more reliable than the categorical verdict, a noisier three-signal majority
-vote.
+\emph{except} Llama-3.3-70B ($457$) and Nova-micro ($670$), which ground \emph{even with the rule
+present}---the content has value but the model cannot act on it (\textsc{unusable}; fix the model, not
+the corpus). This is genuine learner-dependence: the same corpus item is \emph{usable} for one model and
+\emph{unusable} for another. (A prompt-condition study on Gemini gives the binding-fidelity control:
+under a strict binding prompt necessity grades monotonically with capability; removing the clause flips
+every model to \textsc{leaking}.) The continuous $\delta_{\regret}$ and $\regret_{\text{with}}$ are more
+reliable than the categorical verdict, a noisier three-signal majority vote.
 
 \begin{table}[t]
 \centering
@@ -531,23 +529,20 @@ Llama-3.3-70B      & $0$ & $213$          & $\mathbf{457}$ & $\textbf{\textsc{un
 Nova-micro         & $1$ & $0$            & $\mathbf{670}$ & $\textbf{\textsc{unusable}}$ \\
 Nova-lite          & $0$ & $145$          & $0.2$          & \textsc{inconcl.} \\
 Nova-pro           & $1$ & $669$          & $0.2$          & \textsc{inconcl.} \\
-\addlinespace
-\texttt{gpt-oss}-120B & $2$          & $932$ & $\mathbf{431}$ & \textsc{inconcl.} (grounds) \\
-\texttt{gpt-oss}-20B  & $\mathbf{3}$ & $485$          & $\mathbf{856}$ & \textsc{inconcl.} (grounds) \\
 \bottomrule
 \end{tabular}
-\caption{Cross-model necessity on AWS Bedrock (ten models). \textbf{relied/4}: standard-COLREG rules
-the model relies on, of four (per-item audit); $0$--$1$ reads \emph{redundant}/false-sufficiency,
-$2$--$3$ reads \emph{contributing}. \textbf{Hazard}: $\delta_{\regret}$ is necessity (regret rise when
-the corpus-only rule is ablated); $\regret_{\text{with}}$ is regret \emph{with} the rule present
-($\approx\!0.2$ = clears, so \emph{usable}; $\gg\!0$ = grounds anyway = \textsc{unusable}). Standard
-COLREG is \emph{redundant} for the frontier models but \emph{relied-upon} by the open \texttt{gpt-oss}
-models---necessity is a property of the (corpus, learner) pair. On the hazard, necessity spans $0$
-(Nova-micro ignores it) to $1998$ (Opus, full-barrier \textsc{corpus-bound}), and $\regret_{\text{with}}$
-exposes four models that ground even with the rule. Mock learners bound the scale; \texttt{gpt-oss}-20B
-needed a $50$k-token decode budget for its hazard cell to terminate (vs.\ $<\!4$k for the others)---a
-capability-linked reasoning-length effect. The continuous $\delta_{\regret}$/$\regret_{\text{with}}$ are
-more reliable than the categorical verdict.}
+\caption{Cross-model necessity on AWS Bedrock (eight models). \textbf{relied/4}: standard-COLREG rules
+the model relies on, of four (per-item audit); $0$--$1$ reads \emph{redundant}/false-sufficiency.
+\textbf{Hazard}: $\delta_{\regret}$ is necessity (regret rise when the corpus-only rule is ablated);
+$\regret_{\text{with}}$ is regret \emph{with} the rule present ($\approx\!0.2$ = clears, so \emph{usable};
+$\gg\!0$ = grounds anyway = \textsc{unusable}). Standard COLREG is \emph{redundant} across all eight
+(relied $0$--$1$/4). On the hazard, $\delta_{\regret}$ ranges from $0$ (Nova-micro ignores it) to $1998$
+(Opus, full-barrier \textsc{corpus-bound}); this number is a coarse ordinal set by the fixed sim geometry
+(identical maneuvers therefore yield identical $\delta_{\regret}$---four models emit the same $30^\circ$
+avoidance and land at $669$), not a fine-grained per-model scalar. $\regret_{\text{with}}$ exposes two
+models that ground even with the rule (\textsc{unusable}). Mock learners bound the scale. (Two open
+\texttt{gpt-oss} reasoning models were excluded: their reasoning did not reliably terminate within the
+decode budget, so the single-shot instrument cannot score them without a variance control---see text.)}
 \label{tab:disc}
 \end{table}
 
@@ -558,33 +553,32 @@ more reliable than the categorical verdict.}
   width=\columnwidth, height=5.4cm,
   xlabel={necessity $\delta_{\regret}$ (rule ablated)},
   ylabel={with-corpus regret $\regret_{\text{with}}$},
-  xmin=-90, xmax=2260, ymin=-70, ymax=1040,
-  xtick={0,500,1000,1500,2000}, ytick={0,200,400,600,800},
+  xmin=-90, xmax=2260, ymin=-60, ymax=800,
+  xtick={0,500,1000,1500,2000}, ytick={0,200,400,600},
   tick label style={font=\scriptsize}, label style={font=\scriptsize},
   clip=false,
 ]
 \addplot[only marks, mark=*, mark size=1.6pt, figblue]
   coordinates {(1998,0.2) (668,0.2) (145,0.2)};
 \addplot[only marks, mark=*, mark size=1.6pt, figorange]
-  coordinates {(0,670) (213,457) (485,856) (932,431)};
-\node[font=\scriptsize, anchor=south] at (axis cs:1998,10) {Opus};
-\node[font=\scriptsize, anchor=south] at (axis cs:660,10) {Haiku/Sonnet/Nova-pro/8B};
-\node[font=\scriptsize, anchor=south] at (axis cs:145,10) {Nova-lite};
-\node[font=\scriptsize, anchor=south] at (axis cs:0,690) {Nova-micro};
+  coordinates {(0,670) (213,457)};
+\node[font=\scriptsize, anchor=south] at (axis cs:1998,8) {Opus};
+\node[font=\scriptsize, anchor=south] at (axis cs:660,8) {Haiku/Sonnet/Nova-pro/8B};
+\node[font=\scriptsize, anchor=south] at (axis cs:145,8) {Nova-lite};
+\node[font=\scriptsize, anchor=south] at (axis cs:0,685) {Nova-micro};
 \node[font=\scriptsize, anchor=west]  at (axis cs:235,457) {Llama-70B};
-\node[font=\scriptsize, anchor=south] at (axis cs:485,872) {gpt-oss-20B};
-\node[font=\scriptsize, anchor=west]  at (axis cs:955,431) {gpt-oss-120B};
-\node[figblue, font=\scriptsize\itshape, anchor=north east] at (axis cs:2240,150) {corpus-bound};
-\node[figorange, font=\scriptsize\itshape, anchor=north] at (axis cs:1050,1020) {unusable: grounds even with the rule};
+\node[figblue, font=\scriptsize\itshape, anchor=north east] at (axis cs:2240,120) {corpus-bound};
+\node[figorange, font=\scriptsize\itshape, anchor=north east] at (axis cs:2240,760) {unusable: grounds even with the rule};
 \end{axis}
 \end{tikzpicture}
-\caption{The necessity--usability plane for the ten models of Table~\ref{tab:disc} on the corpus-only
-hazard. \emph{Horizontal:} necessity $\delta_{\regret}$ (how much ablating the rule raises regret).
-\emph{Vertical:} with-corpus regret---$\approx\!0$ (blue, on the axis) means the model \emph{clears}
-once given the rule (\emph{usable}); a large value (orange) means it \emph{grounds even with the rule
-present} (\emph{unusable}). The two axes are orthogonal: Claude Opus is the clean \textsc{corpus-bound}
-reader (necessity $1998$, clears), while both \texttt{gpt-oss} models and Nova-micro / Llama-70B ground
-regardless. Four usable models coincide near $\delta_{\regret}\!\approx\!668$.}
+\caption{The necessity--usability plane for the eight models of Table~\ref{tab:disc} on the corpus-only
+hazard. \emph{Horizontal:} necessity $\delta_{\regret}$ (how much ablating the rule raises regret; a
+coarse ordinal set by the fixed geometry---the four blue points at $\delta_{\regret}\!\approx\!668$ are
+four models that emit the same avoidance angle). \emph{Vertical:} with-corpus regret---$\approx\!0$
+(blue, on the axis) means the model \emph{clears} once given the rule (\emph{usable}); a large value
+(orange) means it \emph{grounds even with the rule present} (\emph{unusable}). Reliance and usability are
+distinct axes: Claude Opus reads the corpus-only fact and clears, while Nova-micro and Llama-70B ground
+regardless.}
 \label{fig:plane}
 \end{figure}
 
@@ -674,8 +668,7 @@ agreement rules out a gradient-method artifact. We run this in two domains with 
 objectives}, the second of which uses no simulator at all.
 
 \paragraph{Domain 1 --- control-regret (a hidden hazard).} Standard COLREG rules have little dynamic
-range for this test---every current \emph{frontier} model already knows them (the open \texttt{gpt-oss}
-models are the exception, Section~\ref{sec:diagnosis})---so we
+range for this test---every current frontier model already knows them (Section~\ref{sec:diagnosis})---so we
 use a \emph{corpus-only charted hazard}: a danger scored by the objective barrier but not shown in
 the prompt, knowable only from the corpus. Teaching it into a Qwen2.5-3B model collapses necessity
 from a full-barrier swing ($\regret$-necessity $\approx 667$, naive) to $\approx 0.2$ (taught), and
@@ -841,8 +834,9 @@ choices (ship domain, objective); we show the ranking survives a $\pm40\%$ rewei
 ($\tau=1.00$, \S\ref{sec:instrument}), but robustness beyond that range, and to the
 elliptical-domain \emph{form} itself, is untested. \textbf{Small evidence base --- illustrative, not a benchmark.}
 The numbers here demonstrate that the \emph{method} behaves as designed; they are not a
-validity claim at scale. The discrimination result (Table~\ref{tab:disc}) covers ten models across
-\emph{four} provider families (Anthropic, Meta, Amazon, OpenAI), and reports the head-on rule; the
+validity claim at scale. The discrimination result (Table~\ref{tab:disc}) covers eight models across
+\emph{three} provider families (Anthropic, Meta, Amazon)---two open reasoning models were run but
+excluded as unscoreable by the single-shot instrument (\S\ref{sec:diagnosis})---and reports the head-on rule; the
 released harness now exercises \emph{three} rules across \emph{two} metric axes---turn direction
 (Rule~14 head-on, Rule~15 crossing) and, on a restricted-visibility subset, speed (Rule~6/19 safe
 speed, scored through the decision's speed rather than its heading)---and the unlearning arm turns on a
