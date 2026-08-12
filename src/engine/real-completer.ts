@@ -13,7 +13,7 @@ type BedrockContentBlock = { text?: string; reasoningContent?: { reasoningText?:
 type BedrockConverseResponse = { output?: { message?: { content?: BedrockContentBlock[] } } };
 
 /** AWS Bedrock via the Converse API. Lazy-imports the SDK so it's only required when used. */
-export function bedrockCompleter(cfg: { model: string; region?: string; maxTokens?: number }): Completer {
+export function bedrockCompleter(cfg: { model: string; region?: string; maxTokens?: number; temperature?: number }): Completer {
   let clientP: Promise<{ client: { send: (c: unknown) => Promise<BedrockConverseResponse> }; ConverseCommand: new (i: unknown) => unknown }> | null = null;
   const load = () =>
     (clientP ??= import('@aws-sdk/client-bedrock-runtime').then(({ BedrockRuntimeClient, ConverseCommand }) => ({
@@ -28,7 +28,10 @@ export function bedrockCompleter(cfg: { model: string; region?: string; maxToken
         messages: [{ role: 'user', content: [{ text: prompt }] }],
         // Reasoning models (e.g. gpt-oss) need headroom past the analysis channel or the answer
         // block comes back empty; non-reasoning models still stop early.
-        inferenceConfig: { temperature: 0, maxTokens: cfg.maxTokens ?? Number(process.env.BEDROCK_MAX_TOKENS) || 4096 },
+        inferenceConfig: {
+          temperature: cfg.temperature ?? Number(process.env.TEMP ?? 0),
+          maxTokens: cfg.maxTokens ?? (Number(process.env.BEDROCK_MAX_TOKENS) || 4096),
+        },
       }),
     );
     const blocks = res.output?.message?.content ?? [];

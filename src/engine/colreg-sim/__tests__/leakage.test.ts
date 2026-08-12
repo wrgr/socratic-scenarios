@@ -14,6 +14,7 @@ import type { AJPNode } from '../../../types/ajp';
 import { colregDomain } from '../../../corpus/colreg';
 import { collisionTarget, makeScenario, ownship, kn } from '../../../corpus/colreg/benchmark-geometry';
 import { restrictedBenchmark } from '../../../corpus/colreg/restricted';
+import { HAZARD_SUITE, suiteScenario, suiteNode, type SuiteHazard } from '../../../corpus/colreg/hazard-suite';
 
 const headOn = (id: string, range: number, speedKn: number) =>
   makeScenario(id, 'Head-on', 'beginner', [collisionTarget('A', 0, range, speedKn)]);
@@ -112,6 +113,51 @@ describe('leakage — a hidden hazard is the large-effect corpus-reliance probe'
     // value, this model just can't act on it. (Mirrors Bedrock Llama-70B: regret-with ≈ 1207.)
     expect(p.regretWith).toBeGreaterThan(100);
     expect(p.leakMode).toBe('unusable');
+  });
+});
+
+// Audit fix F1 — the geometric hazard SUITE turns the one-angle probe into a genuine fraction over N
+// independent decisions, and closes the reflex loophole. Each danger sits off the port OR starboard
+// bow, so the clearing action alternates; only a learner that READS each fact clears all of them.
+describe('leakage — the geometric hazard suite is a per-item necessity fraction (F1)', () => {
+  const cfgFor = (h: SuiteHazard): LeakageConfig => {
+    const sc = suiteScenario(h);
+    return {
+      corpusNodes: [...colregDomain.nodes, suiteNode(h)],
+      scenarios: [sc],
+      probes: [hazardProbe(sc, [sc])],
+      closedBookScenario: sc,
+    };
+  };
+  const boundMock = () => boundLearnerCompleter([], [], ['RULE-HAZARD-01']);
+  const runAll = async (mk: () => Parameters<typeof runLeakageExperiment>[0]) =>
+    Promise.all(HAZARD_SUITE.map((h) => runLeakageExperiment(mk(), h.id, cfgFor(h)).then((r) => ({ h, p: r.perRule[0] }))));
+
+  it('the suite spans both bows (the geometry that closes the reflex loophole)', () => {
+    expect(HAZARD_SUITE.some((h) => h.side === 'port')).toBe(true);
+    expect(HAZARD_SUITE.some((h) => h.side === 'starboard')).toBe(true);
+  });
+
+  it('a learner that reads every fact relies on every hazard → necessity N/N', async () => {
+    const rows = await runAll(boundMock);
+    expect(rows.every((r) => r.p.verdict === 'corpus-bound')).toBe(true);
+    // Normalized delta clears the corpus-bound threshold; the raw swing is a full-barrier collapse.
+    expect(rows.every((r) => r.p.ablationDelta > 0.15)).toBe(true);
+    expect(rows.every((r) => r.p.regretDelta > 100)).toBe(true);
+  });
+
+  it('a fixed-starboard reflex-leaker relies on NONE, and grounds on exactly the starboard-bow half', async () => {
+    const rows = await runAll(() => leakingLearnerCompleter());
+    // It never reads the corpus, so per-item reliance is zero everywhere.
+    expect(rows.every((r) => r.p.verdict !== 'corpus-bound')).toBe(true);
+    // Port-bow dangers: the reflex (turn starboard) happens to clear them WITHOUT the corpus.
+    const port = rows.filter((r) => r.h.side === 'port');
+    expect(port.every((r) => r.p.regretWith < 10)).toBe(true);
+    // Starboard-bow dangers: the same reflex steers INTO them — a real capability failure (unusable),
+    // not a redundant corpus. This asymmetry is what a single fixed-direction hazard cannot reveal.
+    const stbd = rows.filter((r) => r.h.side === 'starboard');
+    expect(stbd.every((r) => r.p.regretWith > 100)).toBe(true);
+    expect(stbd.every((r) => r.p.leakMode === 'unusable')).toBe(true);
   });
 });
 
