@@ -203,12 +203,15 @@ def main():
             p = run_one(label, provider, model, probes)
             out = (p.stdout or '') + '\n' + (p.stderr or '')
             open(os.path.join(outdir, f'{label}__{probes}.txt'), 'w').write(out)
-            if 'VERDICT' not in out and p.returncode != 0:
-                row[f'{probes}_error'] = (p.stderr or p.stdout or 'failed')[-200:]
-            elif probes == 'hazard':
-                row.update(parse_hazard(out))
+            parsed = parse_hazard(out) if probes == 'hazard' else parse_all(out)
+            if parsed:
+                row.update(parsed)
             else:
-                row.update(parse_all(out))
+                # Unparseable — capture a tail even when the runner exited 0. Many harness
+                # failures (e.g. a model whose reply the JSON parser rejects) print an error
+                # and still exit 0, which the old `returncode != 0` guard let slip through as ?.
+                tail = ' '.join((out or '').split())[-300:]
+                row[f'{probes}_error'] = tail or f'no output (exit {p.returncode})'
         rows.append(row)
         err = '  ERR' if any(k.endswith('_error') for k in row) else ''
         print(f"  -> [{label:14}] hazard={row.get('verdict','?')}/{row.get('leak_mode','')} "
