@@ -11,6 +11,8 @@
  * where removing it (the implementer ignores it) changes the outcome.
  */
 import './_env';
+import { appendFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import {
   solveReference,
   evaluateManeuver,
@@ -21,6 +23,7 @@ import {
   type SimScenario,
   type Policy,
   type LeakageConfig,
+  type LeakageAuditRow,
 } from '../src/engine/colreg-sim';
 import { colregDomain } from '../src/corpus/colreg';
 import {
@@ -61,11 +64,26 @@ async function runLive() {
   }
   const rpm = Number(process.env.RPM ?? (process.env.BEDROCK_MODEL ? 30 : 5));
   const completer = throttleCompleter(retryCompleter(real.completer, { retries: Number(process.env.GEMINI_RETRIES ?? 5) }), Math.ceil(60000 / Math.max(1, rpm)) + 700);
-  console.log(`\nLive run (${real.label}, throttled ~${rpm}/min) — does the model USE the local rule or apply the reflex?`);
+
+  // AUDIT_LOG=<path> writes one JSONL row per model call (prompt, completion, decision, kinematics) so
+  // a suspicious reading — e.g. a negative necessity — can be traced to what the model actually said.
+  const auditPath = process.env.AUDIT_LOG;
+  const temp = Number(process.env.TEMP ?? 0);
+  if (auditPath) { mkdirSync(dirname(auditPath), { recursive: true }); writeFileSync(auditPath, ''); }
+  const onAudit = auditPath
+    ? (rc: ReasonCase) => (row: LeakageAuditRow) =>
+        appendFileSync(auditPath, JSON.stringify({
+          utc: new Date().toISOString(), model: process.env.BEDROCK_MODEL ?? real.label, temp,
+          reach: rc.id, safeSide: rc.safeSide, ...row,
+        }) + '\n')
+    : () => undefined;
+
+  console.log(`\nLive run (${real.label}, throttled ~${rpm}/min, temp ${temp}) — does the model USE the local rule or apply the reflex?`);
+  if (temp === 0) console.log('  (single-shot at temp 0 — set TEMP=0.7 and re-run for a variance-controlled ensemble; a lone negative necessity is a noise spike, not signal.)');
   console.log(`  ${'reach'.padEnd(30)} ${'verdict'.padStart(13)}  ${'necessity(δregret)'.padStart(18)}`);
   let overrideRelied = 0, redundantRelied = 0;
   for (const rc of REASON_SUITE) {
-    const rep = await runLeakageExperiment(completer, real.label, cfgFor(rc));
+    const rep = await runLeakageExperiment(completer, real.label, { ...cfgFor(rc), onAudit: onAudit(rc) });
     const v = rep.perRule[0];
     if (v.verdict === 'corpus-bound') {
       if (rc.safeSide === 'port') overrideRelied++;
@@ -79,6 +97,7 @@ async function runLive() {
       `(where Rule 14 grounds) — high ⇒ reasoner, low ⇒ Rule-14 implementer.` +
       `\n  (redundant reaches relied ${redundantRelied}/${REASON_SUITE.length - override}: the rule agrees with the reflex there, so reliance is expected to be low.)`,
   );
+  if (auditPath) console.log(`\n  audit log: ${auditPath} (one JSONL row per call — inspect the completions behind any odd reading)`);
 }
 
 async function main() {

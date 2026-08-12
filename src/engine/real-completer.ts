@@ -26,18 +26,28 @@ export function bedrockCompleter(cfg: { model: string; region?: string; maxToken
     })));
   return async (prompt: string) => {
     const { client, ConverseCommand } = await load();
-    const res = await client.send(
-      new ConverseCommand({
-        modelId: cfg.model,
-        messages: [{ role: 'user', content: [{ text: prompt }] }],
-        // Reasoning models (e.g. gpt-oss) need headroom past the analysis channel or the answer
-        // block comes back empty; non-reasoning models still stop early.
-        inferenceConfig: {
-          temperature: cfg.temperature ?? Number(process.env.TEMP ?? 0),
-          maxTokens: cfg.maxTokens ?? (Number(process.env.BEDROCK_MAX_TOKENS) || 4096),
-        },
-      }),
-    );
+    const inferenceConfig = {
+      // Reasoning models (e.g. gpt-oss) need headroom past the analysis channel or the answer
+      // block comes back empty; non-reasoning models still stop early.
+      temperature: cfg.temperature ?? Number(process.env.TEMP ?? 0),
+      maxTokens: cfg.maxTokens ?? (Number(process.env.BEDROCK_MAX_TOKENS) || 4096),
+    };
+    const call = (modelId: string) =>
+      client.send(new ConverseCommand({ modelId, messages: [{ role: 'user', content: [{ text: prompt }] }], inferenceConfig }));
+    let res: BedrockConverseResponse;
+    try {
+      res = await call(cfg.model);
+    } catch (e) {
+      // Most current Bedrock models are invocable ONLY through a cross-region inference profile; the
+      // bare model id then errors with "on-demand throughput isn't supported / use an inference
+      // profile." Transparently retry once with the "us." profile prefix (unless already prefixed).
+      const msg = (e as Error).message ?? '';
+      if (/inference profile|on-demand throughput/i.test(msg) && !/^(us|eu|apac)\./i.test(cfg.model)) {
+        res = await call(`us.${cfg.model}`);
+      } else {
+        throw e;
+      }
+    }
     const blocks = res.output?.message?.content ?? [];
     const text = blocks.map((c) => c.text ?? '').join('').trim();
     // Fallback: some models return the answer only in the reasoning channel.
