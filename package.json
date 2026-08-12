@@ -17,6 +17,7 @@
     "learner:recovery": "npx tsx scripts/learner-recovery.ts",
     "colreg:leakage": "npx tsx scripts/colreg-leakage.ts",
     "colreg:hazard-suite": "npx tsx scripts/colreg-hazard-suite.ts",
+    "colreg:quality-band": "npx tsx scripts/colreg-quality-band.ts",
     "factqa:leakage": "npx tsx scripts/factqa-leakage.ts",
     "db:init": "npx tsx scripts/db/init.ts",
     "db:migrate": "npx tsx scripts/db/migrate.ts",
