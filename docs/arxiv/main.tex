@@ -247,6 +247,11 @@ none of these do.
 
 \section{The Transfer Instrument}
 \label{sec:instrument}
+This section defines and verifies the instrument's \emph{forward} use---measuring transfer and skill.
+The \emph{backward} use that measures corpus necessity, the paper's central contribution, follows in
+Section~\ref{sec:diagnosis}; the construct-validity, identifiability, and robustness checks below are
+the support that licenses it.
+
 \paragraph{Task and metric.} The worked domain is COLREG collision avoidance: a
 power-driven vessel must choose course and speed to resolve an encounter. We implement a
 kinematic simulator with an elliptical ship domain and a Collision Risk Index, and two
@@ -418,7 +423,9 @@ The measurement, not just the metric, is validated.}
 \label{sec:diagnosis}
 The Corpus Diagnosis is not a second tool. It is the Transfer Instrument of
 Section~\ref{sec:instrument} run in reverse: the \emph{same} objective metric answers two
-opposite questions.
+opposite questions. This backward reading---\emph{does the learner rely on a given corpus item?}---is
+the paper's central contribution; the forward construct validity of Section~\ref{sec:instrument} is
+what licenses it.
 
 \paragraph{(i) Corpus-gap localization.} When the corpus is missing or wrong on a rule, the
 learner's failures on the governed metric have a signature that attributes the failure to a
@@ -436,7 +443,9 @@ corpus supplied). The verdict---\textsc{corpus-bound}, \textsc{leaking}, or
 \textsc{inconclusive}---is read from the same metric, by a majority vote over the three
 signals so that a clear ablation-and-contamination pattern is not vetoed by a single
 dissenting sub-test. Section~\ref{sec:construction} calibrates this necessity against a known
-parametric baseline by construction.
+parametric baseline by construction. Because the bounded compliance penalty is a \emph{term inside}
+the objective $J$, this necessity is read off the graded regret instrument itself---not a decoupled
+side-metric---and is visible per model in the $\delta_{\!\regret}$ column of Table~\ref{tab:disc}.
 
 \paragraph{(iii) Why an item is not needed: \emph{redundant} vs.\ \emph{unusable}.} A small
 ablation-delta says the corpus did not move behavior, but not \emph{why}, and the two reasons
@@ -458,23 +467,6 @@ so the corpus is not carrying the load and success rides on priors, fragile to d
 The claim is explicitly scoped to the probed query set (sufficiency is always ``for these
 queries''); the false-sufficiency signal (necessity $\approx 0$) is precisely the measurable
 warning that a bounded-query sufficiency claim will not survive a shift.
-
-\subsection{One instrument, not two}
-\label{sec:coupling}
-It is fair to ask whether the Diagnosis really uses the \emph{transfer} instrument or merely a
-convenient side-metric. The bounded compliance penalty we threshold in $[0,1]$ is
-deliberately near-binary (following a discrete steering rule is close to binary), which
-could look decoupled from the graded regret $\regret$ of Section~\ref{sec:instrument}. It is
-not: the compliance penalty is a \emph{term inside} the objective $J$, so the same rule
-ablation can be read on the full regret instrument directly. It carries the signal even more
-strongly---a corpus-bound learner that loses the rule it relied on abstains, collides, and
-its $J$ jumps by $\sim\!2000$, whereas a leaking learner's $J$ is invariant to the corpus.
-On the two reference mocks, the regret-ablation is $1981$ (corpus-bound) versus $0$
-(leaking). So localization and leakage are read off the very metric that measures transfer;
-the bounded compliance penalty is just a low-variance, thresholdable readout of it. This is
-what makes the ``single instrument, used bidirectionally'' claim literal rather than
-rhetorical, and it is visible per model in the $\delta_{\!\regret}$ column of
-Table~\ref{tab:disc}.
 
 \paragraph{Offline recovery of known ground truth.} Against two reference mock learners
 whose truth is known, the instrument recovers it exactly: the corpus-bound mock yields
@@ -605,7 +597,10 @@ for reasons we did not control. We close this two ways, in increasing strength.
 
 \subsection{Validation by construction: the necessity dose-response}
 \label{sec:construction}
-The decisive test is \emph{known-groups}: build models along a gradient from fact-naive to
+The holding this section establishes: \emph{necessity is a non-confounded, calibrated measure}---teaching
+a fact into the weights drives it down as a dose-response---so a near-zero reading is evidence the model
+already knew the item, not a context-removal artifact. The decisive test is \emph{known-groups}: build
+models along a gradient from fact-naive to
 fact-knowing \emph{by construction}, and show necessity falls monotonically. We teach a target
 fact into the weights (LoRA SFT) and sweep two independent knowledge gradients---the LoRA scale
 $\alpha$ (one adapter, evaluated at $\alpha\in[0,1]$) and training checkpoints---so their
@@ -671,34 +666,25 @@ the alter-to-starboard knowledge from an open-weight model with a real unlearnin
 model on the reference-policy instrument. A removal audit \citep{lynch2024} reports whether the
 knowledge is \emph{gone} vs.\ merely \emph{suppressed}; for a stable novice that resists
 benign relearning we layer in a robust utility-preserving recipe \citep{unlearninglasts2025}.
-The harness is built, and a completed GPU run (SimNPO on Qwen2.5-3B-Instruct, \texttt{bfloat16},
-LoRA $r{=}8$, at a deliberately gentle, guardrailed setting: lr $5\!\times\!10^{-5}$,
-retain\_weight $3.0$, $3$ epochs, with COLREG's own Rule-14 head-on-port prohibition kept in
-the retain set as an anti-inversion guardrail) delivers not just the audit half but a first
-instrument-scoring result (Table~\ref{tab:unlearn}). Its lesson is sharper than the predicted
+A completed GPU run (gentle, guardrailed SimNPO on Qwen2.5-3B; config in Table~\ref{tab:unlearn})
+delivers not just the audit half but a first instrument-scoring result, whose lesson is sharper
+than the predicted
 $2\times2$: \textbf{the standard free-text unlearning metrics overstate removal because they
 measure what the model \emph{says}; the reference-policy instrument measures what the model
 \emph{does}---its steering decision---and shows the decision is untouched.}
 
 \paragraph{Primary result: a \emph{says\,$\neq$\,does} dissociation.}
-On CPU the primary method reproduces the classic likelihood collapse (SimNPO on Qwen2.5-1.5B
-drives forget-target NLL $4.6\to92$ and the direction-cue rate $5/6\to0/6$; the NPO baseline
-matches it, $4.6\to41$, $5/6\to0/6$), so the audit-level suppression is method-agnostic. The
-GPU run tells the more interesting story. Every metric that reads the model's \emph{words}
-registers forgetting: the forget-probe ``starboard'' rate falls $0.43\to0.27$, and---most
-tellingly---the Rule-14 \emph{citation} disappears, the model now attributing its maneuver to
-Rules 15/16/17 instead of 14. The likelihood audit calls it a clean success (forget-set NLL
-$7.4\to32.4$; retain-set NLL, teacher-forced, actually \emph{improves} $4.3\to1.07$ as
-retain\_weight$=3$ intended). Yet when the same base and unlearned models are scored on the
-head-on instrument (corpus present vs.\ ablated), the $2\times2$ does not move a cell: both
-read verdict \textsc{leaking}, ablation-delta $0.000$, counterfactual ignored, closed-book
-contaminated. The unlearned completions \emph{still turn $+30^\circ$ to starboard}---the
-steering \emph{decision} is unchanged; only the citation and the verbalization moved. Model
-damage stays flat (wrong+degenerate $0.10$, unchanged) with no inversion, and retain-coherence
-is nearly intact ($1.00\to0.91$: $3/32$ free generations degenerate, one an off-language
-Chinese ``lookout'' slip when the targeted English pathway frays). This is the thesis in one
-run: a words-level metric can report a fact removed while the
-policy that governs behavior is entirely intact.
+Every metric that reads the model's \emph{words} registers forgetting: on the GPU run the
+forget-probe ``starboard'' rate falls $0.43\to0.27$, the forget-set NLL rises $7.4\to32.4$
+(retain-set NLL, teacher-forced, even \emph{improves} $4.3\to1.07$), and---most tellingly---the
+Rule-14 \emph{citation} disappears, the model reattributing its maneuver to Rules 15/16/17. (A CPU
+run reproduces the likelihood collapse method-agnostically: forget NLL $4.6\to92$, direction-cue
+$5/6\to0/6$.) Yet scored on the head-on instrument (corpus present vs.\ ablated) the $2\times2$
+does not move a cell: both base and unlearned read \textsc{leaking}, ablation-delta $0.000$, and the
+unlearned completions \emph{still turn $+30^\circ$ to starboard}---the steering \emph{decision} is
+unchanged; only the citation and verbalization moved (model damage flat at $0.10$, retain-coherence
+$0.91$). A words-level metric reports a fact removed while the policy that governs behavior is
+entirely intact.
 
 \paragraph{Suppressed, not removed (benign relearning).}
 A gone-vs.-suppressed test \citep{hu2024relearn,deebroger2024} confirms the reading from the
@@ -720,44 +706,14 @@ unlearning suppresses the \emph{words} but not the \emph{policy} (the instrument
 so exposes the illusion), while aggressive unlearning moves the instrument---in the wrong
 direction. In both, the probe metrics track words and the instrument tracks the decision.
 
-\paragraph{Convergent evidence, and why the $2\times2$ is flat.}
-An API sweep across every enabled frontier family---Anthropic Claude Haiku~4.5, Meta
-Llama~3.1/3.3/4 (8B--405B), and Amazon Nova (micro/lite/pro), read through Amazon Bedrock---
-returns verdict \textsc{leaking} on the standard COLREG rules \emph{universally}; only a
-constructed reference learner, trained on the corpus alone, reads \textsc{corpus-bound}. The
-interpretation also explains the flat cell above: head-on\,$\to$\,starboard is memorized by
-every pretrained model, so ablating it from the corpus changes nothing (ablation-delta $0$).
-The instrument's \textsc{leaking} verdicts are therefore \emph{correct}---and this is precisely
-why the $2\times2$ cannot move under unlearning: Rule~14 is already leaking at baseline, leaving
-no dynamic range for the corpus-bound cell to travel. Two would-be confounds do not bite here:
-the instrument scores a \emph{task outcome} (simulated-maneuver compliance), not a text probe,
-so it is not re-detecting the lexical suppression; and it renders the full rule corpus, not a
-retrieved top-$k$, so a null in the corpus-present cell is not a retrieval miss. The confound
-that does bite---a \emph{damaged} model failing for the wrong reason---is held off by the
-damage-aware audit (off-language / incoherent generations scored as damage, not forgetting),
-which reads clean here ($0.10$, coherence $0.91$).
-
-\paragraph{The honest limitation, and the experiment it motivates.}
-State it plainly: because Rule~14 is already leaking at baseline---every pretrained model knows
-it---the $2\times2$ \emph{cannot} exhibit a clean \textsc{corpus-bound}\,$\to$\,\textsc{gone}
-transition under unlearning; both cells read \textsc{leaking} regardless of what the weights do.
-To demonstrate the instrument detecting weight-level knowledge, the target rule must be
-\emph{corpus-bound at baseline} (high ablation-delta)---which no pretrained COLREG rule is. The
-fix is a \emph{corpus-only} fact with no pretraining support, scored at \emph{full} effect by the
-objective barrier: a \textbf{charted hazard} on the ownship's track that is scored by the
-simulator but \emph{not shown to the model}, so it can be known only from the corpus. A model that
-reads the corpus alters to clear; one that does not holds its track and grounds---a full-barrier
-swing (reference learners: corpus-reliance $0.93$ / regret-$\delta\approx2000$ when bound versus
-$0.00$ when leaking), and no safety-refusal confound since avoiding a charted danger is plainly
-sensible. We then \emph{validate by construction}: teach the hazard into the weights along a
-gradient (LoRA-$\alpha$ and training checkpoints) and show corpus-reliance falls monotonically to
-$0$ as the fact is memorized---the known-groups dose-response that a single cell cannot provide
-(implementation in \texttt{experiments/unlearning}, \texttt{PROBES=hazard}). We present this as
-the designed next experiment, not a completed result. The hidden hazard is the anchor of a
-\emph{suite} of corpus-only probes---an obscure \emph{real} charted danger (external validity, via
-closed-book screening), a medium-effect routing convention, and a conflicting fact about another
-vessel's intention---so the eventual claim rests on corpus-reliance separating corpus-bound from
-leaking as a \emph{distribution} across probe kinds and effect sizes, not on any single test.
+\paragraph{Why the $2\times2$ is flat.} Rule~14 is already \textsc{leaking} at baseline---every
+pretrained model knows head-on\,$\to$\,starboard (Section~\ref{sec:diagnosis})---so ablating it
+changes nothing (ablation-delta $0$), leaving no dynamic range for the corpus-bound cell to travel.
+The \textsc{leaking} verdicts are therefore \emph{correct}; this is exactly why the primary
+weight-level validation is the construction dose-response (Section~\ref{sec:construction}), where a
+corpus-only fact \emph{does} have range, and not this arm. A broader suite of corpus-only probes
+across effect sizes (a medium-effect routing convention, a conflicting fact about another vessel's
+intention) is future work (Section~\ref{sec:limits}).
 
 \begin{table}[t]
 \centering
@@ -835,6 +791,14 @@ breadth. \textbf{Sufficiency is scoped to a query set.} Every sufficiency verdic
 to the probed queries; we mitigate rather than escape this by always reporting the query count
 and by treating the false-sufficiency signal as the measurable warning of fragility to shift,
 but a corpus adequate for one query distribution may be insufficient for another.
+
+\paragraph{Future work.} The pre-registered human cohort study is the external-validity test this
+in-silico screen is built to de-risk. Method-side, we plan to scale the cross-model discrimination
+(more providers and rule sets; the harness already runs class$\times$size sweeps) and to broaden the
+weight-level battery from one discrete hazard to a \emph{suite} of corpus-only probes across effect
+sizes---a real charted danger for external validity, a medium-effect routing convention, and a
+conflicting fact about another vessel's intention---so necessity is validated as a distribution across
+probe kinds, not a single test.
 
 \section{Conclusion}
 We have described an in-silico instrument that measures whether a learner \emph{needs} a corpus,
