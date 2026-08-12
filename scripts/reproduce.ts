@@ -135,8 +135,9 @@ async function main() {
 
   // ── Credentialed tier (model measurements — not run here) ──
   section('Credentialed arms (model measurements — NOT reproduced offline)');
-  console.log('  ⤷ Exp 1/1b/3/4  cross-model leakage & hazard discrimination — set BEDROCK_MODEL (+AWS creds): npm run colreg:leakage / colreg:hazard-suite');
-  console.log('  ⤷ Exp 2b/7      GPU dose-response (teach → α/checkpoint sweep) — experiments/unlearning/*.py (see DOSE_RESPONSE.md)');
+  console.log('  ⤷ CS1.2/1.3   cross-model discrimination table — set MODELS=… (+AWS creds): npm run colreg:cross-model');
+  console.log('  ⤷ CS2.2       reason-vs-implement on a real model — npm run colreg:reason-implement (with creds)');
+  console.log('  ⤷ CS1.7/3.2   GPU dose-response (teach → α/checkpoint sweep) — experiments/unlearning/*.py (see DOSE_RESPONSE.md)');
 
   console.log(`\n${failures === 0 ? '✓ ALL OFFLINE EXPERIMENTS REPRODUCED' : `✗ ${failures} CHECK(S) FAILED`}`);
   if (failures > 0) process.exitCode = 1;
