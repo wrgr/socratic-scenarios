@@ -69,6 +69,12 @@ describe('parseDecision', () => {
   it('throws with a snippet of the reply when there is no JSON', () => {
     expect(() => parseDecision('no json here')).toThrow(/no json here/i);
   });
+  it('repairs UNQUOTED citedRules tokens (the Llama-4 / Nova slip) instead of failing', () => {
+    const d = parseDecision('{"courseOffsetDeg": 30, "speedFactor": 1.0, "citedRules": [RULE-COLREG-15, RULE_HAZARD_01], "abstained": false, "reasoning": "x"}');
+    expect(d.courseOffsetDeg).toBe(30);
+    expect(d.citedRules).toEqual(['RULE-COLREG-15', 'RULE_HAZARD_01']);
+    expect(d.abstained).toBe(false);
+  });
 });
 
 describe('decisionToManeuver', () => {

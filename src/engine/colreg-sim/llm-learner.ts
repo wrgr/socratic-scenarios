@@ -127,7 +127,24 @@ export function extractFirstJsonObject(text: string): string | null {
   return null; // unbalanced / truncated
 }
 
-/** Parse the model's reply into a decision (tolerant of code fences / stray prose). */
+/**
+ * Repair the one JSON slip models make constantly: UNQUOTED identifier tokens in the `citedRules`
+ * array, e.g. `"citedRules": [RULE-COLREG-15, RULE_HAZARD_01]` (seen on Llama-4 and Nova). Quote the
+ * bare tokens, leave already-quoted ones. Only touches that array, so it can't corrupt other fields.
+ */
+export function repairCitedRules(json: string): string {
+  return json.replace(/("cited_?[rR]ules"\s*:\s*\[)([^\]]*)(\])/g, (_m, pre: string, inner: string, post: string) => {
+    const fixed = inner
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0)
+      .map((t) => (/^".*"$/.test(t) ? t : `"${t.replace(/"/g, '')}"`))
+      .join(', ');
+    return `${pre}${fixed}${post}`;
+  });
+}
+
+/** Parse the model's reply into a decision (tolerant of code fences / stray prose / loose JSON). */
 export function parseDecision(text: string): LlmDecision {
   const json = extractFirstJsonObject(text);
   if (!json) {
@@ -137,9 +154,14 @@ export function parseDecision(text: string): LlmDecision {
   let raw: Partial<LlmDecision>;
   try {
     raw = JSON.parse(json) as Partial<LlmDecision>;
-  } catch (e) {
-    const snip = json.slice(0, 240).replace(/\s+/g, ' ');
-    throw new Error(`JSON parse failed (${(e as Error).message}) on: "${snip}"`);
+  } catch {
+    // Retry once after quoting bare tokens in the citedRules array — the common model slip.
+    try {
+      raw = JSON.parse(repairCitedRules(json)) as Partial<LlmDecision>;
+    } catch (e) {
+      const snip = json.slice(0, 240).replace(/\s+/g, ' ');
+      throw new Error(`JSON parse failed (${(e as Error).message}) on: "${snip}"`);
+    }
   }
   const clampNum = (x: unknown, lo: number, hi: number, dflt: number) =>
     typeof x === 'number' && Number.isFinite(x) ? Math.max(lo, Math.min(hi, x)) : dflt;
