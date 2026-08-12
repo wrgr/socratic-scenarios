@@ -85,6 +85,43 @@ COLREG also ships an **interactive simulator** with real kinematics — speed/he
 
 <sub>COLREG deep-dives: [simulator design](docs/colreg-simulator-design.md) · [validation methodology](docs/colreg-validation.md) · [concept of operations](docs/colreg-conops.md) · [whitepaper](docs/planning/colreg-whitepaper.md)</sub>
 
+## Experiments — the measurement paper
+
+The research contribution is an **in-silico instrument that measures *corpus necessity*** — whether a
+learner actually *relies* on a corpus item (**relied-on** vs. **redundant** vs. **unusable**) as a
+behavioral outcome, calibrated by weight-level construction, *before* an expensive human trial. A
+quality metric (RAGAS-style) can't see this: it scores the answer, not the reliance. Three
+contributions: **C1** Corpus Diagnosis (localize a gap · per-item necessity/leakage · split a leaking
+item into *redundant* vs *unusable*) · **C1b** Corpus Sufficiency (incl. **FALSE SUFFICIENCY**) ·
+**C2** the Transfer Instrument (the regret-vs-reference objective that makes C1 scorable).
+
+Every result below is **simulation / mechanism evidence**; the human trial is future work. Canonical
+status register: [`docs/experiment-status.md`](docs/experiment-status.md) · paper:
+[`docs/arxiv/main.pdf`](docs/arxiv/main.pdf).
+
+**Main spine — the instrument, the diagnosis, and its weight-level validation**
+
+| Exp | Purpose | Core result |
+|---|---|---|
+| **0 · Instrument construct validity** (COLREG, C2) | does the metric separate skill? | do-nothing collides, velocity-obstacle / MPC clear; ranking + gradient invariant over 232 weight perturbations (Kendall τ = 1.00) |
+| **0b · Second sim domain** (tire-change, C2) | does it generalize past continuous control? | discrete procedural instrument: expert J=0 vs reckless J=200, exact knowledge-component→metric identifiability, monotone gradient |
+| **1 · Cross-model leakage**, standard COLREG (C1ii) | is a textbook corpus necessary? | every frontier model reads standard COLREG **redundant** — the corpus duplicates parametric knowledge (an actionable "don't ship it") |
+| **1b · Cross-model hazard discrimination**, class×size (C1ii/iii) | does necessity discriminate models on a corpus-only fact? | necessity spans **0 → 1998** across Claude/Llama/Nova; only **Opus** reads the hazard corpus-bound at the full barrier; **Llama-70B & Nova-micro unusable** (ground even with the rule); standard rules redundant/FALSE-SUFFICIENCY across the board *(OpenAI gpt-oss being added)* |
+| **3 · Corpus-value audit / localization** (C1i) | attribute reliance to a *specific* rule | 4-rule necessity ranking on real models; standard rules redundant, hazard corpus-bound; Rule 15 reads redundant given Rule 14 (decomposability) |
+| **3b · redundant vs *unusable* split** (C1iii) | is a leaking item drop-it or fix-the-model? | split by with-corpus performance; observed on a real model (Llama-70B hazard = unusable, with-corpus regret at the full barrier) |
+| **8 · Corpus sufficiency + FALSE SUFFICIENCY** (C1b) | roll per-item verdicts into a corpus-level verdict | `contributing`/`partial`/`unusable`/**FALSE SUFFICIENCY** (looks sufficient, necessity ≈ 0 → coasts on priors, fragile to shift); fires on all three reference learners |
+| **2b · Hazard dose-response** (teach the fact in, C1ii) | does necessity fall when the fact is learned? | necessity **667 → 0.2** (Qwen2.5-3B); α-sweep and checkpoint-sweep **agree** (rules out a gradient artifact); interior is a step — one discrete fact = threshold learning |
+| **7 · Second domain — fact-QA**, simulator-free (C1) | a *graded* curve on a verifiable answer objective | necessity **1.00→0.93→0.29→0.03** (α) and **1.00→0.25→0.03** (checkpoints), Qwen2.5-7B — the two gradients agree ⇒ artifact-free |
+
+**Supporting / external validity**
+
+| Exp | Purpose | Core result |
+|---|---|---|
+| **4 · Real charted-hazard leg** (C1ii, external validity) | does the instrument work on real, verified dangers? | **Elwha Rock** & **Fullastern Rock** (official-gazetteer-verified) read **corpus-bound** (necessity ≈ 1998) on Opus; **Whittle Rock** screened out as already-known (the screen has teeth); the famous **Seven Stones** control was *not* named for that track (caveat, not headline) |
+| **2a · Unlearning arm** (remove from weights, C1ii) | does forgetting move the decision? | **says ≠ does**: words-level metrics register forgetting, the instrument's decision does not — a caution on naive unlearning (**supporting**, not a clean validation) |
+| **5 · Probe-suite breadth** (C1) | necessity as a distribution across probe kinds | Rule 8 (substantial-action) added → 4 auditable rules; role / routing / agent-intention probes planned |
+| **6 · Human trial** | external validity on people | pre-registered; **future work** — the point of 0–8 is to falsify the value prop in silico first |
+
 ## Quickstart
 
 ```bash
@@ -129,6 +166,7 @@ sources/                  canonical per-source provenance ledger
 | [OVERVIEW.md](OVERVIEW.md) | The short read: how learning-science theory drove the AI architecture |
 | [docs/planning/whitepaper.md](docs/planning/whitepaper.md) | System design paper |
 | [docs/arxiv/main.pdf](docs/arxiv/main.pdf) | Method paper — the in-silico measurement instrument (C1/C2) |
+| [docs/experiment-status.md](docs/experiment-status.md) | Canonical experiment register — every experiment's purpose, status, and result |
 | [docs/DATA_CATALOG.md](docs/DATA_CATALOG.md) | Every data store: path, pipeline, sensitivity |
 | [docs/references.md](docs/references.md) | Annotated bibliography |
 | [sources/SOURCES_LOG.md](sources/SOURCES_LOG.md) | Signed-off source disposition ledger |
