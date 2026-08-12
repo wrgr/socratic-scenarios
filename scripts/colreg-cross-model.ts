@@ -54,13 +54,15 @@ const hazardCfg = (h: SuiteHazard): LeakageConfig => {
 
 interface Assessment { standard: string; relied: number; unusable: number; n: number }
 
-async function assess(complete: Completer, label: string, auditFor: AuditFor): Promise<Assessment> {
+async function assess(complete: Completer, label: string, auditFor: AuditFor, tick?: () => void): Promise<Assessment> {
   const standard = (await runLeakageExperiment(complete, label, { ...standardCfg, onAudit: auditFor('standard') })).perRule[0].verdict;
+  tick?.();
   let relied = 0, unusable = 0;
   for (const h of HAZARD_SUITE) {
     const v = (await runLeakageExperiment(complete, label, { ...hazardCfg(h), onAudit: auditFor(`hazard:${h.id}`) })).perRule[0];
     if (v.verdict === 'corpus-bound') relied++;
     else if (v.regretWith >= 10) unusable++; // present but grounds ⇒ the model can't act on it
+    tick?.();
   }
   return { standard, relied, unusable, n: HAZARD_SUITE.length };
 }
@@ -118,10 +120,12 @@ async function main() {
       const relied: number[] = [], unusable: number[] = [], verdicts: string[] = [];
       try {
         for (let k = 0; k < K; k++) {
-          const a = await assess(modelCompleter(id, T), id, auditFor(id, `ens${k}`, T));
+          process.stdout.write(`  ${id}  sample ${k + 1}/${K}: `);
+          const a = await assess(modelCompleter(id, T), id, auditFor(id, `ens${k}`, T), () => process.stdout.write('.'));
+          console.log('');
           relied.push(a.relied); unusable.push(a.unusable); verdicts.push(a.standard);
         }
-        console.log(`  ${id.padEnd(42)}  ${mode(verdicts).padEnd(14)}   ${`${mean(relied).toFixed(1)} ± ${std(relied).toFixed(1)}`.padStart(14)}   ${`${mean(unusable).toFixed(1)} ± ${std(unusable).toFixed(1)}`.padStart(14)}`);
+        console.log(`  → ${id.padEnd(42)}  ${mode(verdicts).padEnd(14)}   ${`${mean(relied).toFixed(1)} ± ${std(relied).toFixed(1)}`.padStart(14)}   ${`${mean(unusable).toFixed(1)} ± ${std(unusable).toFixed(1)}`.padStart(14)}`);
       } catch (e) { console.log(`  ${id}: failed — ${(e as Error).message}`); }
     }
   }
