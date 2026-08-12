@@ -423,7 +423,15 @@ export function boundLearnerCompleter(
       const line = rulesBlock.split('\n').find((l) => l.includes(`[${id}]`));
       if (line) {
         const clear = /no (charted )?hazard|sector is clear|hold your course/i.test(line);
-        hazardOffset = clear ? 0 : 60; // 60° clears the charted hazard; a 30° default still grounds
+        if (clear) {
+          hazardOffset = 0;
+        } else {
+          // Read the avoidance DIRECTION from the corpus fact (the geometric hazard suite varies it
+          // per hazard — a danger on the port bow needs a starboard turn and vice-versa; a reflex in
+          // one fixed direction can't clear both). 60° clears; the 30° default (no rule) still grounds.
+          const m = line.match(/to\s+(starboard|port)/i);
+          hazardOffset = (m && m[1].toLowerCase() === 'port' ? -1 : 1) * 60;
+        }
         cited.push(id);
         break;
       }
