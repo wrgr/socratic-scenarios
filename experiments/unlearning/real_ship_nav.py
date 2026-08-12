@@ -79,7 +79,7 @@ def main():
     try:
         import boto3
     except ImportError:
-        subprocess.run(['pip', 'install', '-q', 'boto3'], check=True); import boto3
+        subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'boto3'], check=True); import boto3
     brt = boto3.client('bedrock-runtime', region_name=AWS_REGION)
 
     who = subprocess.run(['aws', 'sts', 'get-caller-identity'], capture_output=True, text=True)
