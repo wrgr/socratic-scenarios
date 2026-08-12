@@ -17,8 +17,12 @@ export function bedrockCompleter(cfg: { model: string; region?: string; maxToken
   let clientP: Promise<{ client: { send: (c: unknown) => Promise<BedrockConverseResponse> }; ConverseCommand: new (i: unknown) => unknown }> | null = null;
   const load = () =>
     (clientP ??= import('@aws-sdk/client-bedrock-runtime').then(({ BedrockRuntimeClient, ConverseCommand }) => ({
-      client: new BedrockRuntimeClient({ region: cfg.region ?? process.env.AWS_REGION ?? 'us-east-1' }),
-      ConverseCommand,
+      // Cast the concrete SDK types down to the loose local shape so this file type-checks without
+      // pinning the browser build to the AWS SDK's generic command/response types.
+      client: new BedrockRuntimeClient({ region: cfg.region ?? process.env.AWS_REGION ?? 'us-east-1' }) as unknown as {
+        send: (c: unknown) => Promise<BedrockConverseResponse>;
+      },
+      ConverseCommand: ConverseCommand as unknown as new (i: unknown) => unknown,
     })));
   return async (prompt: string) => {
     const { client, ConverseCommand } = await load();
