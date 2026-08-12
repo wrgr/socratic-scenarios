@@ -55,16 +55,22 @@ export function bedrockCompleter(cfg: { model: string; region?: string; maxToken
   };
 }
 
-/** Pick a real completer from the environment, Bedrock first. Returns null if no credential is set. */
-export function selectRealCompleter(): { completer: Completer; label: string } | null {
+/**
+ * Pick a real completer from the environment, Bedrock first. Returns null if no credential is set.
+ * `opts.temperature` overrides the decode temperature for EVERY provider (0 = deterministic point
+ * estimate; >0 for a sampled ensemble) — without it Bedrock falls back to env TEMP, and Gemini/OpenAI
+ * to their own defaults.
+ */
+export function selectRealCompleter(opts: { temperature?: number } = {}): { completer: Completer; label: string } | null {
   const env = process.env;
+  const t = opts.temperature;
   if (env.BEDROCK_MODEL)
-    return { completer: bedrockCompleter({ model: env.BEDROCK_MODEL, region: env.AWS_REGION }), label: `bedrock(${env.BEDROCK_MODEL})` };
+    return { completer: bedrockCompleter({ model: env.BEDROCK_MODEL, region: env.AWS_REGION, temperature: t }), label: `bedrock(${env.BEDROCK_MODEL})` };
   if (env.GEMINI_API_KEY)
-    return { completer: geminiCompleter(env.GEMINI_API_KEY, env.GEMINI_MODEL ?? 'gemini-2.5-flash'), label: `gemini(${env.GEMINI_MODEL ?? 'gemini-2.5-flash'})` };
+    return { completer: geminiCompleter(env.GEMINI_API_KEY, env.GEMINI_MODEL ?? 'gemini-2.5-flash', t), label: `gemini(${env.GEMINI_MODEL ?? 'gemini-2.5-flash'})` };
   if (env.OPENAI_API_KEY)
-    return { completer: openAiCompatCompleter({ baseUrl: env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1', apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL ?? 'gpt-4o-mini' }), label: `openai(${env.OPENAI_MODEL ?? 'gpt-4o-mini'})` };
+    return { completer: openAiCompatCompleter({ baseUrl: env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1', apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL ?? 'gpt-4o-mini', temperature: t }), label: `openai(${env.OPENAI_MODEL ?? 'gpt-4o-mini'})` };
   if (env.GITHUB_MODELS_TOKEN)
-    return { completer: openAiCompatCompleter({ baseUrl: 'https://models.github.ai/inference', apiKey: env.GITHUB_MODELS_TOKEN, model: env.GITHUB_MODELS_MODEL ?? 'openai/gpt-4o-mini' }), label: 'github-models' };
+    return { completer: openAiCompatCompleter({ baseUrl: 'https://models.github.ai/inference', apiKey: env.GITHUB_MODELS_TOKEN, model: env.GITHUB_MODELS_MODEL ?? 'openai/gpt-4o-mini', temperature: t }), label: 'github-models' };
   return null;
 }

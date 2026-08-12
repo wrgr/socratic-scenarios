@@ -242,8 +242,11 @@ export function retryCompleter(
 }
 
 /** Gemini via @google/generative-ai (needs a live key — the repo's default). */
-export function geminiCompleter(apiKey: string, model = 'gemini-2.5-flash'): Completer {
-  const m = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model });
+export function geminiCompleter(apiKey: string, model = 'gemini-2.5-flash', temperature?: number): Completer {
+  const m = new GoogleGenerativeAI(apiKey).getGenerativeModel({
+    model,
+    ...(temperature === undefined ? {} : { generationConfig: { temperature } }),
+  });
   return async (prompt) => (await m.generateContent(prompt)).response.text();
 }
 
@@ -252,12 +255,12 @@ export function geminiCompleter(apiKey: string, model = 'gemini-2.5-flash'): Com
  *   baseUrl 'https://models.github.ai/inference', model 'openai/gpt-4o-mini',
  *   apiKey = a GitHub PAT with the `models` permission.
  */
-export function openAiCompatCompleter(cfg: { baseUrl: string; apiKey: string; model: string }): Completer {
+export function openAiCompatCompleter(cfg: { baseUrl: string; apiKey: string; model: string; temperature?: number }): Completer {
   return async (prompt) => {
     const res = await fetch(`${cfg.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.apiKey}` },
-      body: JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: prompt }], temperature: 0 }),
+      body: JSON.stringify({ model: cfg.model, messages: [{ role: 'user', content: prompt }], temperature: cfg.temperature ?? 0 }),
     });
     if (!res.ok) throw new Error(`LLM endpoint ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const json = await res.json();
