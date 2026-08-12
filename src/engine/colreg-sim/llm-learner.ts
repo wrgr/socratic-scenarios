@@ -101,11 +101,44 @@ Respond with ONLY a JSON object, no prose:
 {"courseOffsetDeg": <integer -90..90, positive = alter to starboard>, "speedFactor": <0.3..1.0, 1 = keep speed>, "citedRules": [<rule ids you relied on>], "abstained": <true|false>, "reasoning": "<one sentence>"}`;
 }
 
+/**
+ * Extract the first *balanced* `{...}` object, ignoring code fences and any prose before or after
+ * it. A greedy `/\{[\s\S]*\}/` fails when a model emits valid JSON and then keeps talking (the match
+ * runs to the last `}` in the trailing prose, so JSON.parse chokes) — common on the multi-probe
+ * `all` run. Brace-counting (string/escape aware) takes only the first complete object.
+ */
+export function extractFirstJsonObject(text: string): string | null {
+  const s = text.replace(/```(?:json)?/gi, ''); // drop code-fence markers, keep their contents
+  const start = s.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+    } else if (ch === '"') inStr = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}' && --depth === 0) return s.slice(start, i + 1);
+  }
+  return null; // unbalanced / truncated
+}
+
 /** Parse the model's reply into a decision (tolerant of code fences / stray prose). */
 export function parseDecision(text: string): LlmDecision {
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('no JSON object in model reply');
-  const raw = JSON.parse(match[0]) as Partial<LlmDecision>;
+  const json = extractFirstJsonObject(text);
+  if (!json) {
+    const snip = text.trim().slice(0, 240).replace(/\s+/g, ' ');
+    throw new Error(`no JSON object in model reply (got: "${snip}")`);
+  }
+  let raw: Partial<LlmDecision>;
+  try {
+    raw = JSON.parse(json) as Partial<LlmDecision>;
+  } catch (e) {
+    const snip = json.slice(0, 240).replace(/\s+/g, ' ');
+    throw new Error(`JSON parse failed (${(e as Error).message}) on: "${snip}"`);
+  }
   const clampNum = (x: unknown, lo: number, hi: number, dflt: number) =>
     typeof x === 'number' && Number.isFinite(x) ? Math.max(lo, Math.min(hi, x)) : dflt;
   return {

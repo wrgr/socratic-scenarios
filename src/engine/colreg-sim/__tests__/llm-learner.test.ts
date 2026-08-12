@@ -53,8 +53,21 @@ describe('parseDecision', () => {
     expect(d.courseOffsetDeg).toBe(90); // clamped
     expect(d.speedFactor).toBe(1); // clamped
   });
-  it('throws when there is no JSON', () => {
-    expect(() => parseDecision('no json here')).toThrow();
+  it('takes the first balanced object when prose (with braces) follows the JSON', () => {
+    // The real Sonnet-on-`all` failure: valid JSON, then an explanation that itself contains braces.
+    const reply =
+      '{"courseOffsetDeg": 35, "speedFactor": 1, "citedRules": ["RULE-COLREG-15"], "abstained": false}\n\n' +
+      'I altered to starboard per Rule {15} to pass astern of the give-way vessel.';
+    const d = parseDecision(reply);
+    expect(d.courseOffsetDeg).toBe(35);
+    expect(d.citedRules).toEqual(['RULE-COLREG-15']);
+  });
+  it('handles a nested object and stops at its matching brace', () => {
+    const d = parseDecision('{"courseOffsetDeg": 10, "speedFactor": 1, "meta": {"a": 1}, "abstained": false} trailing');
+    expect(d.courseOffsetDeg).toBe(10);
+  });
+  it('throws with a snippet of the reply when there is no JSON', () => {
+    expect(() => parseDecision('no json here')).toThrow(/no json here/i);
   });
 });
 
