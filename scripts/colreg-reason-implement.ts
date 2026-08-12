@@ -96,27 +96,42 @@ async function runLive() {
   const rpm = Number(process.env.RPM ?? (process.env.BEDROCK_MODEL ? 30 : 5));
   const wrap = (c: Completer) => throttleCompleter(retryCompleter(c, { retries: Number(process.env.GEMINI_RETRIES ?? 5) }), Math.ceil(60000 / Math.max(1, rpm)) + 700);
   const override = REASON_SUITE.filter((rc) => rc.safeSide === 'port');
+  const K = Number(process.env.SAMPLES ?? 5);
+  const T = Number(process.env.TEMP ?? 0.7);
+  const ensembleOn = K > 1 && T > 0;
 
   // AUDIT_LOG=<path>: one JSONL row per model CALL (2 per reach: with-corpus + ablated), tagged by
-  // phase (point / ens0..K-1) so any odd reading traces to the exact completion behind it.
+  // phase (point / ens0..K-1). DEBUG=1 also prints each decision inline (deg + abstain + reasoning),
+  // so you can watch what the model does — e.g. an abstention flake — without grepping the JSONL.
   const auditPath = process.env.AUDIT_LOG;
+  const debug = process.env.DEBUG === '1';
   if (auditPath) { mkdirSync(dirname(auditPath), { recursive: true }); writeFileSync(auditPath, ''); }
-  const writeAudit = auditPath
-    ? (o: object) => appendFileSync(auditPath, JSON.stringify({ utc: new Date().toISOString(), model: check.label, ...o }) + '\n')
+  const onCall = auditPath || debug
+    ? (o: object) => {
+        if (auditPath) appendFileSync(auditPath, JSON.stringify({ utc: new Date().toISOString(), model: check.label, ...o }) + '\n');
+        if (debug) {
+          const r = o as { reach: string; condition: string; decision: { courseOffsetDeg: number; abstained: boolean; reasoning?: string } };
+          const d = r.decision;
+          console.log(`\n    [${r.reach} ${r.condition.padEnd(11)}] deg=${String(d.courseOffsetDeg).padStart(3)}${d.abstained ? ' ABSTAIN' : '        '}  ${(d.reasoning ?? '').replace(/\s+/g, ' ').slice(0, 70)}`);
+        }
+      }
     : undefined;
 
-  // one pass over the suite → per-reach necessity; prints a dot per reach so it's never silent.
+  // one pass over the suite → per-reach necessity; a dot per reach (unless DEBUG prints full lines).
   const pass = async (completer: Completer, phase: string, temp: number): Promise<Record<string, number>> => {
     const out: Record<string, number> = {};
     for (const rc of REASON_SUITE) {
-      out[rc.id] = await necessityOf(rc, completer, phase, temp, writeAudit);
-      process.stdout.write('.');
+      out[rc.id] = await necessityOf(rc, completer, phase, temp, onCall);
+      if (!debug) process.stdout.write('.');
     }
     return out;
   };
   const cell = (rc: ReasonCase) => `${rc.id} ${('deep water to ' + rc.safeSide).padEnd(22)}`;
 
+  const totalCalls = REASON_SUITE.length * 2 * (1 + (ensembleOn ? K : 0));
+  const t0 = Date.now();
   console.log(`\nLive run (${check.label}) — does the model USE the local rule (alter to the deep side) or apply the Rule-14 reflex?`);
+  console.log(`  plan: ${totalCalls} model calls at ~${rpm}/min ≈ ${Math.ceil(totalCalls / Math.max(1, rpm))} min${debug ? '  (DEBUG: printing each decision)' : ''}`);
 
   // ── Point estimate: temp 0, deterministic ──
   process.stdout.write(`\n  point estimate (temp 0): `);
@@ -130,9 +145,7 @@ async function runLive() {
   console.log(`  → override reaches USED ${ptOv}/${override.length}  (${ptOv === override.length ? 'reasoner' : ptOv === 0 ? 'Rule-14 implementer' : 'mixed'})`);
 
   // ── Ensemble: K samples at temp T (real variance control) ──
-  const K = Number(process.env.SAMPLES ?? 5);
-  const T = Number(process.env.TEMP ?? 0.7);
-  if (K > 1 && T > 0) {
+  if (ensembleOn) {
     const samples: Record<string, number[]> = Object.fromEntries(REASON_SUITE.map((rc) => [rc.id, [] as number[]]));
     for (let k = 0; k < K; k++) {
       process.stdout.write(`  ensemble sample ${k + 1}/${K} (temp ${T}): `);
@@ -150,7 +163,8 @@ async function runLive() {
     console.log(`  → override reaches relied ${mean(ovRel).toFixed(1)}/${K} on average (stable majority ⇒ reasoner; scattered ⇒ noise/implementer)`);
   }
 
-  if (auditPath) console.log(`\n  audit log: ${auditPath} (one JSONL row per call, tagged by phase: point / ens0..${K - 1})`);
+  console.log(`\n  done in ${((Date.now() - t0) / 60000).toFixed(1)} min (${totalCalls} calls).`);
+  if (auditPath) console.log(`  audit log: ${auditPath} (one JSONL row per call, tagged by phase: point / ens0..${K - 1})`);
 }
 
 async function main() {
