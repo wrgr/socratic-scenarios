@@ -16,7 +16,8 @@
  *   done
  */
 import './_env';
-import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import {
   runLeakageExperiment,
   starboardProbe,
@@ -33,7 +34,13 @@ import {
   type Completer,
   type LeakageConfig,
   type LeakageReport,
+  type LeakageAuditRow,
 } from '../src/engine/colreg-sim';
+
+/** mkdir -p for a file's parent dir, so AUDIT_LOG/dump paths in a fresh clone don't ENOENT. */
+function ensureParent(path: string): void {
+  mkdirSync(dirname(path), { recursive: true });
+}
 import { sufficiencyVerdict } from '../src/engine/audit-sufficiency';
 import type { AJPNode } from '../src/types/ajp';
 import { colregDomain } from '../src/corpus/colreg';
@@ -190,11 +197,14 @@ function bedrockCompleter(cfg: { model: string; region?: string }): Completer {
     // before the answer, so a low cap yields an empty final block. Give generous headroom
     // (overridable via BEDROCK_MAX_TOKENS); non-reasoning models still stop early, so it's ~free.
     const maxTokens = Number(process.env.BEDROCK_MAX_TOKENS) || 4096;
+    // Temperature: 0 (deterministic, the canonical reading) by default; set TEMP>0 for a sampled
+    // ensemble (run K times, vary the seed) to get a variance/CI on the ablation-delta.
+    const temperature = Number(process.env.TEMP ?? 0);
     const res = await client.send(
       new ConverseCommand({
         modelId: cfg.model,
         messages: [{ role: 'user', content: [{ text: prompt }] }],
-        inferenceConfig: { temperature: 0, maxTokens },
+        inferenceConfig: { temperature, maxTokens },
       }),
     );
     const blocks = res.output?.message?.content ?? [];
@@ -285,6 +295,21 @@ async function main() {
 
   const real = realCompleter();
 
+  // AUDIT_LOG=<path>: append one JSONL row per model call (all conditions, mock and live) — the exact
+  // prompt, the raw answer, the parsed decision, the maneuver, and the resulting kinematics/objective —
+  // so every reported number traces back to what the model actually said and did.
+  const auditPath = process.env.AUDIT_LOG;
+  const temp = Number(process.env.TEMP ?? 0);
+  if (auditPath) { ensureParent(auditPath); writeFileSync(auditPath, ''); }
+  const makeAudit = (promptCondition: string, providerLabel: string) =>
+    auditPath
+      ? (row: LeakageAuditRow) =>
+          appendFileSync(auditPath, JSON.stringify({
+            utc: new Date().toISOString(), model: process.env.BEDROCK_MODEL ?? providerLabel,
+            provider: providerLabel, promptCondition, temp, probes: process.env.PROBES ?? 'default', ...row,
+          }) + '\n')
+      : undefined;
+
   // Deterministic mock dry-run: the offline harness self-check. It's noise once a real model is
   // running (two mock blocks before the live result), so run it only when there's NO live model —
   // or force it with SHOW_MOCK=1.
@@ -296,8 +321,8 @@ async function main() {
     const boundMock = isHazard
       ? boundLearnerCompleter([], [], ['RULE-HAZARD-01'])
       : boundLearnerCompleter(['RULE-COLREG-14'], ['RULE-COLREG-19']);
-    print(await runLeakageExperiment(boundMock, 'mock: corpus-bound learner', cfg));
-    print(await runLeakageExperiment(leakingLearnerCompleter(), 'mock: leaking learner', cfg));
+    print(await runLeakageExperiment(boundMock, 'mock: corpus-bound learner', { ...cfg, onAudit: makeAudit('mock', 'mock: corpus-bound learner') }));
+    print(await runLeakageExperiment(leakingLearnerCompleter(), 'mock: leaking learner', { ...cfg, onAudit: makeAudit('mock', 'mock: leaking learner') }));
   }
 
   if (!real) {
@@ -320,8 +345,9 @@ async function main() {
     for (const cond of conditions) {
       const strict = cond !== 'unconstrained';
       console.log(`\nLive run (${real.label}, condition=${cond}, throttled to ~${rpm} req/min, with 429 backoff):`);
-      print(await runLeakageExperiment(completer, `${real.label} [${cond}]`, { ...cfg, strict }));
+      print(await runLeakageExperiment(completer, `${real.label} [${cond}]`, { ...cfg, strict, onAudit: makeAudit(cond, real.label) }));
     }
+    if (auditPath) console.log(`\naudit log: ${auditPath} (one JSONL row per model call: prompt, answer, decision, maneuver, kinematics)`);
   } catch (e) {
     console.log(`\nLive LLM call failed: ${(e as Error).message}\nThe harness is validated by the dry-run above; supply a working credential to run the real model.`);
   }

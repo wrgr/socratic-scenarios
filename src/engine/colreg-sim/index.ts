@@ -115,4 +115,5 @@ export {
   type LeakageVerdict,
   type LeakageReport,
   type LeakageConfig,
+  type LeakageAuditRow,
 } from './leakage';

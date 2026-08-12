@@ -34,6 +34,39 @@ Three tiers by what they need:
 > *also* attempt a live model **if a provider key is in your environment**. To guarantee an offline
 > run, unset keys: `env -u GEMINI_API_KEY -u OPENAI_API_KEY -u BEDROCK_MODEL npm run colreg:leakage`.
 
+## Audit log & temperature
+
+**`AUDIT_LOG=<path>`** makes `colreg:leakage` append **one JSONL row per model call** (every condition —
+with-corpus / ablated / counterfactual / closed-book, mock and live), so every reported number traces
+back to what the model actually said and did. Each row carries: `model`, `promptCondition`, `temp`,
+`condition`, `ruleId`, `scenarioId`, the exact **`prompt`**, the raw **`completion`**, the parsed
+**`decision`** (citedRules / abstained / courseOffsetDeg / …), the **`maneuver`**, and the resulting
+**`kinematics`** (`J`, the objective `terms` incl. the hazard `barrier`, and `metrics` incl. clearances /
+CRI). Example:
+
+```bash
+AUDIT_LOG=results/audit/opus_hazard.jsonl \
+  BEDROCK_MODEL=us.anthropic.claude-opus-4-5-20251101-v1:0 PROBES=hazard npm run colreg:leakage
+```
+
+`model_scan.py` sets `AUDIT_LOG` automatically → `results/model-scan/audit/<label>__<probes>.jsonl` for
+every model (so a full sweep is auditable end-to-end). It works offline too (audits the mock reference
+runs). Logs land under `results/` (git-ignored).
+
+**`TEMP=<t>`** sets the Bedrock decode temperature (default **0**, deterministic — the canonical reading).
+For a variance/CI on the ablation-delta (the F2 control), run a small **ensemble** at a fixed temperature
+and vary nothing else:
+
+```bash
+for i in $(seq 1 10); do
+  AUDIT_LOG=results/audit/opus_hazard_s$i.jsonl TEMP=0.7 \
+    BEDROCK_MODEL=us.anthropic.claude-opus-4-5-20251101-v1:0 PROBES=hazard npm run colreg:leakage
+done   # then compute mean ± CI of the ablation-delta across the 10 audit logs
+```
+
+Temp 0 stays the headline number; the `temp>0` ensemble is *only* the stability control (a wide CI ⇒
+unscoreable, e.g. gpt-oss). Keep temperature identical across models or it's a confound.
+
 ---
 
 ## API (needs a real model)

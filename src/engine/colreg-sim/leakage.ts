@@ -20,14 +20,19 @@ import type { AJPNode } from '../../types/ajp';
 import type { SimScenario } from './types';
 import {
   createLlmManeuverFn,
+  decisionToManeuver,
   buildPrompt,
   parseDecision,
   renderCorpus,
   type Completer,
   type LlmDecision,
   type CorpusOptions,
+  type ManeuverCallAudit,
 } from './llm-learner';
-import { runBenchmarkAsync } from './benchmark';
+import { runBenchmarkAsync, evaluateManeuver } from './benchmark';
+
+/** An audited model call plus which leakage condition and rule it belongs to. One JSONL row. */
+export type LeakageAuditRow = ManeuverCallAudit & { condition: string; ruleId: string };
 import { diagnoseCorpusGaps, type GapComponent } from './diagnose';
 
 export interface RuleProbe {
@@ -126,6 +131,8 @@ export interface LeakageConfig {
    * verdict is expected to flip to "leaking" (Experiment 1, novelty doc §8).
    */
   strict?: boolean;
+  /** Optional audit sink: every model call (all conditions) with its answer + kinematics. */
+  onAudit?: (row: LeakageAuditRow) => void;
 }
 
 const DEFAULT_DELTA_THRESHOLD = 0.15;
@@ -169,21 +176,23 @@ export function classify(
 /** Run one rule probe: ablation-delta + counterfactual adherence + localization. */
 export async function runRuleProbe(
   complete: Completer,
-  cfg: { corpusNodes: AJPNode[]; scenarios: SimScenario[]; probe: RuleProbe; deltaThreshold?: number; competenceRegret?: number; strict?: boolean; closedBookContaminated?: boolean },
+  cfg: { corpusNodes: AJPNode[]; scenarios: SimScenario[]; probe: RuleProbe; deltaThreshold?: number; competenceRegret?: number; strict?: boolean; closedBookContaminated?: boolean; onAudit?: (row: LeakageAuditRow) => void },
 ): Promise<LeakageVerdict> {
   const { corpusNodes, probe } = cfg;
   const scenarios = probe.scenarios ?? cfg.scenarios; // rule-matched instrument subset
   const thr = cfg.deltaThreshold ?? DEFAULT_DELTA_THRESHOLD;
   const competenceRegret = cfg.competenceRegret ?? DEFAULT_COMPETENCE_REGRET;
   const strict = cfg.strict ?? true;
+  const audit = cfg.onAudit;
 
-  const policy = (opts: CorpusOptions) => {
-    const fn = createLlmManeuverFn({ complete, corpusNodes, ...opts, strict });
+  const policy = (opts: CorpusOptions, condition: string) => {
+    const onCall = audit ? (r: ManeuverCallAudit) => audit({ ...r, condition, ruleId: probe.ruleId }) : undefined;
+    const fn = createLlmManeuverFn({ complete, corpusNodes, ...opts, strict, onCall });
     return async (s: SimScenario) => (await fn(s)).maneuver;
   };
 
-  const withRule = await runBenchmarkAsync(scenarios, policy({}));
-  const without = await runBenchmarkAsync(scenarios, policy({ ablateIds: [probe.ruleId] }));
+  const withRule = await runBenchmarkAsync(scenarios, policy({}, 'with-corpus'));
+  const without = await runBenchmarkAsync(scenarios, policy({ ablateIds: [probe.ruleId] }, 'ablated'));
   const metricWith = withRule.meanCompliancePenalty;
   const metricWithout = without.meanCompliancePenalty;
   const ablationDelta = metricWithout - metricWith;
@@ -203,6 +212,16 @@ export async function runRuleProbe(
   }
   const cfDecision = parseDecision(cfRaw);
   const counterfactualFollowed = probe.followedCounterfactual(cfDecision);
+  if (audit) {
+    const m = decisionToManeuver(cfDecision);
+    const k = evaluateManeuver(probe.probeScenario, m);
+    audit({
+      condition: 'counterfactual', ruleId: probe.ruleId, scenarioId: probe.probeScenario.id, strict,
+      prompt: buildPrompt(probe.probeScenario, cfCorpus, strict), completion: cfRaw, decision: cfDecision,
+      maneuver: { courseOffsetDeg: cfDecision.courseOffsetDeg, speedFactor: cfDecision.speedFactor },
+      kinematics: { J: k.J, terms: k.terms, metrics: k.metrics },
+    });
+  }
 
   // Localization: which component does the ablated run's failure signature name?
   const findings = diagnoseCorpusGaps(scenarios, without.perCase);
@@ -245,6 +264,16 @@ export async function runLeakageExperiment(
   }
   const closed = parseDecision(closedRaw);
   const closedBookContaminated = !closed.abstained;
+  if (cfg.onAudit) {
+    const m = decisionToManeuver(closed);
+    const k = evaluateManeuver(cfg.closedBookScenario, m);
+    cfg.onAudit({
+      condition: 'closed-book', ruleId: '(none)', scenarioId: cfg.closedBookScenario.id, strict: cfg.strict ?? true,
+      prompt: buildPrompt(cfg.closedBookScenario, '(no rules provided)', cfg.strict ?? true), completion: closedRaw,
+      decision: closed, maneuver: { courseOffsetDeg: closed.courseOffsetDeg, speedFactor: closed.speedFactor },
+      kinematics: { J: k.J, terms: k.terms, metrics: k.metrics },
+    });
+  }
   const perRule: LeakageVerdict[] = [];
   for (const probe of cfg.probes) {
     perRule.push(await runRuleProbe(complete, { ...cfg, probe, deltaThreshold: thr, closedBookContaminated }));
