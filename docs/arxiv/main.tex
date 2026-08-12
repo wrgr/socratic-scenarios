@@ -475,51 +475,75 @@ closed-book ($\Rightarrow$ \textsc{corpus-bound}); the leaking mock yields ablat
 $0.000$ (regret-ablation $0$), ignores the counterfactual, and answers closed-book from
 priors ($\Rightarrow$ \textsc{leaking}).
 
-\paragraph{Real-model discrimination.} We run the necessity test on current production LLMs over
-AWS Bedrock, contrasting a \emph{standard-COLREG} corpus (rules every model plausibly knows) with
-the \emph{corpus-only charted hazard} of Section~\ref{sec:construction} (a fact no model can know
-from pretraining), Table~\ref{tab:disc}. The verdict is a majority vote of three orthogonal
-signals: low necessity, counterfactual ignored, closed-book contaminated. Two findings. \emph{(1)
-Standard rules are redundant across the board.} Every frontier model reads textbook COLREG
-\textsc{leaking/redundant}---the corpus duplicates parametric knowledge, so it adds no value. This
-is itself an actionable audit verdict (do not ship these in the corpus), not an instrument failure,
-and it is exactly why the weight-level dose-response uses a corpus-only hazard, where models have
-dynamic range. \emph{(2) The hazard discriminates---along two axes.} Claude Haiku and Sonnet read
-it \textsc{corpus-bound} (they use the corpus to avoid a danger they cannot otherwise see);
-Llama-3.3-70B grounds regardless---its with-corpus regret stays at the full barrier
-($\regret_{\text{with}}\!\approx\!1207$), so the item is not redundant but \textsc{unusable}
-(present yet unexploited, the fix is the model not the corpus); Amazon Nova-Pro is erratic
-(\textsc{inconclusive}). The \emph{redundant}-vs-\emph{unusable} split of point~(iii) is thus
-observed on real models, not only on mocks. (A separate prompt-condition study on Gemini models
-gives the binding-fidelity control: under a strict corpus-binding prompt necessity grades
-monotonically with model capability, and removing the binding clause flips every model to
-\textsc{leaking}---confirming the strict prompt is a genuine positive control.)
+\paragraph{Real-model discrimination.} We run the necessity test on ten production models over AWS
+Bedrock---Claude Haiku/Sonnet/Opus~4.5, Llama-3.1-8B / 3.3-70B, Nova micro/lite/pro, and OpenAI
+\texttt{gpt-oss} 20B/120B---contrasting a \emph{standard-COLREG} corpus with the \emph{corpus-only
+charted hazard} of Section~\ref{sec:construction} (Table~\ref{tab:disc}). Three findings.
+
+\emph{(1) ``Redundant'' is a property of the (corpus, learner) pair, not the corpus.} The frontier
+models rely on little of the standard corpus (relied $0$--$1$ of $4$; it duplicates their parametric
+COLREG---\emph{redundant}, an actionable ``do not ship'' verdict), yet the open \texttt{gpt-oss}
+reasoning models genuinely \emph{rely} on the \emph{same} corpus (relied $2$/$4$ for 120B, $3$/$4$ for
+20B $\Rightarrow$ \textsc{contributing})---their COLREG priors are less complete and, being reasoning
+models, they can exploit the retrieved rule. The identical corpus is redundant for one learner and
+necessary for another, so necessity must be read per learner---the point of a per-item diagnosis.
+(Within \texttt{gpt-oss} the \emph{smaller} model relies \emph{more}: a larger knowledge gap at equal
+exploit-ability.)
+
+\emph{(2) Necessity has wide dynamic range on the hazard.} $\delta_{\regret}$ spans $0$ to
+$\sim\!2000$: Nova-micro ignores the corpus ($\delta_{\regret}{=}0$) while Opus reads it and clears at
+the full barrier ($\delta_{\regret}{=}1998$, $\regret_{\text{with}}{=}0.2$)---the cleanest
+\textsc{corpus-bound} reader.
+
+\emph{(3) The redundant-vs-unusable split shows on real models.} With-corpus regret separates
+\emph{usable} from \emph{unusable}: all clear once given the rule ($\regret_{\text{with}}\!\approx\!0.2$)
+\emph{except} Llama-3.3-70B ($457$), Nova-micro ($670$), and \texttt{gpt-oss}-120B ($431$), which ground
+\emph{even with the rule present}---the content has value but the model cannot act on it
+(\textsc{unusable}; fix the model, not the corpus). (A prompt-condition study on Gemini gives the
+binding-fidelity control: under a strict binding prompt necessity grades monotonically with capability;
+removing the clause flips every model to \textsc{leaking}.) The continuous $\delta_{\regret}$ and
+$\regret_{\text{with}}$ are more reliable than the categorical verdict, a noisier three-signal majority
+vote.
 
 \begin{table}[t]
 \centering
 \small
-\begin{tabular}{@{}llcl@{}}
+\begin{tabular}{@{}lcccl@{}}
 \toprule
-Model & Standard COLREG & Charted hazard (corpus-only) & Hazard mechanism \\
+& Standard & \multicolumn{2}{c}{Charted hazard (corpus-only)} & \\
+\cmidrule(lr){3-4}
+Model & relied/4 & $\delta_{\regret}$ & $\regret_{\text{with}}$ & reads hazard as \\
 \midrule
-mock (corpus-bound) & --- & \textsc{corpus-bound} & reads the corpus \\
-mock (leaking) & \textsc{redundant} & \textsc{leaking} & ignores the corpus \\
+\emph{mock corpus-bound} & --- & $1981$ & $0.2$ & \textsc{corpus-bound} \\
+\emph{mock leaking}      & $0$ & $0$    & ---   & \textsc{leaking} \\
 \midrule
-Claude Haiku 4.5 & \textsc{redundant} & \textsc{corpus-bound} & reads \& avoids \\
-Claude Sonnet & \textsc{redundant} & \textsc{corpus-bound} & reads \& avoids \\
-Llama-3.3-70B & \textsc{redundant} & \textsc{leaking/unusable} & grounds regardless ($\regret_{\text{with}}\!\approx\!1207$) \\
-Amazon Nova-Pro & mixed & \textsc{inconclusive} & erratic \\
+Claude Haiku 4.5   & $0$ & $669$          & $0.2$          & \textsc{inconcl.} \\
+Claude Sonnet 4.5  & $1$ & $669$          & $0.2$          & \textsc{leaking} \\
+Claude Opus 4.5    & $1$ & $\mathbf{1998}$& $0.2$          & $\textbf{\textsc{corpus-bound}}$ \\
+\addlinespace
+Llama-3.1-8B       & $0$ & $667$          & $0.1$          & \textsc{leaking} \\
+Llama-3.3-70B      & $0$ & $213$          & $\mathbf{457}$ & $\textbf{\textsc{unusable}}$ \\
+\addlinespace
+Nova-micro         & $1$ & $0$            & $\mathbf{670}$ & $\textbf{\textsc{unusable}}$ \\
+Nova-lite          & $0$ & $145$          & $0.2$          & \textsc{inconcl.} \\
+Nova-pro           & $1$ & $669$          & $0.2$          & \textsc{inconcl.} \\
+\addlinespace
+\texttt{gpt-oss}-120B & $2$          & $932$ & $\mathbf{431}$ & \textsc{inconcl.} (grounds) \\
+\texttt{gpt-oss}-20B  & $\mathbf{3}$ & \multicolumn{2}{c}{\emph{n/a}} & \emph{n/a} \\
 \bottomrule
 \end{tabular}
-\caption{Cross-model necessity on AWS Bedrock: a standard-COLREG corpus vs.\ a corpus-only charted
-hazard. Every frontier model reads the standard rules \textsc{redundant} (the corpus duplicates
-parametric knowledge---an actionable audit verdict). The hazard, a fact no model can know from
-pretraining, \emph{discriminates}: Claude models are \textsc{corpus-bound} (they use it),
-Llama-3.3-70B is \textsc{unusable} (grounds even with the rule present---with-corpus regret at the
-full barrier, so the item has value but the model cannot act on it), and Nova is
-\textsc{inconclusive}. The \emph{redundant} vs.\ \emph{unusable} split is thus observed on real
-models. Mock learners bound the scale. (Standard-corpus verdicts summarize the per-rule audit;
-Nova reads one of three standard rules relied-on, hence \emph{mixed}.)}
+\caption{Cross-model necessity on AWS Bedrock (ten models). \textbf{relied/4}: standard-COLREG rules
+the model relies on, of four (per-item audit); $0$--$1$ reads \emph{redundant}/false-sufficiency,
+$2$--$3$ reads \emph{contributing}. \textbf{Hazard}: $\delta_{\regret}$ is necessity (regret rise when
+the corpus-only rule is ablated); $\regret_{\text{with}}$ is regret \emph{with} the rule present
+($\approx\!0.2$ = clears, so \emph{usable}; $\gg\!0$ = grounds anyway = \textsc{unusable}). Standard
+COLREG is \emph{redundant} for the frontier models but \emph{relied-upon} by the open \texttt{gpt-oss}
+models---necessity is a property of the (corpus, learner) pair. On the hazard, necessity spans $0$
+(Nova-micro ignores it) to $1998$ (Opus, full-barrier \textsc{corpus-bound}), and $\regret_{\text{with}}$
+exposes three models that ground even with the rule. Mock learners bound the scale; \texttt{gpt-oss}-20B's
+hazard cell is \emph{n/a}---on the harder hazard scenario its analysis-channel reasoning did not
+terminate within the decode budget, a capability-linked effect absent in the larger 120B. The
+continuous $\delta_{\regret}$/$\regret_{\text{with}}$ are more reliable than the categorical verdict.}
 \label{tab:disc}
 \end{table}
 
@@ -532,6 +556,18 @@ Ablating each rule produces a large regret signal on its own encounters: on
 $\delta_{\!\regret}{=}1981$ (head-on) and ablating Rule~15 gives $1285$ (crossing); on
 \texttt{gemini-flash-lite-latest}, $658$ and $662$ respectively. The two rules are localized
 on disjoint scenario subsets, so the instrument reads reliance per rule.
+
+\paragraph{External validity on real charted dangers.} The corpus-bound reading is not an artifact of
+our synthetic hazard---it holds on \emph{real}, publicly-documented dangers. We closed-book-screen four
+candidates on Claude Opus (dropping any it already names) and run the survivors through the same hazard
+probe. Two obscure, official-gazetteer-verified rocks---Elwha Rock (Cayou Channel, Puget Sound) and
+Fullastern Rock (Adelaide Island, Antarctica)---read \textsc{corpus-bound} at the full barrier
+($\delta_{\regret}\!\approx\!1998$, $\regret_{\text{with}}{=}0.2$), exactly as the constructed hazard
+does. Whittle Rock (False Bay) was \emph{screened out}---Opus named it unprompted, so it is parametric,
+not corpus-only---which is the screen working. (A famous control, the Seven Stones reef, was \emph{not}
+named for its track---Opus recalled adjacent dangers instead---so it did not screen out as expected; we
+report this rather than force it.) The instrument thus reads corpus reliance on real charted facts, not
+only a hand-built one.
 
 \paragraph{What in the corpus changes the answer: presence vs.\ retrieval.}
 The leakage test asks a binary question---does the learner rely on the corpus at all. A
@@ -796,9 +832,9 @@ but a corpus adequate for one query distribution may be insufficient for another
 in-silico screen is built to de-risk. Method-side, we plan to scale the cross-model discrimination
 (more providers and rule sets; the harness already runs class$\times$size sweeps) and to broaden the
 weight-level battery from one discrete hazard to a \emph{suite} of corpus-only probes across effect
-sizes---a real charted danger for external validity, a medium-effect routing convention, and a
-conflicting fact about another vessel's intention---so necessity is validated as a distribution across
-probe kinds, not a single test.
+sizes---a medium-effect routing convention and a conflicting fact about another vessel's intention,
+building on the real charted-danger leg already shown (Section~\ref{sec:diagnosis})---so necessity is
+validated as a distribution across probe kinds, not a single test.
 
 \section{Conclusion}
 We have described an in-silico instrument that measures whether a learner \emph{needs} a corpus,
