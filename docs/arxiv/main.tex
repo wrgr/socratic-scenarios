@@ -455,9 +455,9 @@ rule, so the item is dead weight and should be pruned) versus \emph{unusable} (t
 the task \emph{even with} the item present---the content has value but this model cannot act on
 it, so the fix is the model/prompting/retrieval, not the corpus). The delta alone conflates
 these; the with-corpus outcome (regret in the control domain, accuracy in QA) separates them. On
-the real-model sweep this is not hypothetical: on the corpus-only hazard, Claude Haiku and Sonnet
-read \textsc{corpus-bound} while Llama-3.3-70B grounds regardless (with-corpus regret $\approx
-1207\approx$ full barrier)---\emph{unusable}, not redundant.
+the real-model sweep this is not hypothetical: on the corpus-only hazard, Claude Opus reads
+\textsc{corpus-bound} while Llama-3.3-70B grounds regardless (with-corpus regret
+$\approx\!457$)---\emph{unusable}, not redundant.
 
 \paragraph{Corpus sufficiency, and \emph{false sufficiency}.} Rolling the per-item verdicts to the
 corpus level yields a sufficiency judgement for a query set: \emph{contributing} (every item
@@ -468,7 +468,8 @@ The claim is explicitly scoped to the probed query set (sufficiency is always ``
 queries''); the false-sufficiency signal (necessity $\approx 0$) is precisely the measurable
 warning that a bounded-query sufficiency claim will not survive a shift.
 
-\paragraph{Offline recovery of known ground truth.} Against two reference mock learners
+\paragraph{Offline recovery of known ground truth.} Before the real-model sweep, we confirm the
+verdicts recover truth we control. Against two reference mock learners
 whose truth is known, the instrument recovers it exactly: the corpus-bound mock yields
 ablation-delta $1.000$ (regret-ablation $1981$), follows the counterfactual, and abstains
 closed-book ($\Rightarrow$ \textsc{corpus-bound}); the leaking mock yields ablation-delta
@@ -478,7 +479,7 @@ priors ($\Rightarrow$ \textsc{leaking}).
 \paragraph{Real-model discrimination.} We run the necessity test on ten production models over AWS
 Bedrock---Claude Haiku/Sonnet/Opus~4.5, Llama-3.1-8B / 3.3-70B, Nova micro/lite/pro, and OpenAI
 \texttt{gpt-oss} 20B/120B---contrasting a \emph{standard-COLREG} corpus with the \emph{corpus-only
-charted hazard} of Section~\ref{sec:construction} (Table~\ref{tab:disc}). Three findings.
+charted hazard} of Section~\ref{sec:construction} (Table~\ref{tab:disc}, Figure~\ref{fig:plane}). Three findings.
 
 \emph{(1) ``Redundant'' is a property of the (corpus, learner) pair, not the corpus.} The frontier
 models rely on little of the standard corpus (relied $0$--$1$ of $4$; it duplicates their parametric
@@ -495,8 +496,8 @@ $\sim\!2000$: Nova-micro ignores the corpus ($\delta_{\regret}{=}0$) while Opus 
 the full barrier ($\delta_{\regret}{=}1998$, $\regret_{\text{with}}{=}0.2$)---the cleanest
 \textsc{corpus-bound} reader.
 
-\emph{(3) The redundant-vs-unusable split shows on real models.} With-corpus regret separates
-\emph{usable} from \emph{unusable}: all clear once given the rule ($\regret_{\text{with}}\!\approx\!0.2$)
+\emph{(3) The redundant-vs-unusable split shows on real models} (Figure~\ref{fig:plane}). With-corpus
+regret separates \emph{usable} from \emph{unusable}: all clear once given the rule ($\regret_{\text{with}}\!\approx\!0.2$)
 \emph{except} Llama-3.3-70B ($457$), Nova-micro ($670$), and both \texttt{gpt-oss} models ($431$ for
 120B, $856$ for 20B), which ground \emph{even with the rule present}---the content has value but the
 model cannot act on it (\textsc{unusable}; fix the model, not the corpus). \texttt{gpt-oss}-20B is the
@@ -549,6 +550,43 @@ capability-linked reasoning-length effect. The continuous $\delta_{\regret}$/$\r
 more reliable than the categorical verdict.}
 \label{tab:disc}
 \end{table}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=\columnwidth, height=5.4cm,
+  xlabel={necessity $\delta_{\regret}$ (rule ablated)},
+  ylabel={with-corpus regret $\regret_{\text{with}}$},
+  xmin=-90, xmax=2260, ymin=-70, ymax=1040,
+  xtick={0,500,1000,1500,2000}, ytick={0,200,400,600,800},
+  tick label style={font=\scriptsize}, label style={font=\scriptsize},
+  clip=false,
+]
+\addplot[only marks, mark=*, mark size=1.6pt, figblue]
+  coordinates {(1998,0.2) (668,0.2) (145,0.2)};
+\addplot[only marks, mark=*, mark size=1.6pt, figorange]
+  coordinates {(0,670) (213,457) (485,856) (932,431)};
+\node[font=\scriptsize, anchor=south] at (axis cs:1998,10) {Opus};
+\node[font=\scriptsize, anchor=south] at (axis cs:660,10) {Haiku/Sonnet/Nova-pro/8B};
+\node[font=\scriptsize, anchor=south] at (axis cs:145,10) {Nova-lite};
+\node[font=\scriptsize, anchor=south] at (axis cs:0,690) {Nova-micro};
+\node[font=\scriptsize, anchor=west]  at (axis cs:235,457) {Llama-70B};
+\node[font=\scriptsize, anchor=south] at (axis cs:485,872) {gpt-oss-20B};
+\node[font=\scriptsize, anchor=west]  at (axis cs:955,431) {gpt-oss-120B};
+\node[figblue, font=\scriptsize\itshape, anchor=north east] at (axis cs:2240,150) {corpus-bound};
+\node[figorange, font=\scriptsize\itshape, anchor=north] at (axis cs:1050,1020) {unusable: grounds even with the rule};
+\end{axis}
+\end{tikzpicture}
+\caption{The necessity--usability plane for the ten models of Table~\ref{tab:disc} on the corpus-only
+hazard. \emph{Horizontal:} necessity $\delta_{\regret}$ (how much ablating the rule raises regret).
+\emph{Vertical:} with-corpus regret---$\approx\!0$ (blue, on the axis) means the model \emph{clears}
+once given the rule (\emph{usable}); a large value (orange) means it \emph{grounds even with the rule
+present} (\emph{unusable}). The two axes are orthogonal: Claude Opus is the clean \textsc{corpus-bound}
+reader (necessity $1998$, clears), while both \texttt{gpt-oss} models and Nova-micro / Llama-70B ground
+regardless. Four usable models coincide near $\delta_{\regret}\!\approx\!668$.}
+\label{fig:plane}
+\end{figure}
 
 \paragraph{Per-rule, not just per-corpus.} To show the diagnosis attributes reliance to a
 \emph{specific} rule rather than to corpus presence in general, we add a second, independent
@@ -614,17 +652,6 @@ their difference the retrieval gap. Harness: \texttt{experiments/retrieval-decom
 \label{tab:ragdecomp}
 \end{table}
 
-\section{Proxy learners as a pre-trial screen (application)}
-\label{sec:proxies}
-We exercise the instrument with \emph{two complementary} controlled-competence proxy
-classes: (a) a parametric competence-vector learner, and (b) a knowledge-suppressed /
-unlearned LLM learner. Because both are scored on the \emph{same} $\regret$ instrument, a
-method that fails to move the instrument in the expected direction is a \emph{no-go} before
-any human is recruited. This differs from prior proxy-learner work
-\citep{apartsin2026,ps2_2026,song2026unlearn,llmjudgeaudit2026,educlaw2026} in scoring on an
-objective control-task outcome rather than dialogue behavior, profile alignment, or
-LLM-judge helpfulness.
-
 \section{Validating necessity at the weight level}
 \label{sec:weightlevel}
 The necessity/leakage test infers a fact about a model's \emph{weights} from a change in the
@@ -646,8 +673,9 @@ $\alpha$ (one adapter, evaluated at $\alpha\in[0,1]$) and training checkpoints--
 agreement rules out a gradient-method artifact. We run this in two domains with \emph{independent
 objectives}, the second of which uses no simulator at all.
 
-\paragraph{Domain 1 --- control-regret (a hidden hazard).} Standard COLREG rules have no dynamic
-range for this test---every current model already knows them (Section~\ref{sec:diagnosis})---so we
+\paragraph{Domain 1 --- control-regret (a hidden hazard).} Standard COLREG rules have little dynamic
+range for this test---every current \emph{frontier} model already knows them (the open \texttt{gpt-oss}
+models are the exception, Section~\ref{sec:diagnosis})---so we
 use a \emph{corpus-only charted hazard}: a danger scored by the objective barrier but not shown in
 the prompt, knowable only from the corpus. Teaching it into a Qwen2.5-3B model collapses necessity
 from a full-barrier swing ($\regret$-necessity $\approx 667$, naive) to $\approx 0.2$ (taught), and
@@ -745,8 +773,8 @@ unlearning suppresses the \emph{words} but not the \emph{policy} (the instrument
 so exposes the illusion), while aggressive unlearning moves the instrument---in the wrong
 direction. In both, the probe metrics track words and the instrument tracks the decision.
 
-\paragraph{Why the $2\times2$ is flat.} Rule~14 is already \textsc{leaking} at baseline---every
-pretrained model knows head-on\,$\to$\,starboard (Section~\ref{sec:diagnosis})---so ablating it
+\paragraph{Why the $2\times2$ is flat.} Rule~14 is already \textsc{leaking} at baseline---every model
+in Table~\ref{tab:disc} knows head-on\,$\to$\,starboard (Section~\ref{sec:diagnosis})---so ablating it
 changes nothing (ablation-delta $0$), leaving no dynamic range for the corpus-bound cell to travel.
 The \textsc{leaking} verdicts are therefore \emph{correct}; this is exactly why the primary
 weight-level validation is the construction dose-response (Section~\ref{sec:construction}), where a
@@ -785,6 +813,18 @@ removed; the decision holds throughout. Harness: \texttt{experiments/unlearning}
 \label{tab:unlearn}
 \end{table}
 
+\section{Proxy learners as a pre-trial screen (application)}
+\label{sec:proxies}
+With the measure validated, its intended use is a pre-trial screen. We exercise the instrument with
+\emph{two complementary} controlled-competence proxy classes: (a) a parametric competence-vector
+learner, and (b) a knowledge-suppressed / unlearned LLM learner (the arm of
+Section~\ref{sec:unlearning}). Because both are scored on the \emph{same} $\regret$ instrument, a
+method that fails to move the instrument in the expected direction is a \emph{no-go} before any human
+is recruited---exactly what the \emph{says\,$\neq$\,does} dissociation flags for naive unlearning. This
+differs from prior proxy-learner work
+\citep{apartsin2026,ps2_2026,song2026unlearn,llmjudgeaudit2026,educlaw2026} in scoring on an objective
+control-task outcome rather than dialogue behavior, profile alignment, or LLM-judge helpfulness.
+
 \section{Limitations and scope}
 \label{sec:limits}
 \textbf{Mechanism, not external validity.} Every result here is simulation-based mechanism
@@ -801,12 +841,12 @@ choices (ship domain, objective); we show the ranking survives a $\pm40\%$ rewei
 ($\tau=1.00$, \S\ref{sec:instrument}), but robustness beyond that range, and to the
 elliptical-domain \emph{form} itself, is untested. \textbf{Small evidence base --- illustrative, not a benchmark.}
 The numbers here demonstrate that the \emph{method} behaves as designed; they are not a
-validity claim at scale. The discrimination result (Table~\ref{tab:disc}) covers six models
-within \emph{one} provider family, and reports the head-on rule; the released harness now
-exercises \emph{three} rules across \emph{two} metric axes---turn direction (Rule~14 head-on,
-Rule~15 crossing) and, on a restricted-visibility subset, speed (Rule~6/19 safe speed, scored
-through the decision's speed rather than its heading)---and the unlearning arm turns on a
-single rule and model family. A persuasive claim still needs cross-provider models and many
+validity claim at scale. The discrimination result (Table~\ref{tab:disc}) covers ten models across
+\emph{four} provider families (Anthropic, Meta, Amazon, OpenAI), and reports the head-on rule; the
+released harness now exercises \emph{three} rules across \emph{two} metric axes---turn direction
+(Rule~14 head-on, Rule~15 crossing) and, on a restricted-visibility subset, speed (Rule~6/19 safe
+speed, scored through the decision's speed rather than its heading)---and the unlearning arm turns on a
+single rule and model family. A persuasive claim still needs more models per family and many
 more rules/encounters---which is why we release the harness (\texttt{experiment.sh}, and a
 Bedrock provider$\times$size sweep) built to run exactly that, and report these as worked
 examples rather than a leaderboard. \textbf{Single-rule decomposability may not generalize.}
