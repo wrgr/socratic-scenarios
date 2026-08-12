@@ -182,13 +182,19 @@ def main():
     outdir = os.path.join(REPO, 'results', 'model-scan'); os.makedirs(outdir, exist_ok=True)
     run_log = []   # traceability: exact command + UTC per call (secrets masked)
 
+    auditdir = os.path.join(outdir, 'audit'); os.makedirs(auditdir, exist_ok=True)
+
     def run_one(label, provider, model, probes):
         env, shown = build_env(provider, model)
         env['PROBES'] = probes
+        # Full audit trail: one JSONL row per model call (prompt, answer, decision, maneuver, kinematics).
+        audit = os.path.join(auditdir, f'{label}__{probes}.jsonl')
+        env['AUDIT_LOG'] = audit
+        env['TEMP'] = os.environ.get('TEMP', '0')
         ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        cmd = f"{shown} PROBES={probes} npm run --silent colreg:leakage"
+        cmd = f"{shown} PROBES={probes} AUDIT_LOG={os.path.relpath(audit, REPO)} npm run --silent colreg:leakage"
         print(f"RUN {ts}  [{label:14}] {cmd}", flush=True)
-        run_log.append({'utc': ts, 'label': label, 'provider': provider, 'model': model, 'probes': probes, 'cmd': cmd})
+        run_log.append({'utc': ts, 'label': label, 'provider': provider, 'model': model, 'probes': probes, 'cmd': cmd, 'audit_log': os.path.relpath(audit, REPO)})
         return subprocess.run(['npm', 'run', '--silent', 'colreg:leakage'], cwd=REPO, env=env, capture_output=True, text=True)
 
     rows = []

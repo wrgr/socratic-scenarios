@@ -15,6 +15,8 @@ import type { AJPNode } from '../../types/ajp';
 import type { SimScenario, Maneuver, Vessel } from './types';
 import { M_TO_NM, MS_TO_KNOTS } from './types';
 import { wrapPi } from './kinematics';
+import { evaluateManeuver } from './benchmark';
+import type { ObjectiveResult } from './objective';
 
 const DEG = 180 / Math.PI;
 
@@ -269,11 +271,26 @@ export function isSafetyBlock(msg: string): boolean {
 
 // ─── Live LLM policy ──────────────────────────────────────────────
 
+/** One fully-auditable model call: the prompt asked, the raw answer, the parsed decision, the
+ *  maneuver it produced, and the resulting kinematics/objective — everything needed to trace a
+ *  reported number back to what the model actually said and did. */
+export interface ManeuverCallAudit {
+  scenarioId: string;
+  strict: boolean;
+  prompt: string;
+  completion: string;
+  decision: LlmDecision;
+  maneuver: { courseOffsetDeg: number; speedFactor: number };
+  kinematics: { J: number; terms: ObjectiveResult['terms']; metrics: ObjectiveResult['metrics'] };
+}
+
 export interface LlmLearnerOptions extends CorpusOptions {
   complete: Completer;
   corpusNodes: AJPNode[];
   /** false = the `unconstrained` prompt condition (parametric fallback allowed). */
   strict?: boolean;
+  /** Optional audit hook: fires once per model call with the answer + kinematics (see AUDIT_LOG). */
+  onCall?: (row: ManeuverCallAudit) => void;
 }
 
 /**
@@ -284,7 +301,18 @@ export interface LlmLearnerOptions extends CorpusOptions {
 export function createLlmManeuverFn(opts: LlmLearnerOptions) {
   const corpus = renderCorpus(opts.corpusNodes, opts);
   return async (scenario: SimScenario): Promise<{ maneuver: Maneuver; decision: LlmDecision }> => {
-    const decision = parseDecision(await opts.complete(buildPrompt(scenario, corpus, opts.strict ?? true)));
-    return { maneuver: decisionToManeuver(decision), decision };
+    const prompt = buildPrompt(scenario, corpus, opts.strict ?? true);
+    const completion = await opts.complete(prompt);
+    const decision = parseDecision(completion);
+    const maneuver = decisionToManeuver(decision);
+    if (opts.onCall) {
+      const k = evaluateManeuver(scenario, maneuver);
+      opts.onCall({
+        scenarioId: scenario.id, strict: opts.strict ?? true, prompt, completion, decision,
+        maneuver: { courseOffsetDeg: decision.courseOffsetDeg, speedFactor: decision.speedFactor },
+        kinematics: { J: k.J, terms: k.terms, metrics: k.metrics },
+      });
+    }
+    return { maneuver, decision };
   };
 }
