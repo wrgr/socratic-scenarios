@@ -86,11 +86,15 @@ function pointRow(label: string, a: Assessment) {
 async function main() {
   const modelList = (process.env.MODELS ?? process.env.BEDROCK_MODEL ?? '').split(',').map((s) => s.trim()).filter(Boolean);
   const auditPath = process.env.AUDIT_LOG;
+  const debug = process.env.DEBUG === '1';
   if (auditPath) { mkdirSync(dirname(auditPath), { recursive: true }); writeFileSync(auditPath, ''); }
+  // AUDIT_LOG writes one JSONL row per call; DEBUG=1 also prints each decision inline.
   const auditFor = (model: string, phase: string, temp: number): AuditFor =>
-    auditPath
-      ? (probe: string) => (row: LeakageAuditRow) =>
-          appendFileSync(auditPath, JSON.stringify({ utc: new Date().toISOString(), model, phase, temp, probe, ...row }) + '\n')
+    auditPath || debug
+      ? (probe: string) => (row: LeakageAuditRow) => {
+          if (auditPath) appendFileSync(auditPath, JSON.stringify({ utc: new Date().toISOString(), model, phase, temp, probe, ...row }) + '\n');
+          if (debug) console.log(`\n    [${model} ${probe} ${row.condition}] deg=${row.decision.courseOffsetDeg}${row.decision.abstained ? ' ABSTAIN' : ''}`);
+        }
       : () => undefined;
 
   if (modelList.length === 0) {
@@ -102,6 +106,15 @@ async function main() {
     return;
   }
 
+  const K = Number(process.env.SAMPLES ?? 1);
+  const T = Number(process.env.TEMP ?? 0.7);
+  const ensembleOn = K > 1 && T > 0;
+  const rpm = Number(process.env.RPM ?? 30);
+  const callsPerModel = (1 + HAZARD_SUITE.length) * 4 * (1 + (ensembleOn ? K : 0)); // 9 probes × 4 conditions
+  const totalCalls = modelList.length * callsPerModel;
+  const t0 = Date.now();
+  console.log(`plan: ${modelList.length} models × ${callsPerModel} calls = ${totalCalls} at ~${rpm}/min ≈ ${Math.ceil(totalCalls / Math.max(1, rpm))} min` + (debug ? '  (DEBUG: printing decisions)' : '') + '\n');
+
   // ── POINT ESTIMATE (temp 0, deterministic) ──
   console.log('POINT ESTIMATE (temp 0, deterministic)\n');
   pointHeader();
@@ -111,9 +124,7 @@ async function main() {
   }
 
   // ── ENSEMBLE (temp T, K samples) ──
-  const K = Number(process.env.SAMPLES ?? 1);
-  const T = Number(process.env.TEMP ?? 0.7);
-  if (K > 1 && T > 0) {
+  if (ensembleOn) {
     console.log(`\nENSEMBLE (temp ${T}, K=${K} samples/model — mean ± sd over the hazard suite)\n`);
     console.log('model                                         standard(mode)   relied mean±sd     unusable mean±sd');
     for (const id of modelList) {
@@ -135,7 +146,8 @@ async function main() {
       `corpus-bound is usually\n  the STRICT-mode confound (it abstains when the rule is ablated), visible in the ` +
       `audit log's ablated arm. The corpus-only\n  hazard suite is the discriminator: corpus-bound (reads it) vs unusable (grounds with it present).`,
   );
-  if (auditPath) console.log(`\n  audit log: ${auditPath} (rows tagged model / phase point|ens0..${K - 1} / probe standard|hazard:<id> / condition)`);
+  console.log(`\n  done in ${((Date.now() - t0) / 60000).toFixed(1)} min (${totalCalls} calls).`);
+  if (auditPath) console.log(`  audit log: ${auditPath} (rows tagged model / phase point|ens0..${K - 1} / probe standard|hazard:<id> / condition)`);
 }
 
 main();
