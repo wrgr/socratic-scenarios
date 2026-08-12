@@ -41,12 +41,14 @@ MODELS = [
     ('claude-small',  'bedrock', 'us.anthropic.claude-haiku-4-5-20251001-v1:0'),
     ('claude-medium', 'bedrock', 'us.anthropic.claude-sonnet-4-5-20250929-v1:0'),
     ('claude-large',  'bedrock', 'us.anthropic.claude-opus-4-5-20251101-v1:0'),
-    # ── Meta Llama on Bedrock:  8B < 70B < Llama-4 Maverick ──
-    # (llama3-2-90b is a Vision profile that rejects plain-text Converse; llama3-1-405b not offered.
-    #  Llama-4 Maverick is the available large text model.)
+    # ── Meta Llama on Bedrock:  8B < 70B  (two rungs only — see note) ──
+    # No clean "large" text rung: llama3-1-405b isn't offered, llama3-2-90b is a Vision profile that
+    # rejects plain-text Converse, and Llama-4 Maverick/Scout are 17B MoE (not "larger than 70B" in a
+    # size-ladder sense). So Llama is presented as small/medium. Uncomment a large below if desired.
     ('llama-small',   'bedrock', 'us.meta.llama3-1-8b-instruct-v1:0'),
     ('llama-medium',  'bedrock', 'us.meta.llama3-3-70b-instruct-v1:0'),
-    ('llama-large',   'bedrock', 'us.meta.llama4-maverick-17b-instruct-v1:0'),
+    # ('llama-mav',   'bedrock', 'us.meta.llama4-maverick-17b-instruct-v1:0'),  # 17B MoE, off-ladder
+    # ('llama-scout', 'bedrock', 'us.meta.llama4-scout-17b-instruct-v1:0'),     # 17B MoE, off-ladder
     # ── Amazon Nova on Bedrock:  micro < lite < pro ──
     ('nova-small',    'bedrock', 'us.amazon.nova-micro-v1:0'),
     ('nova-medium',   'bedrock', 'us.amazon.nova-lite-v1:0'),
