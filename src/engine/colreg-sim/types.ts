@@ -82,6 +82,17 @@ export interface SimScenario {
    * its whole range, not a sliver. Position is SI metres in the ownship's local frame.
    */
   hazards?: { x: number; y: number; radiusM: number; label: string }[];
+  /**
+   * Optional CORPUS-supplied local rule that *overrides* the default give-way direction for this
+   * reach — the reason-vs-implement probe (Exp B2). COLREG Rules 2 and 9 subordinate the default
+   * steering rules to local conditions and good seamanship, so where the corpus supplies a local
+   * directive (e.g. "the navigable deep water is to port here"), THAT is the governing side for the
+   * compliance term, not the textbook starboard. A rigid rule *implementer* ignores it (applies
+   * Rule 14 starboard regardless); a *reasoner* integrates it. Absent ⇒ default COLREG governs, so
+   * every existing scenario is unchanged. Like a hazard, it is corpus-only (never rendered to the
+   * model) and ablatable — necessity = does removing it change the decision.
+   */
+  localRule?: { safeSide: 'port' | 'starboard'; note?: string };
   /** Simulation horizon, seconds. */
   horizonS: number;
   /** Integration timestep, seconds. */

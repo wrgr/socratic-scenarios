@@ -194,24 +194,30 @@ export function scoreCompliance(scenario: SimScenario, traj: Trajectory): Compli
     return { classification: cls, primaryTargetIndex: idx, checks, penalty: wSum > 0 ? wFail / wSum : 0 };
   }
 
-  // Direction (Rules 14/15/8) — starboard for head-on & crossing give-way.
+  // Direction (Rules 14/15/8) — starboard by default, but a corpus-supplied local rule (Rules 2/9,
+  // Exp B2) can make PORT the governing side for this reach. Absent ⇒ starboard, unchanged.
+  const govSide = scenario.localRule?.safeSide ?? 'starboard';
+  const turnedGoverning = govSide === 'starboard' ? turnedStarboard && !turnedPort : turnedPort && !turnedStarboard;
+  const turnedAgainst = govSide === 'starboard' ? turnedPort : turnedStarboard;
   checks.push({
     id: 'direction',
-    label: 'Alter to starboard',
+    label: `Alter to ${govSide}`,
     applicable: isGiveWayStarboard,
-    pass: turnedStarboard && !turnedPort,
-    detail: turnedStarboard
-      ? 'Altered to starboard, as required.'
-      : turnedPort
-        ? 'Altered to PORT — contrary to Rules 14/15.'
+    pass: turnedGoverning,
+    detail: turnedGoverning
+      ? `Altered to ${govSide}, as required${scenario.localRule ? ' by the local rule' : ''}.`
+      : turnedAgainst
+        ? `Altered to ${govSide === 'starboard' ? 'PORT' : 'STARBOARD'} — contrary to the governing ${scenario.localRule ? 'local rule' : 'Rules 14/15'}.`
         : 'No clear alteration made.',
     weight: 0.35,
   });
 
-  // No turn to port for a crossing vessel on starboard (Rule 15) / stand-on (17c).
+  // No turn to port for a crossing vessel on starboard (Rule 15) / stand-on (17c) — suppressed when a
+  // local rule makes port the governing side (the corpus has authorized it for this reach).
   const portProhibited =
-    cls.encounter === 'crossing-give-way' ||
-    (cls.role === 'stand-on' && !cls.targetOnStarboard && acted);
+    govSide === 'starboard' &&
+    (cls.encounter === 'crossing-give-way' ||
+      (cls.role === 'stand-on' && !cls.targetOnStarboard && acted));
   checks.push({
     id: 'no-port-turn',
     label: 'No turn to port toward danger',
