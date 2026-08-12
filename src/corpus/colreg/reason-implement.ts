@@ -22,6 +22,7 @@
  * prior supplies them — the necessity is uncontaminated.
  */
 import type { SimScenario, Maneuver, Policy } from '../../engine/colreg-sim';
+import type { AJPNode } from '../../types/ajp';
 import { ownship, collisionTarget } from './benchmark-geometry';
 
 const DEG = Math.PI / 180;
@@ -30,6 +31,8 @@ export interface ReasonCase {
   id: string;
   /** The corpus local rule's governing side (deep water). Shoal sits on the opposite side. */
   safeSide: 'port' | 'starboard';
+  /** The (invented) reach the rule is keyed to — the query cue the model sees. */
+  location: string;
   /** The fictional local condition text (what the corpus rule would say). */
   note: string;
 }
@@ -49,6 +52,7 @@ export function conflictScenario(c: ReasonCase): SimScenario {
     label: `Channel head-on — deep water to ${c.safeSide}`,
     description: '',
     difficulty: 'advanced',
+    location: c.location,
     ownship: ownship(),
     targets: [collisionTarget('A', 0, 6000, 12)],
     visibility: 'clear',
@@ -57,6 +61,25 @@ export function conflictScenario(c: ReasonCase): SimScenario {
     horizonS: 1200,
     dt: 4,
     intendedHeading: 0,
+  };
+}
+
+/**
+ * The CORPUS node that renders the local rule to a live model (the objective's `localRule` field is
+ * scoring-only and never shown). Ablating this node — the model's ACCESS to the rule — is the live
+ * necessity probe: a reasoner reads it and alters to the deep side; a reflex implementer ignores it,
+ * applies Rule 14 starboard, and grounds where the rule overrides. Fixed id so `hazardProbe` ablates it.
+ */
+export function localRuleNode(c: ReasonCase, ruleId = 'RULE-LOCAL-01'): AJPNode {
+  return {
+    id: ruleId,
+    type: 'TheoryReference',
+    content:
+      `LOCAL RULE — in ${c.location}, ${c.note}. The navigable deep water is to ${c.safeSide}; ` +
+      `when meeting a vessel head-on here, alter course to ${c.safeSide} to keep clear of the shoal ` +
+      `before resuming track (a local condition governing over the ordinary starboard hand).`,
+    confidence: 'High',
+    source: 'Notice to mariners (corpus-only; the shoal is not shown in the situation).',
   };
 }
 
@@ -90,10 +113,10 @@ export const reasonerPolicy: Policy = (s) => alter(s.localRule?.safeSide ?? 'sta
 
 /** Six conflict reaches, safe side alternating port/starboard so a fixed reflex can't pass. */
 export const REASON_SUITE: ReasonCase[] = [
-  { id: 'RI-P1', safeSide: 'port', note: 'the flood sets hard onto the eastern bank; the deep water lies to port' },
-  { id: 'RI-S1', safeSide: 'starboard', note: 'a silted patch fouls the port hand; keep to the starboard side' },
-  { id: 'RI-P2', safeSide: 'port', note: 'a training wall encroaches from starboard; the fairway is to port' },
-  { id: 'RI-S2', safeSide: 'starboard', note: 'a wreck lies off the port hand of the reach; hold starboard' },
-  { id: 'RI-P3', safeSide: 'port', note: 'a spit has silted from the starboard shore; deep water to port' },
-  { id: 'RI-S3', safeSide: 'starboard', note: 'an exclusion shoal sits to port; keep to the starboard hand' },
+  { id: 'RI-P1', safeSide: 'port', location: 'the Vhalki Narrows (northbound)', note: 'the flood sets hard onto the eastern bank' },
+  { id: 'RI-S1', safeSide: 'starboard', location: 'the Dornmouth Approach (inbound)', note: 'a silted patch fouls the port hand' },
+  { id: 'RI-P2', safeSide: 'port', location: 'the Skerrig Passage (westbound)', note: 'a training wall encroaches from starboard' },
+  { id: 'RI-S2', safeSide: 'starboard', location: 'Pellan Sound (down-channel)', note: 'a wreck lies off the port hand of the reach' },
+  { id: 'RI-P3', safeSide: 'port', location: 'the Wray Cut (southbound)', note: 'a spit has silted from the starboard shore' },
+  { id: 'RI-S3', safeSide: 'starboard', location: 'Grennock Reach (mid-channel)', note: 'an exclusion shoal sits to port' },
 ];

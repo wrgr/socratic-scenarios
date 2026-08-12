@@ -31,7 +31,7 @@ describe('reason-vs-implement — implementer and reasoner diverge only on the o
   });
 
   it('CONFLICT, local rule OVERRIDES (deep water to port): implementer grounds, reasoner clears', () => {
-    const s = conflictScenario({ id: 'P', safeSide: 'port', note: 'deep water to port' });
+    const s = conflictScenario({ id: 'P', safeSide: 'port', location: 'a test reach', note: 'deep water to port' });
     const imp = regret(s, implementerPolicy);
     const rea = regret(s, reasonerPolicy);
     expect(imp.grounds).toBe(true); // rigid Rule-14 starboard stands into the shoal
@@ -41,7 +41,7 @@ describe('reason-vs-implement — implementer and reasoner diverge only on the o
   });
 
   it('CONFLICT, local rule REDUNDANT (deep water to starboard): both clear (rule agrees with Rule 14)', () => {
-    const s = conflictScenario({ id: 'S', safeSide: 'starboard', note: 'keep starboard' });
+    const s = conflictScenario({ id: 'S', safeSide: 'starboard', location: 'a test reach', note: 'keep starboard' });
     const imp = regret(s, implementerPolicy);
     const rea = regret(s, reasonerPolicy);
     expect(imp.grounds).toBe(false);
@@ -68,7 +68,7 @@ describe('reason-vs-implement — the local rule redefines the compliant directi
     complianceOf(s, m).checks.find((c) => c.id === 'direction');
 
   it('a port turn is COMPLIANT when the local rule makes port the governing side', () => {
-    const s = conflictScenario({ id: 'P', safeSide: 'port', note: 'deep water to port' });
+    const s = conflictScenario({ id: 'P', safeSide: 'port', location: 'a test reach', note: 'deep water to port' });
     expect(dirCheck(s, port())?.pass).toBe(true);
   });
 

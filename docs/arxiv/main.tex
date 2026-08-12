@@ -151,6 +151,50 @@ audit} are the open ground (Section~\ref{sec:related}). We are explicit througho
 evidence is simulation-based: it tests whether the machinery behaves as designed, not whether
 humans learn more.
 
+\paragraph{Organization: four case studies.} The empirical work is a register of experiments grouped
+into four case studies (Table~\ref{tab:casemap}), which we reference throughout as CS$X.Y$.
+\textbf{CS1} builds and stress-tests the necessity instrument on the COLREG core (the corpus
+diagnosis and sufficiency products, Section~\ref{sec:diagnosis}). \textbf{CS2} climbs a
+\emph{learner ladder}---blind, naive, implementer, reasoner---to show the same instrument reads not
+just \emph{existence} (did you avoid at all) but \emph{quality} (did you avoid well) and
+\emph{reasoning depth} (do you generalize a local rule), Section~\ref{sec:depth}. \textbf{CS3}
+enriches for reach and generality (a simulator-free second domain, a discrete procedural domain, real
+charted hazards). \textbf{CS4} validates the instrument itself (construct validity, reweighting
+sensitivity, the unlearning null, an offline reproduce runner). The headline necessity claim is
+validated by construction in two domains with independent objectives: CS1.7 (control-regret, the
+large-effect known-groups endpoints) and CS3.2 (simulator-free fact-QA, the graded monotone curve).
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}llp{0.44\linewidth}@{}}
+\toprule
+Case study & Where & Key experiments (CS$X.Y$) \\
+\midrule
+\textbf{CS1} necessity instrument (COLREG core) & \S\ref{sec:diagnosis} &
+1.1 reference-learner recovery; 1.2/1.3 cross-model leakage \& hazard discrimination;
+1.5 redundant-vs-unusable; 1.6 corpus-value audit/localization; 1.7 hazard dose-response
+(\S\ref{sec:construction}); 1.8 sufficiency \& false-sufficiency \\
+\addlinespace
+\textbf{CS2} blind$\to$expert ladder (quality$\to$reasoning) & \S\ref{sec:depth} &
+2.1 decision-quality band (the middle band); 2.2 reason-vs-implement (generalization axis) \\
+\addlinespace
+\textbf{CS3} enrichments (reach \& generality) & \S\ref{sec:diagnosis},\,\ref{sec:construction} &
+3.1 real-hazard screen; 3.2 fact-QA necessity (no simulator); 3.3 discrete procedural domain
+(\S\ref{sec:instrument}); 3.4 probe-suite breadth \\
+\addlinespace
+\textbf{CS4} validations (does the instrument hold up?) & \S\ref{sec:instrument},\,\ref{sec:unlearning} &
+4.1 construct validity; 4.2 reweighting sensitivity ($\tau{=}1.00$); 4.3 unlearning null
+(says\,$\neq$\,does); 4.4 offline reproduce runner \\
+\bottomrule
+\end{tabular}
+\caption{The experiment register, grouped into four case studies and referenced as CS$X.Y$
+throughout. The sections cut across the case studies (the instrument's forward validation, CS4/CS3.3,
+is Section~\ref{sec:instrument}; its backward necessity use, CS1, is Section~\ref{sec:diagnosis}; the
+weight-level calibration, CS1.7/CS3.2/CS4.3, is Section~\ref{sec:weightlevel}); this map is the
+reading guide.}
+\label{tab:casemap}
+\end{table}
+
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[font=\small,
@@ -207,14 +251,17 @@ but \emph{necessity}---calibrated by manipulating the parametric baseline direct
 construction and unlearning, Section~\ref{sec:weightlevel}), so a fact the model already knew is
 not mistaken for one it relied on. No context-attribution method has that weight-level ground
 truth. The gap is structural, not incidental: a faithfulness or context-relevance score is a
-function of the \emph{(question, retrieved context, answer)} triple, which does not encode
-necessity. For a model that already knows a fact and one that does not, \emph{both} answering
-correctly \emph{with} the corpus present, that triple---and therefore the score---is identical, and
-reads \emph{high} in both (the correct answer is entailed by the context whether or not the model
-used it). Such a metric thus cannot separate a load-bearing corpus from a redundant one, and
-reports the redundant case as sufficient---the false-sufficiency failure our measure is built to
-catch (we confirm the invariance empirically in the released harness, but it follows from the
-metric's definition). \textbf{ContextCite} \citep{contextcite2024} is the closest relative: because
+function of the \emph{(question, retrieved context, answer)} triple, computed with the corpus
+\emph{present}. Necessity is a \emph{contrast}---$\mathrm{acc}(\text{with corpus})-\mathrm{acc}(\text{without
+corpus})$---and RAGAS never runs the without-corpus condition, so it is \emph{structurally blind}
+to the quantity, regardless of how the answers are phrased. A model that already knows a fact and
+one that does not \emph{both} answer correctly with the corpus present and both score \emph{high}
+(the correct answer is entailed by the context whether or not the model used it); a metric that
+only ever sees the with-corpus arm therefore cannot separate a load-bearing corpus from a
+redundant one, and reports the redundant case as sufficient---the false-sufficiency failure our
+measure is built to catch. (Our released harness computes both the RAGAS scores and our necessity
+contrast side by side; the point is definitional---the without-corpus arm RAGAS omits is exactly
+what necessity is read from.) \textbf{ContextCite} \citep{contextcite2024} is the closest relative: because
 it ablates context and measures the change in the response's log-probability against the model's own
 baseline, it \emph{partially} tracks necessity---but it requires open weights and per-token
 log-probabilities (so it cannot run on the closed API models our necessity test does), attributes
@@ -476,7 +523,7 @@ closed-book ($\Rightarrow$ \textsc{corpus-bound}); the leaking mock yields ablat
 $0.000$ (regret-ablation $0$), ignores the counterfactual, and answers closed-book from
 priors ($\Rightarrow$ \textsc{leaking}).
 
-\paragraph{Real-model discrimination.} We run the necessity test on eight production models over AWS
+\paragraph{Real-model discrimination (CS1.3).} We run the necessity test on eight production models over AWS
 Bedrock---Claude Haiku/Sonnet/Opus~4.5, Llama-3.1-8B / 3.3-70B, and Nova micro/lite/pro---contrasting a
 \emph{standard-COLREG} corpus with the \emph{corpus-only charted hazard} of Section~\ref{sec:construction}
 (Table~\ref{tab:disc}, Figure~\ref{fig:plane}). Three findings.
@@ -592,17 +639,26 @@ $\delta_{\!\regret}{=}1981$ (head-on) and ablating Rule~15 gives $1285$ (crossin
 \texttt{gemini-flash-lite-latest}, $658$ and $662$ respectively. The two rules are localized
 on disjoint scenario subsets, so the instrument reads reliance per rule.
 
-\paragraph{External validity on real charted dangers.} The corpus-bound reading is not an artifact of
-our synthetic hazard---it holds on \emph{real}, publicly-documented dangers. We closed-book-screen four
-candidates on Claude Opus (dropping any it already names) and run the survivors through the same hazard
-probe. Two obscure, official-gazetteer-verified rocks---Elwha Rock (Cayou Channel, Puget Sound) and
-Fullastern Rock (Adelaide Island, Antarctica)---read \textsc{corpus-bound} at the full barrier
-($\delta_{\regret}\!\approx\!1998$, $\regret_{\text{with}}{=}0.2$), exactly as the constructed hazard
-does. Whittle Rock (False Bay) was \emph{screened out}---Opus named it unprompted, so it is parametric,
-not corpus-only---which is the screen working. (A famous control, the Seven Stones reef, was \emph{not}
-named for its track---Opus recalled adjacent dangers instead---so it did not screen out as expected; we
-report this rather than force it.) The instrument thus reads corpus reliance on real charted facts, not
-only a hand-built one.
+\paragraph{A real fact can be corpus-only (screen check, CS3.1).} A fair worry about the hazard
+arm is that our danger is \emph{fictional}, so ``the model is corpus-bound'' might just mean ``the
+model cannot know an invented fact.'' We answer the narrower, real question this raises---\emph{can a
+genuine, publicly-charted fact be corpus-only for a frontier model?}---with a closed-book
+\emph{screen}: we ask Claude Opus to name each candidate danger unprompted and keep only the ones it
+cannot recall. Two obscure, official-gazetteer-verified rocks---Elwha Rock (Cayou Channel, Puget
+Sound) and Fullastern Rock (Adelaide Island, Antarctica)---survive the screen (Opus does not name
+them), while Whittle Rock (False Bay) is \emph{screened out} (Opus names it unprompted, so it is
+parametric, not corpus-only)---the screen working as designed. We stress what this leg does and does
+not show. It validates the \emph{screen}: a real fact \emph{can} be corpus-only for a current model,
+so the necessity phenomenon is not an artifact of using invented dangers. It does \emph{not} add an
+independent measurement of the necessity magnitude: because the hazard's identity never enters the
+objective $J$ (only its rule text and location vary in a fixed rig), any hazard Opus reads yields the
+same full-barrier $\delta_{\regret}\!\approx\!1998$ \emph{by construction}---the number is invariant
+to which danger it is, not a fresh confirmation. The screen is also imperfect: a famous positive
+control, the Seven Stones reef, failed to screen out for the wrong reason (Opus recalled adjacent
+dangers rather than its track), which we report rather than force. The load-bearing evidence that
+necessity is \emph{graded and calibrated} is the simulator-free fact-QA dose-response
+(Section~\ref{sec:construction}, CS3.2), where the metric is answer-accuracy over many independent
+facts and carries no fixed-geometry confound.
 
 \paragraph{What in the corpus changes the answer: presence vs.\ retrieval.}
 The leakage test asks a binary question---does the learner rely on the corpus at all. A
@@ -646,6 +702,59 @@ their difference the retrieval gap. Harness: \texttt{experiments/retrieval-decom
 \label{tab:ragdecomp}
 \end{table}
 
+\section{Case Study 2 --- from blind to expert: reading quality and reasoning depth}
+\label{sec:depth}
+Necessity is always measured against a \emph{learner}, so it helps to name the cast. We arrange them
+on a \emph{learner ladder} of increasing corpus use---\textbf{blind} (cannot perceive the danger;
+holds course and collides), \textbf{naive} (sighted but untrained; avoids, but generically---wrong
+side or over-bold), \textbf{implementer} (applies a corpus rule verbatim where the situation matches
+the corpus), and \textbf{reasoner} (combines the corpus with base rules and partial observation for
+novel or ambiguous cases)---with an off-ladder \textbf{parametric expert} that is competent
+\emph{without} the corpus (it already knows the rule in its weights; necessity $\approx 0$). Each
+rung-gap is a distinct corpus contribution and a distinct measurement. Case Study~1
+(Section~\ref{sec:diagnosis}) lives on the source axis---\emph{anything} vs.\ \emph{parametric
+expert}, i.e.\ necessity itself. This section walks the depth ladder's lower rungs: blind$\to$naive is
+the \emph{existence} gap, naive$\to$implementer the response-\emph{quality} gap (CS2.1), and
+implementer$\to$reasoner the \emph{generalization} gap (CS2.2).
+
+Perception is a second source of the information the corpus can carry, which couples \emph{what the
+corpus must supply} to \emph{whether the learner can see}: an existence-corpus (``a danger is there'')
+is necessary only when the learner is \emph{blind}, and a quality-corpus (``the right way to pass it'')
+only when the learner is \emph{sighted} (perception already gives existence but not which-side or
+how-much). This is exactly why CS1 \emph{hides} the hazard---so existence must come from the corpus and
+the learner must be blind---while CS2 \emph{shows} it---so existence is free and the corpus must earn
+its keep on quality.
+
+\paragraph{CS2.1 --- decision quality (the middle band).} The transfer objective of
+Section~\ref{sec:instrument} is deliberately \emph{bimodal}: a single hard barrier (collision/grounding,
+$\approx 2000$) dominates the graded terms $\sim\!1000\times$, so read directly it measures
+\emph{existence} (did you avoid at all), not \emph{quality} (did you avoid well). Reading quality off
+its \emph{own} axis---the graded terms (ship-margin $+$ compliance $+$ route-deviation) \emph{conditional
+on clearing}---separates three sailors the barrier alone conflates: \textbf{blind} collides (the barrier
+fires), \textbf{naive} clears but the wrong way (quality-regret $\approx 0.87$, the middle band), and
+\textbf{trained} clears lawfully (quality-regret $\approx 0.01$, the floor). A turn-angle sweep traces a
+smooth graded quality surface whose minimum sits at the trained maneuver, so the middle band is a genuine
+continuum, not a third discrete level. \emph{Honest note:} this graded band comes from the smooth quality
+terms; a hard \emph{second} hazard (a shoal on the wrong-side escape) yields only a thin feasibility shell
+rather than a graded surface, and that harder version is deferred to CS2.2's overriding cases.
+
+\paragraph{CS2.2 --- reason vs.\ implement (the generalization axis).} The deepest rung separates two
+\emph{trained} learners that are identical on textbook cases and diverge only where a corpus \emph{local
+rule} must override the reflex. We add a reasoning-aware objective in which a corpus-supplied local rule
+redefines the governing give-way side (COLREG Rules~2 and~9 subordinate the default steering rules to
+local conditions and good seamanship); when the local rule is absent the default starboard governs, so
+every prior scenario and result is unchanged. An \emph{implementer} that looks the rule up and applies it
+verbatim and a \emph{reasoner} that treats the corpus as premises then behave identically where the
+textbook rule already fits, and diverge only where the local rule overrides it. On a matched suite the two
+are indistinguishable (implementer $\equiv$ reasoner, $\Delta$regret $0.00$); on a conflict suite built so
+the safe side \emph{alternates} port/starboard---so no fixed reflex can pass---the \textbf{reasoner clears
+$6/6$} while the \textbf{lookup implementer clears only the $3$} reaches where the local rule is redundant
+with Rule~14 and \emph{grounds on the $3$ it overrides}. The necessity of the local-rule corpus is thus
+$3/6$, separable \emph{only} on the overriding cases---the fact-vs-reasoning distinction (RAG-as-lookup
+vs.\ RAG-as-reasoning-substrate) made measurable. \emph{As in CS2.1, these use hand-built reference
+policies with known ground truth}, so the run validates the \emph{instrument}; a real model is the
+\emph{subject}, run through the same rig (the live path is wired).
+
 \section{Validating necessity at the weight level}
 \label{sec:weightlevel}
 The necessity/leakage test infers a fact about a model's \emph{weights} from a change in the
@@ -667,7 +776,7 @@ $\alpha$ (one adapter, evaluated at $\alpha\in[0,1]$) and training checkpoints--
 agreement rules out a gradient-method artifact. We run this in two domains with \emph{independent
 objectives}, the second of which uses no simulator at all.
 
-\paragraph{Domain 1 --- control-regret (a hidden hazard).} Standard COLREG rules have little dynamic
+\paragraph{Domain 1 --- control-regret (a hidden hazard), CS1.7.} Standard COLREG rules have little dynamic
 range for this test---every current frontier model already knows them (Section~\ref{sec:diagnosis})---so we
 use a \emph{corpus-only charted hazard}: a danger scored by the objective barrier but not shown in
 the prompt, knowable only from the corpus. Teaching it into a Qwen2.5-3B model collapses necessity
@@ -677,7 +786,7 @@ graded---the correct signature for a \emph{single discrete fact}, which is learn
 (the model either lacks the fact and grounds, or has it and clears)---so the hazard arm establishes
 the large-effect known-groups \emph{endpoints}, and the graded curve is Domain 2's job.
 
-\paragraph{Domain 2 --- simulator-free fictional-fact QA.} We invent facts about fictional entities
+\paragraph{Domain 2 --- simulator-free fictional-fact QA, CS3.2.} We invent facts about fictional entities
 (research outposts and their attributes) that no model can have memorized, and score answers with a
 programmatic checker---\emph{no simulator, no reference policy}. Because the facts are fictional, a
 competent model is necessarily corpus-bound at baseline, and because there are many \emph{independent}
@@ -715,7 +824,7 @@ sweeps agreeing---while the simulator-free fictional-fact QA (answer-accuracy ob
 \label{tab:dose}
 \end{table}
 
-\subsection{Validation by unlearning: a \emph{says\,$\neq$\,does} dissociation (supporting)}
+\subsection{Validation by unlearning: a \emph{says\,$\neq$\,does} dissociation (supporting, CS4.3)}
 \label{sec:unlearning}
 The complementary direction removes a rule the model \emph{does} know and asks whether necessity
 rises. This arm is secondary---it has dynamic range only on a rule with a real corpus-vs-prior
@@ -739,12 +848,16 @@ forget-probe ``starboard'' rate falls $0.43\to0.27$, the forget-set NLL rises $7
 (retain-set NLL, teacher-forced, even \emph{improves} $4.3\to1.07$), and---most tellingly---the
 Rule-14 \emph{citation} disappears, the model reattributing its maneuver to Rules 15/16/17. (A CPU
 run reproduces the likelihood collapse method-agnostically: forget NLL $4.6\to92$, direction-cue
-$5/6\to0/6$.) Yet scored on the head-on instrument (corpus present vs.\ ablated) the $2\times2$
-does not move a cell: both base and unlearned read \textsc{leaking}, ablation-delta $0.000$, and the
-unlearned completions \emph{still turn $+30^\circ$ to starboard}---the steering \emph{decision} is
-unchanged; only the citation and verbalization moved (model damage flat at $0.10$, retain-coherence
-$0.91$). A words-level metric reports a fact removed while the policy that governs behavior is
-entirely intact.
+$5/6\to0/6$.) Yet the \emph{decision} the instrument scores does not budge: the unlearned model's completions
+\emph{still turn $+30^\circ$ to starboard} (model damage flat at $0.10$, retain-coherence $0.91$)---the
+one quantity with real dynamic range here (the aggressive recipe below \emph{does} move it, to port)
+stays put while every words-level metric registers forgetting. We separate this from the
+\emph{verdict}: the $2\times2$ also does not move (both base and unlearned read \textsc{leaking},
+ablation-delta $0.000$), but that half carries \emph{no} information, because Rule~14 already leaks at
+baseline, so ablating it is a null with no dynamic range for \emph{any} weights (we make this explicit
+below). The dissociation rests on the heading, which \emph{can} move and does not; the frozen verdict
+is a consequence of the baseline, not a measurement. A words-level metric reports a fact removed while
+the policy that governs behavior is entirely intact.
 
 \paragraph{Suppressed, not removed (benign relearning).}
 A gone-vs.-suppressed test \citep{hu2024relearn,deebroger2024} confirms the reading from the
