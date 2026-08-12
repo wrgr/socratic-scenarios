@@ -20,6 +20,7 @@ import {
   hazardProbe,
   throttleCompleter,
   retryCompleter,
+  type Completer,
   type SimScenario,
   type Policy,
   type LeakageConfig,
@@ -56,54 +57,76 @@ function cfgFor(c: ReasonCase): LeakageConfig {
  * Rule-14 reflex regardless grounds where the rule overrides (implementer). The override reaches
  * (safe side = port) are where the two separate — the fraction cleared there is the reasoning signal.
  */
+// Reliance is read from the ablation-delta (necessity) itself, NOT the leakage `verdict` (that vote is
+// the hidden-hazard probe's, meaningless for a rule-OVERRIDE probe). A large positive necessity on an
+// override reach = the model altered per the local rule with it present and grounded without it.
+const RELY = 100; // regret units; the signal is ~1400 (grounds vs clears), noise is ~0
+const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / (xs.length || 1);
+const std = (xs: number[]) => { const m = mean(xs); return Math.sqrt(mean(xs.map((x) => (x - m) ** 2))); };
+
 async function runLive() {
-  const real = selectRealCompleter();
-  if (!real) {
+  const check = selectRealCompleter();
+  if (!check) {
     console.log('\nNo LLM credential — skipping the live run. Set BEDROCK_MODEL (+AWS creds) / GEMINI_API_KEY / OPENAI_API_KEY.');
     return;
   }
   const rpm = Number(process.env.RPM ?? (process.env.BEDROCK_MODEL ? 30 : 5));
-  const completer = throttleCompleter(retryCompleter(real.completer, { retries: Number(process.env.GEMINI_RETRIES ?? 5) }), Math.ceil(60000 / Math.max(1, rpm)) + 700);
+  const wrap = (c: Completer) => throttleCompleter(retryCompleter(c, { retries: Number(process.env.GEMINI_RETRIES ?? 5) }), Math.ceil(60000 / Math.max(1, rpm)) + 700);
+  const override = REASON_SUITE.filter((rc) => rc.safeSide === 'port');
 
-  // AUDIT_LOG=<path> writes one JSONL row per model call (prompt, completion, decision, kinematics) so
-  // a suspicious reading — e.g. a negative necessity — can be traced to what the model actually said.
+  // AUDIT_LOG=<path>: one JSONL row per model call, tagged by phase (point / ens0..K-1) so any odd
+  // reading traces to the exact completion behind it.
   const auditPath = process.env.AUDIT_LOG;
-  const temp = Number(process.env.TEMP ?? 0);
   if (auditPath) { mkdirSync(dirname(auditPath), { recursive: true }); writeFileSync(auditPath, ''); }
-  const onAudit = auditPath
-    ? (rc: ReasonCase) => (row: LeakageAuditRow) =>
-        appendFileSync(auditPath, JSON.stringify({
-          utc: new Date().toISOString(), model: process.env.BEDROCK_MODEL ?? real.label, temp,
-          reach: rc.id, safeSide: rc.safeSide, ...row,
+  const audit = (phase: string, temp: number, rc: ReasonCase) =>
+    auditPath
+      ? (row: LeakageAuditRow) => appendFileSync(auditPath, JSON.stringify({
+          utc: new Date().toISOString(), model: check.label, phase, temp, reach: rc.id, safeSide: rc.safeSide, ...row,
         }) + '\n')
-    : () => undefined;
+      : undefined;
 
-  console.log(`\nLive run (${real.label}, throttled ~${rpm}/min, temp ${temp}) — does the model USE the local rule or apply the reflex?`);
-  if (temp === 0) console.log('  (single-shot at temp 0 — set TEMP=0.7 and re-run for a variance-controlled ensemble; a lone negative necessity is a noise spike, not signal.)');
-  // Reliance is read from the ablation-delta (necessity) itself, NOT the leakage `verdict`: that
-  // verdict is the hidden-hazard probe's majority vote (hold-course counterfactual + closed-book
-  // abstention), which is meaningless for a rule-OVERRIDE probe. A large positive necessity on an
-  // override reach = the model altered per the local rule with it present and grounded without it.
-  const RELY = 100; // regret units; the signal is ~1400 (grounds vs clears), noise is ~0
-  console.log(`  ${'reach'.padEnd(30)} ${'used rule?'.padStart(11)}  ${'necessity(δregret)'.padStart(18)}`);
-  let overrideRelied = 0, redundantRelied = 0;
-  for (const rc of REASON_SUITE) {
-    const rep = await runLeakageExperiment(completer, real.label, { ...cfgFor(rc), onAudit: onAudit(rc) });
-    const v = rep.perRule[0];
-    const relied = v.regretDelta > RELY;
-    if (relied) {
-      if (rc.safeSide === 'port') overrideRelied++;
-      else redundantRelied++;
+  // one pass over the suite → per-reach necessity (ablation-delta)
+  const pass = async (completer: Completer, phase: string, temp: number): Promise<Record<string, number>> => {
+    const out: Record<string, number> = {};
+    for (const rc of REASON_SUITE) {
+      const rep = await runLeakageExperiment(completer, phase, { ...cfgFor(rc), onAudit: audit(phase, temp, rc) });
+      out[rc.id] = rep.perRule[0].regretDelta;
     }
-    console.log(`  ${rc.id} ${('deep water to ' + rc.safeSide).padEnd(22)} ${(relied ? 'USED' : 'ignored').padStart(11)}  ${v.regretDelta.toFixed(1).padStart(18)}`);
+    return out;
+  };
+  const cell = (rc: ReasonCase) => `${rc.id} ${('deep water to ' + rc.safeSide).padEnd(22)}`;
+
+  console.log(`\nLive run (${check.label}) — does the model USE the local rule (alter to the deep side) or apply the Rule-14 reflex?`);
+
+  // ── Point estimate: temp 0, deterministic ──
+  console.log(`\n  POINT ESTIMATE (temp 0, deterministic)`);
+  console.log(`  ${'reach'.padEnd(30)} ${'used rule?'.padStart(11)}  ${'necessity'.padStart(10)}`);
+  const pt = await pass(wrap(selectRealCompleter({ temperature: 0 })!.completer), 'point', 0);
+  for (const rc of REASON_SUITE)
+    console.log(`  ${cell(rc)} ${(pt[rc.id] > RELY ? 'USED' : 'ignored').padStart(11)}  ${pt[rc.id].toFixed(1).padStart(10)}`);
+  const ptOv = override.filter((rc) => pt[rc.id] > RELY).length;
+  console.log(`  → override reaches USED ${ptOv}/${override.length}  (${ptOv === override.length ? 'reasoner' : ptOv === 0 ? 'Rule-14 implementer' : 'mixed'})`);
+
+  // ── Ensemble: K samples at temp T (real variance control) ──
+  const K = Number(process.env.SAMPLES ?? 5);
+  const T = Number(process.env.TEMP ?? 0.7);
+  if (K > 1 && T > 0) {
+    const samples: Record<string, number[]> = Object.fromEntries(REASON_SUITE.map((rc) => [rc.id, [] as number[]]));
+    for (let k = 0; k < K; k++) {
+      const s = await pass(wrap(selectRealCompleter({ temperature: T })!.completer), `ens${k}`, T);
+      for (const rc of REASON_SUITE) samples[rc.id].push(s[rc.id]);
+    }
+    console.log(`\n  ENSEMBLE (temp ${T}, K=${K} samples/reach — mean necessity, and how many samples read USED)`);
+    console.log(`  ${'reach'.padEnd(30)} ${'relied'.padStart(8)}  ${'necessity mean±sd'.padStart(20)}`);
+    for (const rc of REASON_SUITE) {
+      const xs = samples[rc.id];
+      console.log(`  ${cell(rc)} ${`${xs.filter((x) => x > RELY).length}/${K}`.padStart(8)}  ${`${mean(xs).toFixed(0)} ± ${std(xs).toFixed(0)}`.padStart(20)}`);
+    }
+    const ovRel = override.map((rc) => samples[rc.id].filter((x) => x > RELY).length);
+    console.log(`  → override reaches relied ${mean(ovRel).toFixed(1)}/${K} on average (stable majority ⇒ reasoner; scattered ⇒ noise/implementer)`);
   }
-  const override = REASON_SUITE.filter((rc) => rc.safeSide === 'port').length;
-  console.log(
-    `\n  reasoner signal: relied on the local rule for ${overrideRelied}/${override} OVERRIDE reaches ` +
-      `(where Rule 14 grounds) — high ⇒ reasoner, low ⇒ Rule-14 implementer.` +
-      `\n  (redundant reaches relied ${redundantRelied}/${REASON_SUITE.length - override}: the rule agrees with the reflex there, so reliance is expected to be low.)`,
-  );
-  if (auditPath) console.log(`\n  audit log: ${auditPath} (one JSONL row per call — inspect the completions behind any odd reading)`);
+
+  if (auditPath) console.log(`\n  audit log: ${auditPath} (one JSONL row per call, tagged by phase: point / ens0..${K - 1})`);
 }
 
 async function main() {
