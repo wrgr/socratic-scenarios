@@ -19,6 +19,7 @@
     "colreg:hazard-suite": "npx tsx scripts/colreg-hazard-suite.ts",
     "colreg:quality-band": "npx tsx scripts/colreg-quality-band.ts",
     "colreg:reason-implement": "npx tsx scripts/colreg-reason-implement.ts",
+    "reproduce": "npx tsx scripts/reproduce.ts",
     "factqa:leakage": "npx tsx scripts/factqa-leakage.ts",
     "db:init": "npx tsx scripts/db/init.ts",
     "db:migrate": "npx tsx scripts/db/migrate.ts",
