@@ -95,8 +95,9 @@ contributions: **C1** Corpus Diagnosis (localize a gap · per-item necessity/lea
 item into *redundant* vs *unusable*) · **C1b** Corpus Sufficiency (incl. **FALSE SUFFICIENCY**) ·
 **C2** the Transfer Instrument (the regret-vs-reference objective that makes C1 scorable).
 
-Every result below is **simulation / mechanism evidence**; the human trial is future work. Canonical
-status register: [`docs/experiment-status.md`](docs/experiment-status.md) · paper:
+Every result below is **simulation / mechanism evidence**; the human trial is future work. **How to
+run each one** (exact call + expected result): [`experiments/README.md`](experiments/README.md) ·
+canonical status register: [`docs/experiment-status.md`](docs/experiment-status.md) · paper:
 [`docs/arxiv/main.pdf`](docs/arxiv/main.pdf).
 
 **Main spine — the instrument, the diagnosis, and its weight-level validation**
