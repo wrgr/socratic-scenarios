@@ -72,11 +72,13 @@ on priors and is therefore fragile to distribution shift. Unlike faithfulness (R
 context-attribution (ContextCite), which measure whether context \emph{supported} or
 \emph{influenced} an output, we measure whether the model \emph{needed} it, against a
 weight-level baseline they lack. The method is \emph{closed-model compatible} (API access
-only) and operates \emph{per item}. As breadth we report: cross-model discrimination across
-current LLMs; a second control domain (roadside tire change); \kc$\to$single-metric
-identifiability and estimator-recovery calibration; and a machine-unlearning arm that yields a
-\emph{says\,$\neq$\,does} dissociation (gentle unlearning changes what a model \emph{says} but
-not what the instrument sees it \emph{do}) as supporting weight-level evidence. All results
+only) and operates \emph{per item}. As breadth we report: a \emph{learner ladder} that reads corpus
+contribution beyond mere existence---decision \emph{quality} (avoiding well, not just avoiding) and
+\emph{reasoning depth} (using a local rule that overrides a reflex, not just looking one up);
+cross-model discrimination across current LLMs; a second control domain (roadside tire change);
+\kc$\to$single-metric identifiability and estimator-recovery calibration; and a machine-unlearning arm
+that yields a \emph{says\,$\neq$\,does} dissociation (gentle unlearning changes what a model \emph{says}
+but not what the instrument sees it \emph{do}) as supporting weight-level evidence. All results
 are \textbf{simulation-based mechanism evidence, not human-subject external validity}; we
 scope the contribution accordingly and pre-register the human study as future work.
 \end{abstract}
@@ -140,7 +142,9 @@ technique. Concretely:
 
 \emph{Additional breadth} (supporting the above, not the headline): a \emph{transfer instrument}
 that scores a learner by its \emph{regret against a reference-policy solver} with
-\kc$\to$single-metric identifiability (Section~\ref{sec:instrument}); a second control domain and
+\kc$\to$single-metric identifiability (Section~\ref{sec:instrument}); a \emph{learner ladder} that
+shows the same instrument reads corpus contribution beyond existence---decision \emph{quality} and
+\emph{reasoning depth} (Section~\ref{sec:depth}); a second control domain and
 estimator-recovery calibration; cross-model discrimination on current LLMs
 (Section~\ref{sec:diagnosis}); and a machine-unlearning arm that yields a \emph{says\,$\neq$\,does}
 dissociation as secondary weight-level evidence (Section~\ref{sec:weightlevel}).
@@ -999,16 +1003,18 @@ items by necessity, localizing a missing item, and splitting the unrelied-upon i
 \emph{redundant} versus \emph{unusable}---and a corpus-sufficiency verdict that surfaces
 \emph{false sufficiency}. Distinct from faithfulness and context-attribution, we measure need
 against a weight-level baseline they lack. Supporting breadth---a reference-policy transfer
-instrument with \kc$\to$single-metric identifiability, cross-model discrimination, a second
-control domain, and a \emph{says\,$\neq$\,does} unlearning dissociation---rounds out the picture.
+instrument with \kc$\to$single-metric identifiability, a learner ladder that reads corpus
+contribution beyond existence (decision quality and reasoning depth), cross-model discrimination, a
+second control domain, and a \emph{says\,$\neq$\,does} unlearning dissociation---rounds out the picture.
 The claim is testable and narrow; the domains are worked examples, the evidence base is
 deliberately small, and the measurement method is the point.
 
 \paragraph{Reproducibility.} The simulator, the answer-checker QA domain, the diagnosis and
 sufficiency harness, the construction dose-response, and the open-weight unlearning scaffold will
 be released, along with a deterministic no-key dry-run that recovers the mock ground truth and
-one-tap GPU notebooks for the dose-response. (Code is withheld here to preserve double-blind
-review.)
+one-tap GPU notebooks for the dose-response. The whole offline backbone regenerates in one
+deterministic, LLM-free command that checks each headline result against its claimed value (CS4.4).
+(Code is withheld here to preserve double-blind review.)
 
 \small
 \bibliographystyle{plainnat}
