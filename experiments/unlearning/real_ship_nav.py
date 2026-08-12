@@ -68,43 +68,39 @@ def slug(s):
     return re.sub(r'[^a-z0-9]+', '-', s.lower()).strip('-')[:40]
 
 
+def bedrock_client_or_none():
+    """Return (bedrock-runtime client, None) if the OPTIONAL closed-book screen can run, else
+    (None, reason). The screen needs boto3 + working AWS creds — and for SSO/login creds also
+    botocore[crt]. Any of that missing is not fatal: we skip the screen and let the instrument read
+    leakage behaviorally. Set SKIP_SCREEN=1 to force-skip."""
+    if os.environ.get('SKIP_SCREEN') == '1':
+        return None, 'skipped (SKIP_SCREEN=1)'
+    try:
+        import boto3
+    except ImportError:
+        try:
+            subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'boto3'], check=True)
+            import boto3
+        except Exception:
+            return None, 'skipped (boto3 not installable — run: %s -m pip install boto3)' % sys.executable
+    try:
+        return boto3.client('bedrock-runtime', region_name=AWS_REGION), None
+    except Exception as e:
+        name = type(e).__name__
+        hint = ' — for SSO/login creds run: %s -m pip install "botocore[crt]"' % sys.executable \
+            if 'crt' in str(e).lower() or name == 'MissingDependencyException' else ''
+        return None, f'skipped ({name}{hint})'
+
+
 def main():
     cands = [json.loads(l) for l in open(HAZARDS_FILE) if l.strip()]
     print('repo:', REPO, '| region:', AWS_REGION, '| model:', BEDROCK_MODEL)
     print('candidates:', len(cands), '->', ', '.join(c['location'][:28] for c in cands))
 
-    # deps: npm for the instrument, boto3 for the screen
+    # deps: npm for the instrument (required); boto3 for the OPTIONAL closed-book screen
     if os.environ.get('NPM_INSTALL', '1') != '0':
         subprocess.run(['npm', 'install', '--no-audit', '--no-fund', '--loglevel=error'], cwd=REPO, check=True)
-    try:
-        import boto3
-    except ImportError:
-        print('boto3 not found — attempting install via', sys.executable, '-m pip ...')
-        ok = False
-        for extra in ([], ['--user'], ['--break-system-packages']):  # plain, then PEP-668 escapes
-            try:
-                subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', *extra, 'boto3'], check=True)
-                ok = True
-                break
-            except Exception:
-                continue
-        if not ok:
-            sys.exit("Could not auto-install boto3. Install it once, then re-run:\n"
-                     f"    {sys.executable} -m pip install boto3\n"
-                     "  (or `pip3 install boto3`, or `conda install boto3`, or a venv).")
-        import boto3
-    brt = boto3.client('bedrock-runtime', region_name=AWS_REGION)
-
-    who = subprocess.run(['aws', 'sts', 'get-caller-identity'], capture_output=True, text=True)
-    if who.returncode == 0:
-        print('AWS identity OK:', json.loads(who.stdout).get('Arn', '?'))
-    else:
-        have = [k for k in ('AWS_ACCESS_KEY_ID', 'AWS_PROFILE', 'AWS_ROLE_ARN', 'AWS_WEB_IDENTITY_TOKEN_FILE') if os.environ.get(k)]
-        print('aws cli check unavailable; env-chain markers present:', have or 'NONE — set creds first')
-
-    # same classifier as the CLI screen, so the two can't drift
-    sys.path.insert(0, os.path.join(REPO, 'experiments', 'unlearning'))
-    from screen_hazards import knows_hazard, CLOSED_BOOK_Q
+    brt, screen_note = bedrock_client_or_none()   # brt is None if the screen can't run (not fatal)
 
     # provenance
     run_utc = datetime.datetime.now(datetime.timezone.utc)
@@ -115,34 +111,50 @@ def main():
         'git_commit': commit, 'aws_region': AWS_REGION,
         'model': BEDROCK_MODEL, 'hazards_file': os.path.relpath(HAZARDS_FILE, REPO), 'n_candidates': len(cands),
         'instrument': 'colreg:leakage PROBES=hazard (necessity=regret-delta; redundant/unusable=regret-with)',
-        'screen': 'closed-book Bedrock converse vs danger_terms (screen_hazards.knows_hazard)',
+        'screen': ('closed-book Bedrock converse vs danger_terms (screen_hazards.knows_hazard)'
+                   if brt else screen_note),
     }
     print(json.dumps(PROV, indent=2))
 
     cmd_log = []   # traceability: exact call + UTC for every model touch (screen + run)
 
-    def bedrock_ask(prompt, max_tokens=220):
-        r = brt.converse(modelId=BEDROCK_MODEL,
-                         messages=[{'role': 'user', 'content': [{'text': prompt}]}],
-                         inferenceConfig={'maxTokens': max_tokens, 'temperature': 0.0})
-        return r['output']['message']['content'][0]['text']
-
-    # ── Phase 1 · closed-book screen ────────────────────────────────────────────────────
-    print('\n===== Phase 1 · closed-book screen =====')
+    # ── Phase 1 · closed-book screen (OPTIONAL — skipped if Bedrock/boto3 unavailable) ──────
     screen = []
-    for c in cands:
-        ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        call = f"bedrock:converse model={BEDROCK_MODEL} region={AWS_REGION} closed-book('{c['location'][:32]}...')"
-        print(f"SCREEN {ts}  {call}", flush=True)
-        cmd_log.append({'utc': ts, 'phase': 'screen', 'location': c['location'], 'call': call})
-        ans = bedrock_ask(CLOSED_BOOK_Q.format(location=c['location']))
-        leaked = knows_hazard(ans, c.get('danger_terms'))
-        screen.append({'location': c['location'], 'leaked': leaked, 'closed_book': ans.replace(chr(10), ' ')})
-        print(f"  -> [{'DROP (leaked)' if leaked else 'USABLE       '}] {ans[:150].replace(chr(10),' ')}\n")
+    if brt:
+        # same classifier as the CLI screen, so the two can't drift
+        sys.path.insert(0, os.path.join(REPO, 'experiments', 'unlearning'))
+        from screen_hazards import knows_hazard, CLOSED_BOOK_Q
 
-    usable = [c for c, s in zip(cands, screen) if not s['leaked']]
-    print(f"{len(usable)}/{len(cands)} USABLE (model did not name the danger closed-book); "
-          f"{len(cands)-len(usable)} dropped as already-known.")
+        def bedrock_ask(prompt, max_tokens=220):
+            r = brt.converse(modelId=BEDROCK_MODEL,
+                             messages=[{'role': 'user', 'content': [{'text': prompt}]}],
+                             inferenceConfig={'maxTokens': max_tokens, 'temperature': 0.0})
+            return r['output']['message']['content'][0]['text']
+
+        print('\n===== Phase 1 · closed-book screen =====')
+        for c in cands:
+            ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            call = f"bedrock:converse model={BEDROCK_MODEL} region={AWS_REGION} closed-book('{c['location'][:32]}...')"
+            print(f"SCREEN {ts}  {call}", flush=True)
+            cmd_log.append({'utc': ts, 'phase': 'screen', 'location': c['location'], 'call': call})
+            try:
+                ans = bedrock_ask(CLOSED_BOOK_Q.format(location=c['location']))
+                leaked = knows_hazard(ans, c.get('danger_terms'))
+            except Exception as e:   # a mid-screen failure keeps the candidate (conservative)
+                ans, leaked = f'(screen call failed: {type(e).__name__})', False
+            screen.append({'location': c['location'], 'leaked': leaked, 'closed_book': ans.replace(chr(10), ' ')})
+            print(f"  -> [{'DROP (leaked)' if leaked else 'USABLE       '}] {ans[:150].replace(chr(10),' ')}\n")
+
+        usable = [c for c, s in zip(cands, screen) if not s['leaked']]
+        print(f"{len(usable)}/{len(cands)} USABLE (model did not name the danger closed-book); "
+              f"{len(cands)-len(usable)} dropped as already-known.")
+    else:
+        print(f"\n===== Phase 1 · closed-book screen SKIPPED — {screen_note} =====")
+        print("  Running ALL candidates through the instrument. Leakage is still read, behaviorally:")
+        print("  an already-known danger reads LEAKING/redundant with necessity ~0 (the screen result,")
+        print("  measured rather than asked). To enable the pre-filter, see the hint above.\n")
+        screen = [{'location': c['location'], 'leaked': None, 'closed_book': None} for c in cands]
+        usable = list(cands)
 
     # ── Phase 2 · run each USABLE hazard through the instrument ──────────────────────────
     print('\n===== Phase 2 · instrument run =====')
@@ -171,15 +183,22 @@ def main():
 
     # ── Summary + paste-back ────────────────────────────────────────────────────────────
     stamp = run_utc.strftime('%Y%m%dT%H%M%SZ')
-    screen_rows = [{'location': s['location'], 'screen': 'DROP (leaked)' if s['leaked'] else 'USABLE'} for s in screen]
+    def screen_label(s):
+        if s['leaked'] is None:
+            return 'not screened'
+        return 'DROP (leaked)' if s['leaked'] else 'USABLE'
+    screen_rows = [{'location': s['location'], 'screen': screen_label(s)} for s in screen]
     payload = {'provenance': PROV, 'command_log': cmd_log, 'screen': screen, 'rows': rows}
     json.dump(payload, open(os.path.join(outdir, f'realhazards_{stamp}.json'), 'w'), indent=2)
 
+    screened = brt is not None
+    screen_summary = (f"{sum(not s['leaked'] for s in screen)}/{len(screen)} usable"
+                      if screened else f"not run ({screen_note})")
     print('==================== PASTE THIS BACK ====================')
     print(f"real-hazard external-validity run | run_utc={PROV['run_utc']} | local={PROV['run_local']}")
     print(f"commit={PROV['git_commit'][:9]} region={AWS_REGION} model={BEDROCK_MODEL}")
-    print(f"screen: {sum(not s['leaked'] for s in screen)}/{len(screen)} usable | {len(cmd_log)} model calls logged\n")
-    print('SCREEN (all candidates):')
+    print(f"screen: {screen_summary} | {len(cmd_log)} model calls logged\n")
+    print('SCREEN (all candidates):' if screened else 'SCREEN: skipped — all candidates run through the instrument:')
     print(to_md(screen_rows, ['location', 'screen']))
     print('\nNECESSITY (usable hazards):')
     print(to_md(rows, ['location', 'necessity', 'verdict', 'leak_mode', 'regret_with', 'error']) if rows

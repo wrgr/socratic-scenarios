@@ -51,6 +51,12 @@ BEDROCK_MODEL=us.anthropic.claude-opus-4-5-20251101-v1:0 \
   python experiments/unlearning/real_ship_nav.py
 ```
 
+The closed-book screen is an **optional pre-filter**: it needs `boto3` + working AWS creds (and, for
+SSO/login creds, `botocore[crt]`). If that's unavailable the screen is skipped and **every** candidate
+is run through the instrument — leakage is then read behaviorally (an already-known danger reads
+`LEAKING`/redundant with necessity ≈ 0, which *is* the screen result, measured rather than asked).
+Force-skip with `SKIP_SCREEN=1`.
+
 The CLI path below is the equivalent GPU route (screen with a local base model instead of the API):
 
 ```bash
