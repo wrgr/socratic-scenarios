@@ -79,7 +79,20 @@ def main():
     try:
         import boto3
     except ImportError:
-        subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'boto3'], check=True); import boto3
+        print('boto3 not found — attempting install via', sys.executable, '-m pip ...')
+        ok = False
+        for extra in ([], ['--user'], ['--break-system-packages']):  # plain, then PEP-668 escapes
+            try:
+                subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', *extra, 'boto3'], check=True)
+                ok = True
+                break
+            except Exception:
+                continue
+        if not ok:
+            sys.exit("Could not auto-install boto3. Install it once, then re-run:\n"
+                     f"    {sys.executable} -m pip install boto3\n"
+                     "  (or `pip3 install boto3`, or `conda install boto3`, or a venv).")
+        import boto3
     brt = boto3.client('bedrock-runtime', region_name=AWS_REGION)
 
     who = subprocess.run(['aws', 'sts', 'get-caller-identity'], capture_output=True, text=True)
