@@ -96,6 +96,8 @@ def main():
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--dtype", choices=["float32", "bfloat16", "float16"], default="bfloat16")
     ap.add_argument("--max_new", type=int, default=64)
+    ap.add_argument("--load_4bit", action="store_true",
+                    help="load the base in 4-bit NF4 (bitsandbytes) — match unlearn.py.")
     ap.add_argument("--verbose", action="store_true", help="print every completion")
     args = ap.parse_args()
 
@@ -103,7 +105,7 @@ def main():
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
-    base = load_base(args.model, device=args.device, dtype=DTYPES[args.dtype]).eval()
+    base = load_base(args.model, load_4bit=args.load_4bit, device=args.device, dtype=DTYPES[args.dtype]).eval()
     from peft import PeftModel
     model = PeftModel.from_pretrained(base, args.adapter).eval().to(args.device)
 
