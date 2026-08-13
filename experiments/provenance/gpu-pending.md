@@ -34,13 +34,23 @@ relearn), ×3 seeds. Expected: forget-probe 0.43→0.27, forget NLL 7.4→32.4, 
 steering decision still starboard, ablation-delta 0.000; relearn 32.4→9.2. (1.5B CPU column, runnable
 without a GPU: `CPU_MODEL=Qwen/Qwen2.5-1.5B-Instruct CPU_METHOD=npo python cpu_run.py`.)
 
-### 4. Override factorial on real models (API — not A100)
-The offline design is validated (`../offline/override-factorial.txt`, all checks pass). To measure a
-*real* model on it, run the six cells through the leakage rig (present vs. ablated), same as the
-cross-model sweep — this needs a **credential**, not a GPU, and a small live runner added to
-`scripts/colreg-override-factorial.ts` (currently reference-policies only). This is the "planned"
-suite expansion #3/#4 in `experiments/unlearning/DOSE_RESPONSE.md` (keep-to-side / other-vessel
-conflict), now designed. Commit the audit log → `experiments/provenance/override-factorial/`.
+### 4. Override factorial on real models (API — not A100) — the misled result
+The offline design is validated (`../offline/override-factorial.txt`, all checks pass) and the **live
+runner is now built**: `scripts/colreg-override-factorial.ts` runs the offline design gate first, then
+measures a real model when a credential is present (the same present-vs-ablated necessity rig as the
+cross-model sweep, classified into relied/redundant/unusable/**misled**). Needs a **credential**, not a
+GPU. Run:
+```bash
+# Bedrock (matches the cross-model provenance path):
+MODELS="us.anthropic.claude-opus-4-5-20251101-v1:0" SAMPLES=5 RPM=30 npm run colreg:override-factorial
+# or Gemini once the key is rotated:
+GEMINI_API_KEY=… SAMPLES=5 npm run colreg:override-factorial
+```
+The headline is the **MISLED count**: a model that faithfully follows a WRONG retrieved rule collides
+(negative necessity, fails-with) — invisible to standard necessity/faithfulness, the paper's sharp
+point. Audit log defaults to `runs/override-factorial-<stamp>.jsonl`; curate → `provenance/override-factorial/`.
+This is the "planned" suite expansion #3/#4 in `DOSE_RESPONSE.md` (keep-to-side / other-vessel conflict),
+now built. **This is the paper's sharpest real-model claim and currently has no committed real-model log.**
 
 ---
 ### Until these are committed
