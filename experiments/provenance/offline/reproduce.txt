@@ -1,0 +1,30 @@
+# CS4.4 offline reproduce runner — 2026-08-13T04:00:19Z
+$ npm run reproduce
+
+
+> socratic-scenarios@0.0.0 reproduce
+> npx tsx scripts/reproduce.ts
+
+Reproducing the offline (deterministic, LLM-free) experiment backbone…
+
+
+Instrument construct validity (C2)
+  ✓  0      naive collides, expert clears (cleared-rate)         hold 9% vs VO 100%
+  ✓  0b     expert J=0 < reckless < naive (procedural)           expert 0 · reckless 200 · naive 204
+
+Corpus diagnosis — reference-learner recovery (C1)
+  ✓  1/3    bound→corpus-bound, leaking→leaking                  corpus-bound / leaking
+  ✓  1c     hazard suite bound N/N, leaking 0/N                  bound 8/8 · leaking 0/8
+  ✓  7      fact-QA bound necessity≈1, memorized≈0               bound min 1.00 · memorized max 0.00
+  ✓  8      contributing vs FALSE SUFFICIENCY fire correctly     contributing / redundant
+
+Case study 2 — the quality axis (B) and reasoning (B2)
+  ✓  B      blind collides < naive middle band < trained floor   blind bar 1970 · naive q 0.87 · trained q 0.01
+  ✓  B2     matched identical; reasoner N/N, implementer only redundant matched Δ0 · reasoner 6/6 · implementer 3/6
+
+Credentialed arms (model measurements — NOT reproduced offline)
+  ⤷ CS1.2/1.3   cross-model discrimination table — set MODELS=… (+AWS creds): npm run colreg:cross-model
+  ⤷ CS2.2       reason-vs-implement on a real model — npm run colreg:reason-implement (with creds)
+  ⤷ CS1.7/3.2   GPU dose-response (teach → α/checkpoint sweep) — experiments/unlearning/*.py (see DOSE_RESPONSE.md)
+
+✓ ALL OFFLINE EXPERIMENTS REPRODUCED

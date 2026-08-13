@@ -1,0 +1,66 @@
+# override-factorial (offline design validation) — 2026-08-13T04:49:33Z
+$ npm run colreg:override-factorial
+
+Override factorial — 4 reference learners × {head-on,crossing} × {override,redundant,misled}.
+No LLM: deterministic reference policies with known ground truth. Validates that the DESIGN
+separates corpus reading from ablated-arm fallback before any real-model run.
+
+
+F-HO-OV  [override · head-on · rule→port]
+  learner       with   ablated   necessity   decision(with→ablated)   cell
+  blind          1972   1972       0.00   0/1.00→0/1.00            IGNORED
+  implementer    1782   1782       0.00   30/1.00→30/1.00          IGNORED
+  lookup         0.03   1782       1782   -30/1.00→30/1.00         RELIED
+  reasoner       0.03   1782       1782   -30/1.00→30/1.00         RELIED
+
+F-HO-RD  [redundant · head-on · rule→starboard]
+  learner       with   ablated   necessity   decision(with→ablated)   cell
+  blind          1972   1972       0.00   0/1.00→0/1.00            IGNORED
+  implementer    0.05   0.05       0.00   30/1.00→30/1.00          REDUNDANT
+  lookup         0.05   0.05       0.00   30/1.00→30/1.00          REDUNDANT
+  reasoner       0.05   0.05       0.00   30/1.00→30/1.00          REDUNDANT
+
+F-HO-MI  [misled · head-on · rule→port]
+  learner       with   ablated   necessity   decision(with→ablated)   cell
+  blind          1973   1973       0.00   0/1.00→0/1.00            IGNORED
+  implementer    0.55   0.55       0.00   30/1.00→30/1.00          REDUNDANT
+  lookup         1814   0.55      -1814   -30/1.00→30/1.00         MISLED
+  reasoner       0.00   0.55       0.55   15/0.75→30/1.00          REDUNDANT
+
+F-CR-OV  [override · crossing · rule→port]
+  learner       with   ablated   necessity   decision(with→ablated)   cell
+  blind          1973   1973       0.00   0/1.00→0/1.00            IGNORED
+  implementer    1782   1782       0.00   30/1.00→30/1.00          IGNORED
+  lookup         0.00   1782       1782   -30/1.00→30/1.00         RELIED
+  reasoner       0.00   1782       1782   -30/1.00→30/1.00         RELIED
+
+F-CR-RD  [redundant · crossing · rule→starboard]
+  learner       with   ablated   necessity   decision(with→ablated)   cell
+  blind          1973   1973       0.00   0/1.00→0/1.00            IGNORED
+  implementer    0.06   0.06       0.00   30/1.00→30/1.00          REDUNDANT
+  lookup         0.06   0.06       0.00   30/1.00→30/1.00          REDUNDANT
+  reasoner       0.06   0.06       0.00   30/1.00→30/1.00          REDUNDANT
+
+F-CR-MI  [misled · crossing · rule→port]
+  learner       with   ablated   necessity   decision(with→ablated)   cell
+  blind          1974   1974       0.00   0/1.00→0/1.00            IGNORED
+  implementer    0.56   0.56       0.00   30/1.00→30/1.00          REDUNDANT
+  lookup         1814   0.56      -1814   -30/1.00→30/1.00         MISLED
+  reasoner       0.00   0.56       0.56   0/0.50→30/1.00           REDUNDANT
+
+
+Summary — cell counts per learner (of 6 cells):
+  learner       RELIED  MISLED  REDUNDANT  IGNORED
+  blind            0       0          0        6
+  implementer      0       0          4        2
+  lookup           2       2          2        0
+  reasoner         2       0          4        0
+
+Design validation:
+  ✓  reasoner clears every cell (RELIED on overrides, REDUNDANT/RELIED elsewhere, never MISLED/IGNORED)
+  ✓  lookup reader is MISLED on the misled cells (blind corpus-following is worse than ignoring)
+  ✓  implementer is IGNORED/unusable on the override cells (ignores the rule, grounds)
+  ✓  reliance shows on overrides but not redundant (necessity localizes to the override factor)
+  ✓  blind never RELIED (holds course; necessity attributes nothing to it)
+
+✓ The factorial SEPARATES reading from fallback and lookup from reasoning — safe to point at a real model.

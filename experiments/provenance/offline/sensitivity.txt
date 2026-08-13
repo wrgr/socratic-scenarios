@@ -1,0 +1,20 @@
+# colreg:sensitivity — 2026-08-13T04:00:32Z
+$ npm run colreg:sensitivity
+
+
+> socratic-scenarios@0.0.0 colreg:sensitivity
+> npx tsx scripts/colreg-sensitivity.ts
+
+Instrument sensitivity — 9 scenarios, 232 perturbations (one-at-a-time sweep + 200 joint ±40% samples) of the ship-domain and objective weights.
+
+Nominal mean J (default weights):
+  policies:  naive 1765.443   VO    0.704   SB-MPC    0.009
+  gradient (stages 0→6): [1765.44, 1759.18, 1745.24, 1605.21, 221.01, 0.03, 0.03]
+
+Ranking stability under perturbation:
+  ordering                          preserved    mean τ    min τ
+  --------------------------------------------------------------
+  R1  naive ranked worst           100.0%      1.000   1.000
+  R2  competence gradient monotone 100.0%      1.000   1.000
+
+✓ The protocol ranking is stable across the weighting perturbations (τ ≥ 1.00).

@@ -40,7 +40,8 @@
     "proc:identifiability": "npx tsx scripts/procedure-identifiability.ts",
     "colreg:curation": "npx tsx scripts/colreg-curation-decomp.ts",
     "ajp:curation": "npx tsx scripts/ajp-curation-decomp.ts",
-    "ajp:retrieval": "npx tsx scripts/ajp-retrieval-decomp.ts"
+    "ajp:retrieval": "npx tsx scripts/ajp-retrieval-decomp.ts",
+    "colreg:override-factorial": "npx tsx scripts/colreg-override-factorial.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.0",

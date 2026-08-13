@@ -1,0 +1,14 @@
+
+> socratic-scenarios@0.0.0 colreg:construct
+> npx tsx scripts/colreg-construct-validity.ts
+
+Construct validity + grading — 9 scenarios across head-on / crossing / overtaking / restricted-visibility.
+
+Policy                mean J   median     min      max   cleared%   mean-regret
+------------------------------------------------------------------------------------
+naive (hold course)  1765.44 1988.08    1.08 1995.18      11    1765.43
+VO reference            0.70    0.58    0.33    1.27     100       0.69
+SB-MPC reference        0.01    0.01    0.00    0.03     100       0.00
+
+Distinct J values across all policy×scenario cells (grading check):
+  20 distinct J values in [0.00, 1995.18] — a graded metric, not near-binary.
