@@ -195,7 +195,7 @@ Appendix~\ref{app:unlearning}); this map is the reading guide.}
   {\footnotesize\textbf{One metric, read three ways.}\;
    \textbf{Instrument (identifiability):} ablate a knowledge component $\Rightarrow$ exactly one metric moves.\;
    \textbf{Diagnosis (localize):} a task failure $\Rightarrow$ which rule is missing.\;
-   \textbf{Diagnosis (leakage):} ablate a rule $\Rightarrow$ $J$ jumps $=$ corpus-bound, $J$ unchanged $=$ leaking.};
+   \textbf{Diagnosis (necessity):} ablate a rule $\Rightarrow$ the decision changes for the worse $=$ relied, unchanged $=$ not needed.};
 \draw[flow, figorange, dashed] (sim) -- (diag);
 \end{tikzpicture}
 \caption{The instrument, used bidirectionally. A governed corpus and a learner both feed one
@@ -404,32 +404,51 @@ governed penalty when that rule is removed---and a localization that names the g
 component. A large delta plus a matching localization means the learner \emph{relied on}
 that corpus rule.
 
-\paragraph{(ii) Parametric leakage detection (necessity).} The mirror image: ablate a rule from the
-corpus; if the metric it governs does \emph{not} degrade, the model is answering from
-pretrained priors, not the corpus. We combine the ablation-delta with a
-\emph{counterfactual} test (replace ``alter to starboard'' with ``alter to port''; does the
-learner follow the altered rule?) and a \emph{closed-book} contamination baseline (no
-corpus supplied). The verdict---\textsc{corpus-bound}, \textsc{leaking}, or
-\textsc{inconclusive}---is read from the same metric, by a majority vote over the three
-signals so that a clear ablation-and-contamination pattern is not vetoed by a single
-dissenting sub-test. Section~\ref{sec:construction} calibrates this necessity against a known
-parametric baseline by construction. Because the bounded compliance penalty is a \emph{term inside}
-the objective $J$, this necessity is read off the graded regret instrument itself---not a decoupled
-side-metric---and is visible per model as the corpus-reliance spectrum of Table~\ref{tab:disc}.
+\paragraph{(ii) Necessity as \emph{different and better}.} The mirror image asks whether the learner
+\emph{needed} an item---read as a positive signal, not a null. Ablate the item and compare the run against
+the with-corpus run on two observables (Figure~\ref{fig:diffbetter}): does the \emph{decision} change
+(\textbf{different}), and does the learner \emph{succeed with} the item present (\textbf{usable})? An item
+is \textbf{relied on} when the corpus changes the decision \emph{for the better}---removing it flips a
+succeeding call into a failing one; if the decision is unchanged, the learner would have acted the same way
+without the corpus and did not need it. Reading necessity as ``the corpus changed the call, and it helped''
+is stronger than the subtractive ``nothing broke when we removed it,'' and it is read off the graded regret
+instrument itself---not a decoupled side-metric---calibrated against a known parametric baseline by
+construction (Section~\ref{sec:construction}), and visible per model as the reliance spectrum of
+Table~\ref{tab:disc}. (A coarser categorical verdict---a majority vote that adds a counterfactual and a
+closed-book baseline---is deferred to Appendix~\ref{app:verdict}.)
 
-\paragraph{(iii) Why an item is not needed: \emph{redundant} vs.\ \emph{unusable}.} A small
-ablation-delta says the corpus did not move behavior, but not \emph{why}, and the two reasons
-demand opposite fixes. We split a \textsc{leaking} item by its \emph{with-corpus} performance:
-\emph{redundant} (the learner is competent \emph{with} the item present---it already knows the
-rule, so the item is dead weight and should be pruned) versus \emph{unusable} (the learner fails
-the task \emph{even with} the item present---the content has value but this model cannot act on
-it, so the fix is the model/prompting/retrieval, not the corpus). The delta alone conflates
-these; the with-corpus outcome (regret in the control domain, accuracy in QA) separates them. On
-the real-model sweep this is not hypothetical (Table~\ref{tab:disc}): Claude Opus relies on every hazard
-in the suite while Llama-4-Maverick grounds on the override reaches \emph{even with the rule present}
-($4/8$ \textsc{unusable})---\emph{unusable}, not redundant.
+\paragraph{(iii) When the decision doesn't change, or changes but fails.} The three non-relied cells of
+Figure~\ref{fig:diffbetter} demand different fixes: an \emph{unchanged} decision that succeeds is
+\textbf{redundant} (prune it) and one that fails is \emph{ignored} (present but unused); a decision that
+\emph{changes but still fails} is \textbf{unusable} (the model can't execute the rule) or flags a
+\emph{misleading} item---a corpus-quality fault the subtractive ``did removing it hurt'' test cannot even
+see. On the sweep (Table~\ref{tab:disc}) Opus's call changes on every hazard when the rule is removed, while
+Llama-4-Maverick applies the same reflex either way and grounds on the override reaches ($4/8$ \emph{ignored},
+scored \textbf{unusable}).
 
-\paragraph{Corpus sufficiency, and \emph{false sufficiency}.} Rolling the per-item verdicts to the
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\footnotesize,
+  cell/.style={draw=figink, line width=0.5pt, text width=44mm, align=center, inner sep=3pt, minimum height=11mm},
+  relied/.style={cell, fill=figblue!10, draw=figblue, line width=1pt},
+  lbl/.style={font=\scriptsize\bfseries, text=figink}]
+\node[relied]                (tl) at (0,0) {\textbf{RELIED}\\{\scriptsize corpus drove the call \emph{and} it works}\\{\scriptsize (regret-with $0$; ablated $1782$)}};
+\node[cell, right=2mm of tl] (tr)          {\textbf{MISLED / can't execute}\\{\scriptsize call changed but still fails: fix the model, or the rule is wrong}};
+\node[cell, below=2mm of tl] (bl)          {\textbf{REDUNDANT}\\{\scriptsize same call either way, and it works---already known (prune)}};
+\node[cell, right=2mm of bl] (br)          {\textbf{IGNORED} (unusable)\\{\scriptsize same call either way, and it fails---present, not used}};
+\node[lbl, above=1.5mm of tl.north] {succeeds \emph{with} the item};
+\node[lbl, above=1.5mm of tr.north] {fails \emph{with} the item};
+\node[lbl, rotate=90, anchor=south, left=1mm of tl.west] {decision \emph{changes}};
+\node[lbl, rotate=90, anchor=south, left=1mm of bl.west] {decision \emph{unchanged}};
+\end{tikzpicture}
+\caption{Necessity read as \emph{different}$\times$\emph{usable}: ablate an item and ask whether the
+\emph{decision} changes (rows) and whether the learner \emph{succeeds with} it (columns). Only the top-left
+cell is \textbf{relied on}---the corpus changed the call, for the better. Two observables replace the
+necessity/regret-with/verdict stack; the categorical verdict is deferred to Appendix~\ref{app:verdict}.}
+\label{fig:diffbetter}
+\end{figure}
+
+\paragraph{Corpus sufficiency, and \emph{false sufficiency}.} Rolling the per-item classifications to the
 corpus level yields a sufficiency judgement for a query set: \emph{contributing} (every item
 relied upon), \emph{partial}, \emph{unusable}, or---the diagnostic ordinary RAG metrics cannot
 produce---\emph{false sufficiency}: task accuracy is high yet necessity is $\approx 0$ everywhere,
@@ -439,12 +458,10 @@ queries''); the false-sufficiency signal (necessity $\approx 0$) is precisely th
 warning that a bounded-query sufficiency claim will not survive a shift.
 
 \paragraph{Offline recovery of known ground truth.} Before the real-model sweep, we confirm the
-verdicts recover truth we control. Against two reference mock learners
-whose truth is known, the instrument recovers it exactly: the corpus-bound mock yields
-ablation-delta $1.000$ (regret-ablation $1981$), follows the counterfactual, and abstains
-closed-book ($\Rightarrow$ \textsc{corpus-bound}); the leaking mock yields ablation-delta
-$0.000$ (regret-ablation $0$), ignores the counterfactual, and answers closed-book from
-priors ($\Rightarrow$ \textsc{leaking}).
+classification recovers truth we control. Against two reference mock learners the instrument is exact: the
+corpus-bound mock's decision \emph{changes} when the rule is ablated and it then grounds (regret $0.2$ with
+the rule $\to 1981$ without $\Rightarrow$ \emph{relied}); the leaking mock's decision is \emph{unchanged}
+and already clears both ways ($\Rightarrow$ \emph{redundant}).
 
 \paragraph{Real-model discrimination (CS1.3).} We run the necessity test as a \emph{suite}: eight
 independent, alternating-bow charted hazards, each isolated in its own corpus, so per-model necessity is
@@ -465,19 +482,18 @@ when ablated rather than falling back (finding~3's strict-mode behavior), so it 
 spectrum is real cross-model range standard COLREG cannot show, but it grades reading \emph{and}
 ablated-arm conservatism together---Opus's $8/8$ means it does not fall back, not that it out-reads Haiku.
 
-\emph{(2) Read on necessity and regret-with, not the verdict.} We classify on \emph{necessity}
-$=\regret(\text{ablated})-\regret(\text{with-corpus})$ and \emph{regret-with}, not the categorical leakage
-verdict---a noisier majority vote that also demands following the inverted counterfactual and abstaining
-closed-book, so it \emph{undercounts} a model that reads the fact but answers closed-book from priors: an
-earlier verdict-based count wrongly put Haiku at $0$, where necessity credits it with $4$. The verdict is
-retained only for the standard-COLREG strict-mode reading below.
+\emph{(2) The decision-change reading, not the verdict.} Classifying on Figure~\ref{fig:diffbetter}'s two
+observables rather than the majority-vote verdict matters: the verdict \emph{undercounts} a model whose
+decision plainly depends on the fact but which answers closed-book from priors---it put Haiku at $0/8$ where
+the decision-change reading gives $4/8$ (Appendix~\ref{app:verdict}).
 
-\emph{(3) Strict-mode faithfulness on standard COLREG.} Opus reads \emph{standard} COLREG as
-\textsc{corpus-bound}, but the audit log shows this is a \emph{strict-mode} effect, not a Rule-14
-knowledge gap: when the steering rule is ablated Opus \emph{abstains} (``no rules were provided\ldots'',
-obeying the instruction to use only the provided rules) rather than falling back on its obvious parametric
-Rule-14 knowledge. Haiku instead falls back to Rule-14 starboard (\textsc{leaking}); Sonnet is split
-across samples (\textsc{inconclusive}). Provenance: \texttt{experiments/provenance/cross-model/}.
+\emph{(3) Strict-mode faithfulness on standard COLREG.} On \emph{standard} COLREG Opus's decision also
+changes when the rule is ablated, but the audit log shows why, and it is not a Rule-14 knowledge gap: when
+the steering rule is removed Opus \emph{abstains/holds course} (``no rules were provided\ldots'', obeying the
+instruction to use only the provided rules) rather than falling back on its obvious parametric Rule-14. Haiku
+instead applies the Rule-14 starboard reflex, and Sonnet varies across samples. The categorical verdict for
+this case (and the strict-mode reading) is Appendix~\ref{app:verdict}; provenance
+\texttt{experiments/provenance/cross-model/}.
 
 \begin{table}[t]
 \centering
@@ -642,8 +658,8 @@ programmatic checker---\emph{no simulator, no reference policy}. Because the fac
 competent model is necessarily corpus-bound at baseline, and because there are many \emph{independent}
 facts, partial teaching learns a fraction of them, so the aggregate necessity is \emph{graded}.
 Teaching the facts into a Qwen2.5-7B-Instruct model drives mean necessity smoothly and monotonically
-down the LoRA-$\alpha$ gradient: $1.00\!\to\!0.93\!\to\!0.29\!\to\!0.03$ (Table~\ref{tab:dose}), with
-the verdict flipping \textsc{corpus-bound}$\to$\textsc{leaking} as the facts are internalized. A
+down the LoRA-$\alpha$ gradient: $1.00\!\to\!0.93\!\to\!0.29\!\to\!0.03$ (Table~\ref{tab:dose}) as the
+facts are internalized. A
 training-checkpoint sweep reproduces the same curve ($1.00\!\to\!0.25\!\to\!0.03$)---the two gradients
 are built differently (scaling one converged adapter vs.\ genuine partial training), so their
 agreement rules out a gradient-method artifact. This is the clean dose-response, in a domain we did
@@ -753,6 +769,26 @@ command that checks each headline result against its claimed value (CS4.4). (Cod
 preserve double-blind review.)
 
 \appendix
+
+\section{The categorical leakage verdict (secondary)}
+\label{app:verdict}
+The main text classifies each item on two observables---does the decision change on ablation, and does the
+learner succeed with the item present (Figure~\ref{fig:diffbetter}). For continuity with prior leakage work
+we also compute a coarser \emph{categorical} verdict, \textsc{corpus-bound}/\textsc{leaking}/\textsc{inconclusive},
+by a majority vote over three signals: the ablation-delta (does regret rise when the rule is removed), a
+\emph{counterfactual} test (replace ``alter to starboard'' with ``alter to port''---does the learner follow
+the altered rule?), and a \emph{closed-book} contamination baseline (no corpus supplied). The majority vote
+keeps a single dissenting sub-test from vetoing a clear ablation-and-contamination pattern. We de-emphasize
+it because it is noisier than the two continuous observables and \emph{undercounts} a model whose decision
+plainly depends on the fact but which answers closed-book from priors---it put Haiku at $0/8$ where the
+decision-change reading gives $4/8$.
+
+\paragraph{Strict-mode reading on standard COLREG.} The verdict is retained mainly for one signal it reads
+cleanly. On \emph{standard} COLREG, Claude Opus verdicts \textsc{corpus-bound}, but the audit log shows this
+is strict-mode faithfulness, not a knowledge gap: when the steering rule is ablated Opus abstains/holds
+course (``no rules were provided\ldots'') rather than falling back on its obvious parametric Rule-14, while
+Haiku falls back to Rule-14 starboard (\textsc{leaking}) and Sonnet splits across samples
+(\textsc{inconclusive}).
 
 \section{Estimator recovery and calibration}
 \label{app:recovery}
