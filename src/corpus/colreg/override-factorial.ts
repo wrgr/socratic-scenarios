@@ -63,7 +63,10 @@ const shoalOpposite = (ruleSide: 'port' | 'starboard') => ({
  * learner that obeys the bad rule collides, while one that checks the rule against what it can see
  * overrides it — the reason-vs-lookup split, on a corpus that is actively wrong.
  */
-const portObstacle = (): Vessel => ({ id: 'P', label: 'moored barge', x: -1250, y: 2200, psi: 0, v: 0, lengthM: 120 });
+// Sited close and large, squarely on the port-turn arc and near enough to the track that a port turn
+// unmistakably grounds while starboard is plainly open — starker than the first cut, to collapse the
+// real model's decision noise (it was ~50/50 on the ambiguous version).
+const portObstacle = (): Vessel => ({ id: 'P', label: 'moored barge', x: -950, y: 1750, psi: 0, v: 0, lengthM: 200 });
 
 const baseOf = (c: FactorialCase) => ({
   id: c.id,
@@ -181,8 +184,12 @@ export const REFERENCE_LEARNERS: { name: string; policy: Policy }[] = [
 export const OVERRIDE_FACTORIAL: FactorialCase[] = [
   { id: 'F-HO-OV', kind: 'override', geometry: 'head-on', ruleSide: 'port', location: 'the Vhalki Narrows (northbound)', note: 'the flood sets hard onto the eastern bank' },
   { id: 'F-HO-RD', kind: 'redundant', geometry: 'head-on', ruleSide: 'starboard', location: 'the Dornmouth Approach (inbound)', note: 'a silted patch fouls the port hand' },
-  { id: 'F-HO-MI', kind: 'misled', geometry: 'head-on', ruleSide: 'port', location: 'the Skerrig Passage (westbound)', note: 'a pilot note (stale) claims the port hand is clearer' },
   { id: 'F-CR-OV', kind: 'override', geometry: 'crossing', ruleSide: 'port', location: 'the Wray Cut (southbound)', note: 'a spit has silted from the starboard shore' },
   { id: 'F-CR-RD', kind: 'redundant', geometry: 'crossing', ruleSide: 'starboard', location: 'Grennock Reach (mid-channel)', note: 'an exclusion shoal sits to port' },
+  // Four misled cells (2 head-on + 2 crossing, distinct locations) so the MISLED rate is over N=4,
+  // not 2 — each a corpus rule that steers to port, into the (now starker) moored barge to port.
+  { id: 'F-HO-MI', kind: 'misled', geometry: 'head-on', ruleSide: 'port', location: 'the Skerrig Passage (westbound)', note: 'a pilot note (stale) claims the port hand is clearer' },
+  { id: 'F-HO-MI2', kind: 'misled', geometry: 'head-on', ruleSide: 'port', location: 'the Aumry Reach (northbound)', note: 'an old chart correction marks the port side as the fairway' },
   { id: 'F-CR-MI', kind: 'misled', geometry: 'crossing', ruleSide: 'port', location: 'Pellan Sound (down-channel)', note: 'a stale note claims to favour the port hand' },
+  { id: 'F-CR-MI2', kind: 'misled', geometry: 'crossing', ruleSide: 'port', location: 'the Brenick Cut (inbound)', note: 'a withdrawn notice still advises keeping to port' },
 ];
