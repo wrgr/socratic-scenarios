@@ -85,7 +85,10 @@ function pointRow(label: string, a: Assessment) {
 
 async function main() {
   const modelList = (process.env.MODELS ?? process.env.BEDROCK_MODEL ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-  const auditPath = process.env.AUDIT_LOG;
+  // Provenance is ON BY DEFAULT for a live run: every call is recorded so no run goes un-audited.
+  // Override with AUDIT_LOG=<path>, or AUDIT_LOG='' to disable. Mocks (no models) don't auto-log.
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const auditPath = process.env.AUDIT_LOG ?? (modelList.length ? `runs/cross-model-${stamp}.jsonl` : undefined);
   const debug = process.env.DEBUG === '1';
   if (auditPath) { mkdirSync(dirname(auditPath), { recursive: true }); writeFileSync(auditPath, ''); }
   // AUDIT_LOG writes one JSONL row per call; DEBUG=1 also prints each decision inline.
@@ -113,7 +116,9 @@ async function main() {
   const callsPerModel = (1 + HAZARD_SUITE.length) * 4 * (1 + (ensembleOn ? K : 0)); // 9 probes × 4 conditions
   const totalCalls = modelList.length * callsPerModel;
   const t0 = Date.now();
-  console.log(`plan: ${modelList.length} models × ${callsPerModel} calls = ${totalCalls} at ~${rpm}/min ≈ ${Math.ceil(totalCalls / Math.max(1, rpm))} min` + (debug ? '  (DEBUG: printing decisions)' : '') + '\n');
+  console.log(`plan: ${modelList.length} models × ${callsPerModel} calls = ${totalCalls} at ~${rpm}/min ≈ ${Math.ceil(totalCalls / Math.max(1, rpm))} min` + (debug ? '  (DEBUG: printing decisions)' : ''));
+  if (auditPath) console.log(`audit log (all runs): ${auditPath}  —  tail with:  wc -l ${auditPath}`);
+  console.log('');
 
   // ── POINT ESTIMATE (temp 0, deterministic) ──
   console.log('POINT ESTIMATE (temp 0, deterministic)\n');
