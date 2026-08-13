@@ -1,0 +1,123 @@
+/**
+ * build-hazard-decision-teach.ts — the DECISION-FORMAT teach set for the hazard arm.
+ *
+ * The prose teach set (build_hazard_datasets.py) installs the hazard fact in a form the model can
+ * RECALL but not ACT on: the scored eval is a structured JSON maneuver decision, and the prose
+ * association never reaches it (necessity flat ~667; recall_probe.py confirms the fact is in the
+ * weights). This builder teaches the fact in the EVAL'S OWN FORMAT instead — each example's prompt
+ * is the real `buildPrompt(...)` decision prompt (hazard NOT in corpus, i.e. the ablated condition
+ * the model must handle from weights), and the target is the correct JSON maneuver (bold starboard).
+ * If teaching in-channel makes necessity fall, the block was channel mismatch, not un-learnability.
+ *
+ * TEACHING-TO-THE-TEST GUARD — on VISIBLE features. The hazard's along-track range (hy) is the
+ * corpus-only fact; it is NEVER rendered in the prompt, so it cannot be a train/test split (varying
+ * it gives identical prompts). The only things visible in a decision prompt are the LOCATION cue,
+ * the ownship heading/speed, and the target vessel(s). So we teach "at <location> -> bold starboard"
+ * across visible geometries that EXCLUDE the eval's exact config, and leave the eval's config unseen:
+ *   - eval config (scripts/colreg-leakage.ts): ownship 12 kn (OWN_KN) + benign target F on the port
+ *     bow. We teach on own speeds {7,9,11,13,15} (12 held out) and benign targets that are NOT F.
+ * Necessity falling on the held-out eval config is genuine procedural transfer of "here -> turn";
+ * necessity that falls only when the eval config is trained is memorization. Re-run with
+ * INCLUDE_EVAL_CONFIG=1 to add the eval's own config back — the memorization-ceiling control.
+ *
+ * Writes JSONL {prompt, target} (the format unlearn.py --method sft --chat consumes) to --out
+ * (default experiments/unlearning/data/hazard_decision_teach.jsonl).
+ *
+ *   npx tsx scripts/build-hazard-decision-teach.ts
+ *   INCLUDE_EVAL_CONFIG=1 npx tsx scripts/build-hazard-decision-teach.ts --out .../hazard_decision_memo.jsonl
+ */
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+import type { SimScenario, Vessel } from '../src/engine/colreg-sim';
+import { renderCorpus, buildPrompt } from '../src/engine/colreg-sim';
+import { colregDomain } from '../src/corpus/colreg';
+import { ownship, kn, OWN_KN } from '../src/corpus/colreg/benchmark-geometry';
+
+// Must match scripts/colreg-leakage.ts (the eval): same location cue, same geometry rig.
+const HAZARD_LOCATION = 'the Kessock Narrows (northbound transit)';
+const CLEARING_DEG = 55; // the corpus's canonical bold starboard alteration; clears the hazard.
+
+const includeEvalConfig = process.env.INCLUDE_EVAL_CONFIG === '1';
+
+// VISIBLE generalization axes. Own speed excludes the eval's OWN_KN (=12) unless the ceiling control
+// is requested. Benign far target vessels (routine transit — no CPA threat), none equal to the eval's
+// target F(-9000, 9000); the turn is driven by the hazard, not by these.
+const SPEED_KN = includeEvalConfig ? [7, 9, 11, 12, 13, 15] : [7, 9, 11, 13, 15];
+const TARGETS: Record<string, Vessel> = {
+  Tsb: { id: 'T', label: 'T', x: 9000, y: 9000, psi: Math.PI, v: kn(6), lengthM: 100 }, // stbd bow, far
+  Tpf: { id: 'T', label: 'T', x: -11000, y: 12000, psi: Math.PI, v: kn(5), lengthM: 100 }, // port bow, farther
+  Tfs: { id: 'T', label: 'T', x: 4000, y: 11000, psi: Math.PI, v: kn(7), lengthM: 100 }, // fine on stbd
+};
+
+const hazardScenario = (id: string, speedKn: number, tgt: Vessel): SimScenario => ({
+  id,
+  label: 'Transit past a charted hazard',
+  description: '',
+  difficulty: 'beginner',
+  location: HAZARD_LOCATION, // the query cue; the hazard itself is corpus-only (absent here)
+  ownship: { ...ownship(), v: kn(speedKn) },
+  targets: [tgt],
+  visibility: 'clear',
+  hazards: [{ x: 0, y: 5200, radiusM: 2000, label: 'charted danger' }], // hidden; not rendered
+  horizonS: 1200,
+  dt: 4,
+  intendedHeading: 0,
+});
+
+// Reasoning paraphrases for the target JSON (varied so SFT doesn't memorize one sentence).
+const REASONS = [
+  'charted wreck ahead on the track; altering boldly to starboard to pass well clear',
+  'a submerged danger lies dead ahead; a bold starboard alteration keeps me clear',
+  'known charted hazard on this leg; coming well to starboard before resuming track',
+  'wreck ahead on the northbound track; turning hard to starboard to clear it',
+];
+
+// The ablated corpus the model must act against at eval: the COLREG domain WITHOUT the hazard rule
+// (the hazard rule is what ablation removes). renderCorpus over exactly colregDomain.nodes matches
+// the eval's "without" condition.
+const ablatedCorpus = renderCorpus(colregDomain.nodes);
+
+function target(i: number): string {
+  return JSON.stringify({
+    courseOffsetDeg: CLEARING_DEG,
+    speedFactor: 1.0,
+    citedRules: [],
+    abstained: false,
+    reasoning: REASONS[i % REASONS.length],
+  });
+}
+
+const rows: { prompt: string; target: string }[] = [];
+let k = 0;
+for (const speedKn of SPEED_KN) {
+  for (const [tname, tgt] of Object.entries(TARGETS)) {
+    const scen = hazardScenario(`HZTEACH-${speedKn}-${tname}`, speedKn, tgt);
+    const prompt = buildPrompt(scen, ablatedCorpus, true); // strict = the eval's default condition
+    rows.push({ prompt, target: ' ' + target(k) }); // leading space matches the prose teach targets
+    k++;
+  }
+}
+
+const outArg = process.argv.indexOf('--out');
+const out =
+  outArg >= 0
+    ? process.argv[outArg + 1]
+    : 'experiments/unlearning/data/hazard_decision_teach.jsonl';
+mkdirSync(dirname(out), { recursive: true });
+writeFileSync(out, rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+
+const distinct = new Set(rows.map((r) => r.prompt)).size;
+console.log(`decision-format teach: ${rows.length} examples (${distinct} distinct prompts) -> ${out}`);
+console.log(`  location:            ${HAZARD_LOCATION}`);
+console.log(`  trained own speeds:  ${SPEED_KN.join(', ')} kn`);
+console.log(`  trained targets:     ${Object.keys(TARGETS).join(', ')} (benign far vessels; none = eval's F)`);
+console.log(
+  `  eval config (held out unless INCLUDE_EVAL_CONFIG=1): ownship ${OWN_KN} kn + target F on the port bow` +
+    (includeEvalConfig ? '  << INCLUDED (memorization ceiling)' : '  << HELD OUT (tests transfer)'),
+);
+console.log(`  target maneuver:     courseOffsetDeg=${CLEARING_DEG} (bold starboard), speedFactor=1.0`);
+console.log('  next: SFT it, then score necessity on the held-out eval config:');
+console.log('    python unlearn.py --method sft --chat --model <id> --dtype bfloat16 \\');
+console.log(`        --sft_file ${out} --epochs 8 --lr 1e-4 --out out/hazard_decision`);
+console.log('    python dose_response.py --model <id> --dtype bfloat16 --adapter out/hazard_decision \\');
+console.log('        --alphas 0,0.5,1.0 --out results/dose_decision   # necessity falls => procedural transfer');

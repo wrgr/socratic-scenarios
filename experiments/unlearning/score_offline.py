@@ -30,6 +30,29 @@ def load_jsonl(path):
         return [json.loads(line) for line in f if line.strip()]
 
 
+# The scored decision prompt (buildPrompt, llm-learner.ts) ends with this exact marker followed by
+# the JSON schema line. --cot rewrites that tail so the model REASONS first (eliciting any recalled
+# hazard knowledge into the token stream) and only then emits the decision. The instrument's parser
+# (extractFirstJsonObject) takes the FIRST balanced {...}, so the reasoning must contain no braces —
+# hence the explicit "no curly braces" instruction. Non-decision prompts (no marker) pass unchanged.
+_JSON_MARKER = "Respond with ONLY a JSON object, no prose:"
+_COT_INSTRUCTION = (
+    "First reason in 1-3 sentences, using NO curly braces: is there a charted hazard on this "
+    "track — from the RULES above OR from anything you already know about this location — and if "
+    "so, what avoiding action does it require? Then, on the FINAL line, output ONLY your decision "
+    "as a JSON object:"
+)
+
+
+def cotify(prompt):
+    """Turn a single-shot decision prompt into a reason-then-decide (CoT) prompt. Idempotent and
+    safe on prompts without the marker (returned unchanged)."""
+    i = prompt.find(_JSON_MARKER)
+    if i < 0:
+        return prompt
+    return prompt[:i] + _COT_INSTRUCTION + prompt[i + len(_JSON_MARKER):]
+
+
 def generate(tok, model, device, prompt, max_new=200):
     # Same rendering as serve.py: wrap the prompt as a single user turn and apply the chat
     # template so INSTRUCT models get their control tokens (raw text -> uncontrolled
@@ -61,9 +84,16 @@ def main():
                     help="model dtype (float32 for CPU; bfloat16 for a real GPU run) — "
                          "match what unlearn.py used")
     ap.add_argument("--max_new", type=int, default=200)
+    ap.add_argument("--cot", action="store_true",
+                    help="reason-then-decide: rewrite the decision prompt so the model reasons "
+                         "(eliciting recalled knowledge) BEFORE emitting the JSON. Tests whether "
+                         "in-weight knowledge that is flat under single-shot scoring reaches the "
+                         "decision when elicited. Needs more tokens; bumps --max_new to >=320.")
     ap.add_argument("--load_4bit", action="store_true",
                     help="load the base in 4-bit NF4 (bitsandbytes) — match unlearn.py.")
     args = ap.parse_args()
+    if args.cot:
+        args.max_new = max(args.max_new, 320)
 
     tok = AutoTokenizer.from_pretrained(args.model)
     if tok.pad_token is None:
@@ -91,10 +121,16 @@ def main():
             name = f"{name}@alpha={args.alpha}"
 
     prompts = [r["prompt"] for r in load_jsonl(args.prompts)]
+    if args.cot:
+        n_cot = sum(1 for p in prompts if _JSON_MARKER in p)
+        print(f"--cot: reason-then-decide on {n_cot}/{len(prompts)} decision prompts (max_new={args.max_new})")
     print(f"generating {len(prompts)} completions for {name} (device={args.device}) ...")
     with open(args.out, "w") as f:
         for i, prompt in enumerate(prompts, 1):
-            completion = generate(tok, model, args.device, prompt, max_new=args.max_new)
+            # The model REASONS on the cotified prompt, but we replay the ORIGINAL prompt so the
+            # instrument matches it back to its scenario (it keys on exact prompt text).
+            gen_prompt = cotify(prompt) if args.cot else prompt
+            completion = generate(tok, model, args.device, gen_prompt, max_new=args.max_new)
             f.write(json.dumps({"prompt": prompt, "completion": completion}) + "\n")
             if i % 5 == 0 or i == len(prompts):
                 print(f"  {i}/{len(prompts)}")
