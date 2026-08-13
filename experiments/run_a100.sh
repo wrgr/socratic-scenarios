@@ -7,6 +7,8 @@
 #   1. Unlearning "says != does" arm  (gentle SimNPO, +relearn) x seeds          -> CS4.3 / tab:unlearn
 #   2. Hazard dose-response           (teach -> alpha + checkpoint sweep)         -> CS1.7 / tab:dose
 #   2b. Recall vs. action probe       (does the taught fact reach the decision?)  -> knowing-vs-doing
+#   2c. CoT bridge                    (does eliciting reasoning move the decision?) -> accessibility
+#   2d. Decision-format teach         (does in-channel install move it?)          -> installability
 #   3. Fact-QA dose-response          (the graded headline, 1.00 -> 0.03)         -> CS3.2 / tab:dose
 # Everything is tee'd to a master log; results land in experiments/unlearning/results/.
 # At the end it prints the exact `git add … && git commit` to fold the raw logs
@@ -22,7 +24,7 @@
 #   export HF_TOKEN=hf_...            # required for Llama (gated); avoids rate-limits otherwise
 #   cd experiments && bash run_a100.sh                 # run everything, both families
 #   DRY_RUN=1 bash run_a100.sh                          # print the plan, run nothing
-#   ONLY=unlearn|hazard|recall|factqa bash run_a100.sh  # run one stage
+#   ONLY=unlearn|hazard|recall|cot|decision|factqa bash run_a100.sh  # run one stage
 #   SEEDS="0 1 2" bash run_a100.sh                      # seed sweep (default "0 1 2")
 #   MODELS="Qwen/Qwen2.5-3B-Instruct microsoft/Phi-3.5-mini-instruct" bash run_a100.sh  # ungated 2nd family
 #
@@ -30,6 +32,7 @@
 # unlearned model from inverting the rule to port. Do not raise LR without reason.
 # =============================================================================
 set -euo pipefail
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"   # repo root (where package.json lives) — for npm runs
 cd "$(dirname "$0")/unlearning"
 
 SEEDS="${SEEDS:-0 1 2}"
@@ -116,6 +119,52 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "recall" ]; then
     fi
     say "recall [$sg]: recall leg (base vs taught) — pair with dose_alpha_${sg}_s0 (action leg)"
     run python recall_probe.py --model "$m" --dtype bfloat16 --adapter "$adapter" --alphas 0,1.0 --verbose
+  done
+fi
+
+# Shared helper for 2c/2d: ensure the seed-0 PROSE hazard adapter exists (both reuse stage 2's).
+ensure_prose_adapter() {  # $1=model $2=slug
+  local a="out/hazard_taught_${2}_s0"
+  if [ ! -d "$a" ] && [ "$DRY_RUN" != "1" ]; then
+    say "prose adapter [$2]: teaching one (seed 0)"
+    run python build_hazard_datasets.py
+    run python unlearn.py --method sft --model "$1" --dtype bfloat16 --chat \
+        --sft_file data/hazard_teach.jsonl --epochs 8 --lr 1e-4 --seed 0 --out "$a"
+  fi
+}
+
+# 2c) CoT bridge — the headline follow-up. Does eliciting reasoning (reason-then-decide) let the
+#     in-weight fact reach the decision? CoT necessity FALLS while single-shot stays flat =>
+#     accessible-but-needs-eliciting. The alpha=0 rows are the control (CoT alone must not turn).
+if [ "$ONLY" = "all" ] || [ "$ONLY" = "cot" ]; then
+  for m in $MODELS; do
+    sg="$(slug "$m")"
+    ensure_prose_adapter "$m" "$sg"
+    adapter="out/hazard_taught_${sg}_s0"
+    say "cot [$sg]: CoT-elicited necessity (the headline — does it fall?)"
+    run python dose_response.py --model "$m" --dtype bfloat16 --cot \
+        --adapter "$adapter" --alphas 0,1.0 --out "results/dose_cot_${sg}_s0"
+    say "cot [$sg]: single-shot control (expect flat ~667)"
+    run python dose_response.py --model "$m" --dtype bfloat16 \
+        --adapter "$adapter" --alphas 0,1.0 --out "results/dose_single_${sg}_s0"
+  done
+fi
+
+# 2d) Decision-format teach — installability. Teach the fact in the eval's JSON format across visible
+#     geometries that EXCLUDE the eval config; necessity falling on the held-out config => procedural
+#     transfer. Build set is TS (npx tsx); teach + score are the usual drivers.
+if [ "$ONLY" = "all" ] || [ "$ONLY" = "decision" ]; then
+  say "decision: build decision-format teach set (eval config held out)"
+  run bash -c "cd '$REPO_ROOT' && npm run --silent colreg:hazard-decision-teach"
+  for m in $MODELS; do
+    sg="$(slug "$m")"
+    say "decision [$sg]: teach in-channel (seed 0)"
+    run python unlearn.py --method sft --model "$m" --dtype bfloat16 --chat \
+        --sft_file data/hazard_decision_teach.jsonl --epochs 8 --lr 1e-4 --seed 0 \
+        --out "out/hazard_decision_${sg}"
+    say "decision [$sg]: necessity on the HELD-OUT eval config (falls => procedural transfer)"
+    run python dose_response.py --model "$m" --dtype bfloat16 \
+        --adapter "out/hazard_decision_${sg}" --alphas 0,0.5,1.0 --out "results/dose_decision_${sg}"
   done
 fi
 
