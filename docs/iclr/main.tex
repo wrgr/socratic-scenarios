@@ -161,7 +161,7 @@ Case study & Where & Key experiments (CS$X.Y$) \\
 3.1 real-hazard screen; 3.2 fact-QA necessity (no simulator); 3.3 discrete procedural domain
 (\S\ref{sec:instrument}); 3.4 probe-suite breadth \\
 \addlinespace
-\textbf{CS4} validations (does the instrument hold up?) & \S\ref{sec:instrument},\,\ref{sec:unlearning} &
+\textbf{CS4} validations (does the instrument hold up?) & \S\ref{sec:instrument},\,App.~\ref{app:unlearning} &
 4.1 construct validity; 4.2 reweighting sensitivity ($\tau{=}1.00$); 4.3 unlearning null
 (says\,$\neq$\,does); 4.4 offline reproduce runner \\
 \bottomrule
@@ -326,47 +326,16 @@ near-binary check. \texttt{npm run colreg:construct}.}
 \label{tab:construct}
 \end{table}
 
-\begin{figure}[t]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-  width=0.86\linewidth, height=4.9cm,
-  ymode=log, ymin=0.02, ymax=5000, log origin=infty,
-  ylabel={mean regret $J$},
-  xmin=-0.4, xmax=6.4,
-  xtick={0,1,2,3,4,5,6},
-  xticklabels={$\varnothing$,{+give-way role},{+turn starboard},{+bold turn},{+act early},{+safe speed},{+multi-ship}},
-  xticklabel style={rotate=28, anchor=east, font=\footnotesize},
-  yticklabel style={font=\footnotesize}, ylabel style={font=\footnotesize},
-  ymajorgrids, grid style={figmuted!25, thin},
-  axis lines=left, tick align=outside, clip=false,
-]
-\addplot[figblue, very thick, mark=*, mark size=2.1pt,
-  mark options={fill=figblue, draw=white, line width=0.5pt}]
-  coordinates {(0,1765.44) (1,1759.18) (2,1745.24) (3,1605.21)
-               (4,221.01) (5,0.03) (6,0.03)};
-% Call out the two competencies that actually clear the domain.
-\node[figorange, font=\scriptsize\bfseries, anchor=west] at (axis cs:4,900) {acting early};
-\node[figorange, font=\scriptsize\bfseries, anchor=west] at (axis cs:4.55,3.0) {+ safe speed};
-\draw[figorange, -{Stealth[length=4pt]}, thick] (axis cs:3.9,700) -- (axis cs:3.98,300);
-\draw[figorange, -{Stealth[length=4pt]}, thick] (axis cs:4.9,2.2) -- (axis cs:4.98,0.09);
-\end{axis}
-\end{tikzpicture}
-\caption{Competence$\to$performance gradient on the nine-encounter instrument. Mean regret
-$J$ (log scale) as the six knowledge components are acquired in curriculum order (left to
-right); each point is a competence stage, from the empty learner ($\varnothing$) to full
-competence. $J$ spans nearly five orders of magnitude and collapses as the two
-domain-clearing competencies---acting \emph{early} and at a \emph{safe speed}---come online,
-the graded behavior Table~\ref{tab:construct} reports numerically. \texttt{npm run colreg:construct}.}
-\label{fig:gradient}
-\end{figure}
-
 \paragraph{\kc$\to$single-metric identifiability.} We design each knowledge component to
 govern exactly one metric, so ablating a \kc\ degrades that metric and no other. On the
 procedural domain this is \emph{exact}: each ablated competence degrades only its governed
 metric, and a monotone competence$\to$performance gradient ($J:204\to 0$) follows as
 competence is acquired in curriculum order; on the COLREG instrument the same gradient spans
-nearly five orders of magnitude (Figure~\ref{fig:gradient}). Because the property holds on both a
+nearly five orders of magnitude, collapsing only as the two domain-clearing competencies come
+online---mean $J$ by curriculum stage ($\varnothing$, {+}give-way, {+}turn-starboard, {+}bold-turn,
+\textbf{{+}act-early}, \textbf{{+}safe-speed}, {+}multi-ship) is
+$1765\!\to\!1759\!\to\!1745\!\to\!1605\!\to\!\mathbf{221}\!\to\!\mathbf{0.03}\!\to\!0.03$
+(\texttt{npm run colreg:construct}). Because the property holds on both a
 continuous-control and a discrete-procedural instrument, it is a general measurement-design
 property, not a COLREG artifact.
 
@@ -413,26 +382,8 @@ The CRI parameters are excluded because CRI is a reported diagnostic, not a term
 scored objective, so the ranking is invariant to them by construction. The protocol's
 conclusions are thus a property of the competence structure, not of the weight calibration.
 
-\paragraph{Estimator recovery and calibration.} Feeding the instrument's outcomes into a
-generic learner-agent estimator, we recover known ground truth on synthetic data
-(Table~\ref{tab:recovery}). This turns ``we have a metric'' into ``the measurement is
-valid.''
-
-\begin{table}[t]
-\centering
-\small
-\begin{tabular}{@{}lll@{}}
-\toprule
-Estimator & Recovery of known ground truth & Calibration (ECE) \\
-\midrule
-Elo & static ability, mean abs.\ error $0.046$ & $0.023$ \\
-BKT & latent state $P(\hat L)=0.997$ (learned) vs.\ $0.175$ (not) & $0.004$ \\
-\bottomrule
-\end{tabular}
-\caption{Estimator-recovery and calibration on synthetic data with a known ground truth.
-The measurement, not just the metric, is validated.}
-\label{tab:recovery}
-\end{table}
+Estimator-recovery and calibration on synthetic data---validating the measurement, not just the
+metric---appear in Appendix~\ref{app:recovery}.
 
 \section{The Corpus Diagnosis: the same instrument, read backwards}
 \label{sec:diagnosis}
@@ -583,20 +534,10 @@ necessity is \emph{graded and calibrated} is the simulator-free fact-QA dose-res
 (Section~\ref{sec:construction}, CS3.2), where the metric is answer-accuracy over many independent
 facts and carries no fixed-geometry confound.
 
-\paragraph{What in the corpus changes the answer: presence vs.\ retrieval.}
-The leakage test asks whether the learner relies on the corpus \emph{at all}; a deployed RAG tutor
-raises a finer question---of the value curation adds, how much comes from the fact being \emph{present}
-versus the retriever actually \emph{surfacing} it. Decomposing over in-corpus $\times$ retrieved gives
-three scorable conditions: \textsc{none} (closed-book), \textsc{retrieved} (the deployed dense
-retriever's top-$k$), and \textsc{oracle} (the answer-bearing chunk). Accuracy across them attributes the
-gain: $\mathrm{acc}(\textsc{oracle}){-}\mathrm{acc}(\textsc{none})$ is the \emph{content ceiling},
-$\mathrm{acc}(\textsc{retrieved}){-}\mathrm{acc}(\textsc{none})$ what the pipeline \emph{delivers}, and
-their difference the \emph{retrieval gap}. On seven equipment-SOP fact-recall queries through a small
-local generator (Qwen2.5-1.5B), closed-book is $0/7$, \textsc{oracle} $7/7$, and the deployed MiniLM
-pipeline $3/7$---so of a $100\%$ content ceiling it delivers $43\%$ and forfeits a $57\%$ retrieval gap
-(generator-independent recall@$5$ $4/7$ localizes it). The binding constraint is retrieval, not coverage
-or capability---distinct outcomes the binary leakage verdict cannot separate. (One small model, seven
-queries: the method, not a benchmark. Harness: \texttt{experiments/retrieval-decomp}.)
+\paragraph{Presence vs.\ retrieval.} A finer decomposition---separating value the corpus \emph{holds}
+from value the retriever \emph{surfaces}, over the \textsc{none}/\textsc{retrieved}/\textsc{oracle}
+conditions, so a curation failure, a retrieval failure, and a priors success are distinguished---is
+developed in Appendix~\ref{app:retrieval}.
 
 \section{Case Study 2 --- from blind to expert: reading quality and reasoning depth}
 \label{sec:depth}
@@ -672,11 +613,13 @@ The necessity/leakage test infers a fact about a model's \emph{weights} from a c
 model did not need it. The sharpest objection is that corpus \emph{context} removal is not
 weight-level \emph{knowledge} change, so a small necessity could be the no-context heuristic in
 disguise---or, conversely, a large necessity could reflect a fact the model happens not to know
-for reasons we did not control. We close this two ways, in increasing strength.
+for reasons we did not control. We close this primarily by \emph{construction} (below); a complementary
+\emph{unlearning} cross-check---removing a rule the model \emph{does} know---is secondary, because
+standard COLREG rules lack necessity range, and is deferred to Appendix~\ref{app:unlearning}.
 
 \subsection{Validation by construction: the necessity dose-response}
 \label{sec:construction}
-The holding this section establishes: \emph{necessity is a non-confounded, calibrated measure}---teaching
+The holding: \emph{necessity is a non-confounded, calibrated measure}---teaching
 a fact into the weights drives it down as a dose-response---so a near-zero reading is evidence the model
 already knew the item, not a context-removal artifact. The decisive test is \emph{known-groups}: build
 models along a gradient from fact-naive to
@@ -734,7 +677,146 @@ sweeps agreeing---while the simulator-free fictional-fact QA (answer-accuracy ob
 \label{tab:dose}
 \end{table}
 
-\subsection{Validation by unlearning: a \emph{says\,$\neq$\,does} dissociation (supporting, CS4.3)}
+\paragraph{Two supporting arms (appendices).} Two secondary arms build on this calibrated measure. A
+complementary \emph{unlearning} cross-check yields a \emph{says\,$\neq$\,does} dissociation---gentle,
+guardrailed SimNPO on a 3B model suppresses what the model \emph{says} (forget-set likelihood collapses,
+the Rule-14 citation disappears) while the steering \emph{decision} the instrument scores is untouched,
+and an aggressive recipe instead \emph{inverts} the rule to port---a caution that weight-level unlearning
+of a safety rule can produce confident non-compliance (Appendix~\ref{app:unlearning}). And the intended
+use, a \emph{pre-trial screen} that scores two complementary proxy-learner classes on the same
+$\regret$ instrument so a method that fails to move it is a no-go before any human is recruited, is
+developed in Appendix~\ref{app:proxies}.
+
+\section{Limitations and scope}
+\label{sec:limits}
+\textbf{Mechanism, not external validity.} Every result here is simulation-based mechanism
+evidence. We make no learning-gains claim and pre-register the human cohort study as future
+work. \textbf{Proxy validity.} Simulated learners can be unfaithful---prompt-suppressed and
+unlearned models may be too capable, may learn unrealistically fast, and need not reproduce
+authentic human misconceptions; recent work cautions that student simulation is valid only
+under specific conditions \citep{validsim2026} and documents systematic fidelity gaps
+between LLM ``students'' and real learners \citep{studentfidelity2025, studentabilities2025}. We
+therefore treat the two proxy classes as a mutual cross-check, not a substitute for human
+data---which is exactly why the human cohort study is a pre-registered requirement rather
+than an optional extension. \textbf{Instrument sensitivity.} The protocol embeds weighting
+choices (ship domain, objective); we show the ranking survives a $\pm40\%$ reweighting
+($\tau=1.00$, \S\ref{sec:instrument}), but robustness beyond that range, and to the
+elliptical-domain \emph{form} itself, is untested. \textbf{Small evidence base --- illustrative, not a benchmark.}
+The numbers here demonstrate that the \emph{method} behaves as designed; they are not a
+validity claim at scale. The discrimination result (Table~\ref{tab:disc}) covers five models across
+\emph{three} provider families (Anthropic, Meta, Amazon) on an eight-hazard suite; an earlier
+single-hazard scan (in the released provenance) additionally spanned eight models and found two open
+reasoning models (\texttt{gpt-oss} 20B/120B) unscoreable by the single-shot instrument---their reasoning
+did not reliably terminate within the decode budget, so whether necessity is a property of the
+(corpus,\,learner) pair awaits a variance-controlled rerun. The released harness now exercises
+\emph{three} rules across \emph{two} metric axes---turn direction
+(Rule~14 head-on, Rule~15 crossing) and, on a restricted-visibility subset, speed (Rule~6/19 safe
+speed, scored through the decision's speed rather than its heading)---and the unlearning arm turns on a
+single rule and model family. A persuasive claim still needs more models per family and many
+more rules/encounters---which is why we release the harness (\texttt{experiment.sh}, and a
+Bedrock provider$\times$size sweep) built to run exactly that, and report these as worked
+examples rather than a leaderboard. \textbf{Single-rule decomposability may not generalize.}
+\kc$\to$single-metric identifiability and clean per-rule ablation are properties we
+\emph{design into} a governed corpus and \emph{verify} per instrument
+(Table~\ref{tab:ident}); they are not guaranteed for an arbitrary corpus, whose rules may be
+entangled, redundant, or jointly govern one outcome. Where a single rule cannot be cleanly
+isolated, the localization degrades to a coarser attribution and the leakage test to a
+group-level one; how far clean decomposition extends beyond corpora we constructed is open.
+\textbf{The unlearning arm is a single model at one scale.} The \emph{says\,$\neq$\,does}
+result (Appendix~\ref{app:unlearning}) is informative---a gentle recipe suppresses the
+\emph{words} while the scored \emph{decision} is untouched, an aggressive one \emph{inverts}
+the rule---but it is one 3B model, and seed/method variance is outstanding. It is a
+\emph{supporting} result: a clean necessity transition is structurally out of reach for any
+pretrained COLREG rule (all leak), which is exactly why the primary weight-level validation is
+the \emph{construction} dose-response (Section~\ref{sec:construction}), where we build the
+knowledge into the weights and observe necessity fall---already run in two domains, though on
+single models per domain; more seeds and sizes (and a 7B hazard replication in
+\texttt{bfloat16}, not 4-bit, since quantization noise would confound the effect) remain
+breadth. \textbf{Sufficiency is scoped to a query set.} Every sufficiency verdict is relative
+to the probed queries; we mitigate rather than escape this by always reporting the query count
+and by treating the false-sufficiency signal as the measurable warning of fragility to shift,
+but a corpus adequate for one query distribution may be insufficient for another.
+
+\paragraph{Future work.} The pre-registered human cohort study is the external-validity test this
+in-silico screen is built to de-risk. Method-side, we plan to scale the cross-model discrimination
+(more providers and rule sets; the harness already runs class$\times$size sweeps) and to broaden the
+weight-level battery from one discrete hazard to a \emph{suite} of corpus-only probes across effect
+sizes---a medium-effect routing convention and a conflicting fact about another vessel's intention,
+building on the real charted-danger leg already shown (Section~\ref{sec:diagnosis})---so necessity is
+validated as a distribution across probe kinds, not a single test.
+
+\section{Conclusion}
+We have described an in-silico instrument that measures whether a learner \emph{needs} a corpus,
+and whether a corpus is \emph{sufficient}, before human-subject effort. The central contribution
+is a \emph{necessity} measure made non-confounded by \emph{construction}: teaching a fact into a
+model's weights drives the instrument's necessity for that fact down as a dose-response, which we
+demonstrate in two domains with independent objectives---a control-regret simulator (large-effect
+known-groups endpoints) and a \emph{simulator-free} fictional-fact QA task (the graded monotone
+curve, $1.00\!\to\!0.03$). On that calibrated measure we build a corpus-value audit---ranking
+items by necessity, localizing a missing item, and splitting the unrelied-upon into
+\emph{redundant} versus \emph{unusable}---and a corpus-sufficiency verdict that surfaces
+\emph{false sufficiency}. Distinct from faithfulness and context-attribution, we measure need
+against a weight-level baseline they lack. Supporting breadth---a reference-policy transfer
+instrument with \kc$\to$single-metric identifiability, a learner ladder that reads corpus
+contribution beyond existence (decision quality and reasoning depth), cross-model discrimination, a
+second control domain, and a \emph{says\,$\neq$\,does} unlearning dissociation---rounds out the picture.
+The claim is testable and narrow; the domains are worked examples, the evidence base is
+deliberately small, and the measurement method is the point.
+
+\paragraph{Reproducibility.} The simulator, the answer-checker QA domain, the diagnosis and
+sufficiency harness, the construction dose-response, and the open-weight unlearning scaffold will
+be released, along with a deterministic no-key dry-run that recovers the mock ground truth and
+one-tap GPU notebooks for the dose-response. The whole offline backbone regenerates in one
+deterministic, LLM-free command that checks each headline result against its claimed value (CS4.4).
+(Code is withheld here to preserve double-blind review.)
+
+\appendix
+
+\section{Estimator recovery and calibration}
+\label{app:recovery}
+Feeding the instrument's outcomes into a generic learner-agent estimator, we recover known ground truth
+on synthetic data (Table~\ref{tab:recovery}). This turns ``we have a metric'' into ``the measurement is
+valid.''
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Estimator & Recovery of known ground truth & Calibration (ECE) \\
+\midrule
+Elo & static ability, mean abs.\ error $0.046$ & $0.023$ \\
+BKT & latent state $P(\hat L)=0.997$ (learned) vs.\ $0.175$ (not) & $0.004$ \\
+\bottomrule
+\end{tabular}
+\caption{Estimator-recovery and calibration on synthetic data with a known ground truth.
+The measurement, not just the metric, is validated.}
+\label{tab:recovery}
+\end{table}
+
+\section{Presence vs.\ retrieval: what in the corpus changes the answer}
+\label{app:retrieval}
+The leakage test asks whether the learner relies on the corpus \emph{at all}; a deployed RAG tutor
+raises a finer question---of the value curation adds, how much comes from the fact being \emph{present}
+versus the retriever actually \emph{surfacing} it. Decomposing over in-corpus $\times$ retrieved gives
+three scorable conditions: \textsc{none} (closed-book, priors only), \textsc{retrieved} (the deployed
+dense retriever's top-$k$), and \textsc{oracle} (the answer-bearing chunk, i.e.\ perfect retrieval).
+Accuracy across them attributes the gain: $\mathrm{acc}(\textsc{oracle}){-}\mathrm{acc}(\textsc{none})$
+is the \emph{content ceiling} (value if retrieval were perfect),
+$\mathrm{acc}(\textsc{retrieved}){-}\mathrm{acc}(\textsc{none})$ is what the deployed pipeline
+\emph{delivers}, and their difference is the \emph{retrieval gap}---value present in the corpus but never
+surfaced. On seven equipment-SOP fact-recall queries through a small local generator (Qwen2.5-1.5B),
+closed-book accuracy is $0/7$ (empty priors), \textsc{oracle} is $7/7$ (every fact is recoverable from
+its chunk), and the deployed MiniLM pipeline lands between at $3/7$---so of a $100\%$ content ceiling the
+pipeline \emph{delivers} $43\%$ and \emph{forfeits} a $57\%$ retrieval gap; a generator-independent
+recall@$5$ of any answer-bearing chunk ($4/7$) localizes it. The binding constraint is retrieval, not
+corpus coverage or model capability, and a curation failure (fact absent), a retrieval failure (present
+but unranked), and a priors success are distinct outcomes the binary leakage verdict cannot separate.
+(Numbers illustrate the method---one small model, seven queries---not a benchmark. Harness:
+\texttt{experiments/retrieval-decomp}.)
+
+\section{Validation by unlearning: a \emph{says\,$\neq$\,does} dissociation (CS4.3)}
+\label{app:unlearning}
 \label{sec:unlearning}
 The complementary direction removes a rule the model \emph{does} know and asks whether necessity
 rises. This arm is secondary---it has dynamic range only on a rule with a real corpus-vs-prior
@@ -798,7 +880,7 @@ corpus-only fact \emph{does} have range, and not this arm. A broader suite of co
 across effect sizes (a medium-effect routing convention, a conflicting fact about another vessel's
 intention) is future work (Section~\ref{sec:limits}).
 
-\begin{table}[t]
+\begin{table}[h]
 \centering
 \small
 \begin{tabular}{@{}lcccc@{}}
@@ -830,99 +912,17 @@ removed; the decision holds throughout. Harness: \texttt{experiments/unlearning}
 \end{table}
 
 \section{Proxy learners as a pre-trial screen (application)}
+\label{app:proxies}
 \label{sec:proxies}
 With the measure validated, its intended use is a pre-trial screen. We exercise the instrument with
 \emph{two complementary} controlled-competence proxy classes: (a) a parametric competence-vector
 learner, and (b) a knowledge-suppressed / unlearned LLM learner (the arm of
-Section~\ref{sec:unlearning}). Because both are scored on the \emph{same} $\regret$ instrument, a
+Appendix~\ref{app:unlearning}). Because both are scored on the \emph{same} $\regret$ instrument, a
 method that fails to move the instrument in the expected direction is a \emph{no-go} before any human
 is recruited---exactly what the \emph{says\,$\neq$\,does} dissociation flags for naive unlearning. This
 differs from prior proxy-learner work
 \citep{apartsin2026,ps2_2026,song2026unlearn,llmjudgeaudit2026,educlaw2026} in scoring on an objective
 control-task outcome rather than dialogue behavior, profile alignment, or LLM-judge helpfulness.
-
-\section{Limitations and scope}
-\label{sec:limits}
-\textbf{Mechanism, not external validity.} Every result here is simulation-based mechanism
-evidence. We make no learning-gains claim and pre-register the human cohort study as future
-work. \textbf{Proxy validity.} Simulated learners can be unfaithful---prompt-suppressed and
-unlearned models may be too capable, may learn unrealistically fast, and need not reproduce
-authentic human misconceptions; recent work cautions that student simulation is valid only
-under specific conditions \citep{validsim2026} and documents systematic fidelity gaps
-between LLM ``students'' and real learners \citep{studentfidelity2025, studentabilities2025}. We
-therefore treat the two proxy classes as a mutual cross-check, not a substitute for human
-data---which is exactly why the human cohort study is a pre-registered requirement rather
-than an optional extension. \textbf{Instrument sensitivity.} The protocol embeds weighting
-choices (ship domain, objective); we show the ranking survives a $\pm40\%$ reweighting
-($\tau=1.00$, \S\ref{sec:instrument}), but robustness beyond that range, and to the
-elliptical-domain \emph{form} itself, is untested. \textbf{Small evidence base --- illustrative, not a benchmark.}
-The numbers here demonstrate that the \emph{method} behaves as designed; they are not a
-validity claim at scale. The discrimination result (Table~\ref{tab:disc}) covers five models across
-\emph{three} provider families (Anthropic, Meta, Amazon) on an eight-hazard suite; an earlier
-single-hazard scan (in the released provenance) additionally spanned eight models and found two open
-reasoning models (\texttt{gpt-oss} 20B/120B) unscoreable by the single-shot instrument---their reasoning
-did not reliably terminate within the decode budget, so whether necessity is a property of the
-(corpus,\,learner) pair awaits a variance-controlled rerun. The released harness now exercises
-\emph{three} rules across \emph{two} metric axes---turn direction
-(Rule~14 head-on, Rule~15 crossing) and, on a restricted-visibility subset, speed (Rule~6/19 safe
-speed, scored through the decision's speed rather than its heading)---and the unlearning arm turns on a
-single rule and model family. A persuasive claim still needs more models per family and many
-more rules/encounters---which is why we release the harness (\texttt{experiment.sh}, and a
-Bedrock provider$\times$size sweep) built to run exactly that, and report these as worked
-examples rather than a leaderboard. \textbf{Single-rule decomposability may not generalize.}
-\kc$\to$single-metric identifiability and clean per-rule ablation are properties we
-\emph{design into} a governed corpus and \emph{verify} per instrument
-(Table~\ref{tab:ident}); they are not guaranteed for an arbitrary corpus, whose rules may be
-entangled, redundant, or jointly govern one outcome. Where a single rule cannot be cleanly
-isolated, the localization degrades to a coarser attribution and the leakage test to a
-group-level one; how far clean decomposition extends beyond corpora we constructed is open.
-\textbf{The unlearning arm is a single model at one scale.} The \emph{says\,$\neq$\,does}
-result (Section~\ref{sec:unlearning}) is informative---a gentle recipe suppresses the
-\emph{words} while the scored \emph{decision} is untouched, an aggressive one \emph{inverts}
-the rule---but it is one 3B model, and seed/method variance is outstanding. It is a
-\emph{supporting} result: a clean necessity transition is structurally out of reach for any
-pretrained COLREG rule (all leak), which is exactly why the primary weight-level validation is
-the \emph{construction} dose-response (Section~\ref{sec:construction}), where we build the
-knowledge into the weights and observe necessity fall---already run in two domains, though on
-single models per domain; more seeds and sizes (and a 7B hazard replication in
-\texttt{bfloat16}, not 4-bit, since quantization noise would confound the effect) remain
-breadth. \textbf{Sufficiency is scoped to a query set.} Every sufficiency verdict is relative
-to the probed queries; we mitigate rather than escape this by always reporting the query count
-and by treating the false-sufficiency signal as the measurable warning of fragility to shift,
-but a corpus adequate for one query distribution may be insufficient for another.
-
-\paragraph{Future work.} The pre-registered human cohort study is the external-validity test this
-in-silico screen is built to de-risk. Method-side, we plan to scale the cross-model discrimination
-(more providers and rule sets; the harness already runs class$\times$size sweeps) and to broaden the
-weight-level battery from one discrete hazard to a \emph{suite} of corpus-only probes across effect
-sizes---a medium-effect routing convention and a conflicting fact about another vessel's intention,
-building on the real charted-danger leg already shown (Section~\ref{sec:diagnosis})---so necessity is
-validated as a distribution across probe kinds, not a single test.
-
-\section{Conclusion}
-We have described an in-silico instrument that measures whether a learner \emph{needs} a corpus,
-and whether a corpus is \emph{sufficient}, before human-subject effort. The central contribution
-is a \emph{necessity} measure made non-confounded by \emph{construction}: teaching a fact into a
-model's weights drives the instrument's necessity for that fact down as a dose-response, which we
-demonstrate in two domains with independent objectives---a control-regret simulator (large-effect
-known-groups endpoints) and a \emph{simulator-free} fictional-fact QA task (the graded monotone
-curve, $1.00\!\to\!0.03$). On that calibrated measure we build a corpus-value audit---ranking
-items by necessity, localizing a missing item, and splitting the unrelied-upon into
-\emph{redundant} versus \emph{unusable}---and a corpus-sufficiency verdict that surfaces
-\emph{false sufficiency}. Distinct from faithfulness and context-attribution, we measure need
-against a weight-level baseline they lack. Supporting breadth---a reference-policy transfer
-instrument with \kc$\to$single-metric identifiability, a learner ladder that reads corpus
-contribution beyond existence (decision quality and reasoning depth), cross-model discrimination, a
-second control domain, and a \emph{says\,$\neq$\,does} unlearning dissociation---rounds out the picture.
-The claim is testable and narrow; the domains are worked examples, the evidence base is
-deliberately small, and the measurement method is the point.
-
-\paragraph{Reproducibility.} The simulator, the answer-checker QA domain, the diagnosis and
-sufficiency harness, the construction dose-response, and the open-weight unlearning scaffold will
-be released, along with a deterministic no-key dry-run that recovers the mock ground truth and
-one-tap GPU notebooks for the dose-response. The whole offline backbone regenerates in one
-deterministic, LLM-free command that checks each headline result against its claimed value (CS4.4).
-(Code is withheld here to preserve double-blind review.)
 
 \small
 \bibliographystyle{plainnat}
