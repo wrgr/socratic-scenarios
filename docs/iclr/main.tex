@@ -57,13 +57,17 @@ collision avoidance), where teaching a hidden charted hazard into the weights co
 necessity from a full-barrier swing to $\approx 0$, with the LoRA-scale and training-checkpoint
 gradients agreeing; and (ii) a simulator-free \emph{fictional-fact question answering} task
 scored by an answer checker, where teaching invented facts into a 7B model drives necessity
-\emph{smoothly and monotonically from $1.00$ to $0.03$}. This calibrated necessity measure is
+\emph{smoothly and monotonically from $1.00$ to $0.03$}.
+
+This calibrated necessity measure is
 the basis of two products: a \emph{corpus diagnosis} that ranks each item by necessity,
 localizes which item is missing from task failures, and---crucially---splits an unrelied-upon
 item into \emph{redundant} (the model already knows it) versus \emph{unusable} (the model
 fails even with it present); and a \emph{corpus-sufficiency} verdict that surfaces
 \emph{false sufficiency}---a corpus that only appears sufficient because the model is coasting
-on priors and is therefore fragile to distribution shift. Unlike faithfulness (RAGAS) and
+on priors and is therefore fragile to distribution shift.
+
+Unlike faithfulness (RAGAS) and
 context-attribution (ContextCite), which measure whether context \emph{supported} or
 \emph{influenced} an output, we measure whether the model \emph{needed} it, against a
 weight-level baseline they lack. The method is \emph{closed-model compatible} (API access
@@ -121,7 +125,7 @@ shows the same instrument reads corpus contribution beyond existence---decision 
 \emph{reasoning depth} (Section~\ref{sec:depth}); a second control domain and
 estimator-recovery calibration; cross-model discrimination on current LLMs
 (Section~\ref{sec:diagnosis}); and a machine-unlearning arm that yields a \emph{says\,$\neq$\,does}
-dissociation as secondary weight-level evidence (Section~\ref{sec:weightlevel}).
+dissociation as secondary weight-level evidence (Appendix~\ref{app:unlearning}).
 
 Our contribution is a \emph{methods/measurement} one, not a new tutor. Every \emph{component} we
 build on is prior art; the \emph{calibrated necessity measure} and its \emph{corpus-value/sufficiency
@@ -169,8 +173,8 @@ Case study & Where & Key experiments (CS$X.Y$) \\
 \caption{The experiment register, grouped into four case studies and referenced as CS$X.Y$
 throughout. The sections cut across the case studies (the instrument's forward validation, CS4/CS3.3,
 is Section~\ref{sec:instrument}; its backward necessity use, CS1, is Section~\ref{sec:diagnosis}; the
-weight-level calibration, CS1.7/CS3.2/CS4.3, is Section~\ref{sec:weightlevel}); this map is the
-reading guide.}
+weight-level calibration, CS1.7/CS3.2, is Section~\ref{sec:weightlevel}, with the CS4.3 unlearning null in
+Appendix~\ref{app:unlearning}); this map is the reading guide.}
 \label{tab:casemap}
 \end{table}
 
@@ -450,21 +454,23 @@ Five production models run over AWS
 Bedrock---Claude Opus/Haiku/Sonnet~4.5, Amazon Nova-micro, and Llama-4-Maverick-17B---at a temp-$0$ point
 estimate plus a $K{=}5$ temp-$0.7$ ensemble (Table~\ref{tab:disc}). Three findings.
 
-\emph{(1) A graded corpus-reliance spectrum.} The corpus-only hazard suite discriminates sharply where
-standard COLREG cannot: reliance falls cleanly from Claude Opus (relies on all $8$) through Haiku ($4$),
-Sonnet ($3$), Nova-micro ($2$), to Llama-4-Maverick ($0$, which never reads the fact and grounds on the
-override reaches even with it present). This is the cross-model dynamic range that textbook
-COLREG---already parametric in every model---cannot produce, laid out as a spectrum rather than the
-near-binary split of the legacy single-hazard scan.
+\emph{(1) A graded reliance spectrum, co-determined by ablated-arm fallback.} Necessity depends on what a
+learner \emph{does when the rule is removed}. The suite is $4$ \emph{override} reaches (the hazard sits
+where the default Rule-14 starboard turn grounds) $+$ $4$ where starboard already clears, so a model that
+falls back on the starboard reflex when the rule is ablated is \emph{rescued} on the four non-override
+reaches and caps at $4/8$ \emph{by construction}: Haiku ($4$), then Sonnet ($3$) and Nova-micro (temp-$0$
+$2$, but $\approx\!0$ in the ensemble, below) reading fewer override reaches, down to Llama-4-Maverick
+($0$, which grounds even with the rule present). Claude Opus is the separate case: it \emph{holds course}
+when ablated rather than falling back (finding~3's strict-mode behavior), so it grounds on all $8$. The
+spectrum is real cross-model range standard COLREG cannot show, but it grades reading \emph{and}
+ablated-arm conservatism together---Opus's $8/8$ means it does not fall back, not that it out-reads Haiku.
 
-\emph{(2) Read on necessity and regret-with, not the verdict.} We classify each hazard on \emph{necessity}
-$=\regret(\text{ablated})-\regret(\text{with-corpus})$ together with \emph{regret-with}, not on the
-categorical leakage verdict. The verdict is a noisier three-signal majority vote that also demands
-following the inverted counterfactual and abstaining closed-book, so it \emph{undercounts} a model that
-reads the fact (high necessity) but happens to answer closed-book from priors: an earlier verdict-based
-count wrongly showed Haiku at $0$, where the necessity reading correctly credits it with $4$. The
-continuous necessity and regret-with are the reliable signals; the verdict is retained only for the
-standard-COLREG strict-mode reading below.
+\emph{(2) Read on necessity and regret-with, not the verdict.} We classify on \emph{necessity}
+$=\regret(\text{ablated})-\regret(\text{with-corpus})$ and \emph{regret-with}, not the categorical leakage
+verdict---a noisier majority vote that also demands following the inverted counterfactual and abstaining
+closed-book, so it \emph{undercounts} a model that reads the fact but answers closed-book from priors: an
+earlier verdict-based count wrongly put Haiku at $0$, where necessity credits it with $4$. The verdict is
+retained only for the standard-COLREG strict-mode reading below.
 
 \emph{(3) Strict-mode faithfulness on standard COLREG.} Opus reads \emph{standard} COLREG as
 \textsc{corpus-bound}, but the audit log shows this is a \emph{strict-mode} effect, not a Rule-14
@@ -498,8 +504,9 @@ sit in wide empty gaps: the necessity signal is the clear$\leftrightarrow$ground
 ($\sim\!1400$--$1782$) against $\approx\!0$ noise, and regret-with $\ge\!10$ is a clean fail-with-corpus
 cut. Values are the temp-$0$ point estimate; the $K{=}5$ temp-$0.7$ ensemble has sd $\approx\!0$ except
 ($\dagger$): Sonnet unusable $1.2\pm0.7$, Nova-micro relied $0.2\pm0.4$ and unusable $2.2\pm0.7$.
-Reliance is graded from Opus ($8/8$) to Maverick ($0/8$) where standard COLREG cannot discriminate.
-Provenance \texttt{experiments/provenance/cross-model/}.}
+Counts reflect ablated-arm fallback as well as reading: reflex-appliers cap at $4/8$ (the four override
+reaches), and Opus's $8/8$ reflects that it holds course rather than falling back on Rule-14 when the rule
+is ablated (cf.\ finding~3). Provenance \texttt{experiments/provenance/cross-model/}.}
 \label{tab:disc}
 \end{table}
 
@@ -509,30 +516,21 @@ rule---Rule~15 crossing give-way---exercised on its own crossing scenarios (a ru
 moves the metric on scenarios that invoke it, so each probe carries a matched subset).
 Ablating each rule produces a large regret signal on its own encounters: on
 \texttt{gemini-flash-latest} under the bound prompt, ablating Rule~14 gives
-$\delta_{\!\regret}{=}1981$ (head-on) and ablating Rule~15 gives $1285$ (crossing); on
-\texttt{gemini-flash-lite-latest}, $658$ and $662$ respectively. The two rules are localized
-on disjoint scenario subsets, so the instrument reads reliance per rule.
+$\delta_{\!\regret}{=}1981$ (head-on) and ablating Rule~15 gives $1285$ (crossing), each localized on its
+own disjoint scenario subset (\texttt{gemini-flash-lite} reproduces this at $658$/$662$), so the instrument
+reads reliance per rule.
 
-\paragraph{A real fact can be corpus-only (screen check, CS3.1).} A fair worry about the hazard
-arm is that our danger is \emph{fictional}, so ``the model is corpus-bound'' might just mean ``the
-model cannot know an invented fact.'' We answer the narrower, real question this raises---\emph{can a
-genuine, publicly-charted fact be corpus-only for a frontier model?}---with a closed-book
-\emph{screen}: we ask Claude Opus to name each candidate danger unprompted and keep only the ones it
-cannot recall. Two obscure, official-gazetteer-verified rocks---Elwha Rock (Cayou Channel, Puget
-Sound) and Fullastern Rock (Adelaide Island, Antarctica)---survive the screen (Opus does not name
-them), while Whittle Rock (False Bay) is \emph{screened out} (Opus names it unprompted, so it is
-parametric, not corpus-only)---the screen working as designed. We stress what this leg does and does
-not show. It validates the \emph{screen}: a real fact \emph{can} be corpus-only for a current model,
-so the necessity phenomenon is not an artifact of using invented dangers. It does \emph{not} add an
-independent measurement of the necessity magnitude: because the hazard's identity never enters the
-objective $J$ (only its rule text and location vary in a fixed rig), any hazard Opus reads yields the
-same full-barrier $\delta_{\regret}\!\approx\!1998$ \emph{by construction}---the number is invariant
-to which danger it is, not a fresh confirmation. The screen is also imperfect: a famous positive
-control, the Seven Stones reef, failed to screen out for the wrong reason (Opus recalled adjacent
-dangers rather than its track), which we report rather than force. The load-bearing evidence that
-necessity is \emph{graded and calibrated} is the simulator-free fact-QA dose-response
-(Section~\ref{sec:construction}, CS3.2), where the metric is answer-accuracy over many independent
-facts and carries no fixed-geometry confound.
+\paragraph{A real fact can be corpus-only (screen check, CS3.1).} Is ``corpus-bound'' just ``cannot know an
+invented fact''? We test whether a \emph{genuine} charted danger can be corpus-only for a frontier model
+with a closed-book \emph{screen}: ask Claude Opus to name each candidate unprompted and keep only those it
+cannot recall. Two official-gazetteer rocks---Elwha Rock (Puget Sound) and Fullastern Rock (Antarctica)---
+survive (Opus does not name them), while Whittle Rock (False Bay) is screened out (named, so parametric).
+This validates the \emph{screen}---a real fact \emph{can} be corpus-only---but adds no independent necessity
+\emph{magnitude}: the hazard's identity never enters $J$, so any hazard Opus reads yields the same
+full-barrier $\delta_{\regret}\!\approx\!1998$ \emph{by construction}. The screen is imperfect (the Seven
+Stones reef failed to screen out because Opus recalled adjacent dangers), which we report rather than force.
+The load-bearing graded-and-calibrated evidence is the simulator-free fact-QA dose-response
+(Section~\ref{sec:construction}, CS3.2), free of the fixed-geometry confound.
 
 \paragraph{Presence vs.\ retrieval.} A finer decomposition---separating value the corpus \emph{holds}
 from value the retriever \emph{surfaces}, over the \textsc{none}/\textsc{retrieved}/\textsc{oracle}
@@ -607,7 +605,7 @@ what the ensemble's variance control flags as noise rather than reliance. Proven
 \texttt{experiments/provenance/reason-implement/gemini-2.5-flash.b2.jsonl}.
 
 \section{Validating necessity at the weight level}
-\label{sec:weightlevel}
+\label{sec:weightlevel}\label{sec:construction}
 The necessity/leakage test infers a fact about a model's \emph{weights} from a change in the
 \emph{prompt}: ablate an item from the corpus, and if the governed outcome does not move, the
 model did not need it. The sharpest objection is that corpus \emph{context} removal is not
@@ -617,9 +615,8 @@ for reasons we did not control. We close this primarily by \emph{construction} (
 \emph{unlearning} cross-check---removing a rule the model \emph{does} know---is secondary, because
 standard COLREG rules lack necessity range, and is deferred to Appendix~\ref{app:unlearning}.
 
-\subsection{Validation by construction: the necessity dose-response}
-\label{sec:construction}
-The holding: \emph{necessity is a non-confounded, calibrated measure}---teaching
+\paragraph{Validation by construction: the necessity dose-response.}
+\emph{Necessity is a non-confounded, calibrated measure}---teaching
 a fact into the weights drives it down as a dose-response---so a near-zero reading is evidence the model
 already knew the item, not a context-removal artifact. The decisive test is \emph{known-groups}: build
 models along a gradient from fact-naive to
@@ -691,14 +688,10 @@ developed in Appendix~\ref{app:proxies}.
 \label{sec:limits}
 \textbf{Mechanism, not external validity.} Every result here is simulation-based mechanism
 evidence. We make no learning-gains claim and pre-register the human cohort study as future
-work. \textbf{Proxy validity.} Simulated learners can be unfaithful---prompt-suppressed and
-unlearned models may be too capable, may learn unrealistically fast, and need not reproduce
-authentic human misconceptions; recent work cautions that student simulation is valid only
-under specific conditions \citep{validsim2026} and documents systematic fidelity gaps
-between LLM ``students'' and real learners \citep{studentfidelity2025, studentabilities2025}. We
-therefore treat the two proxy classes as a mutual cross-check, not a substitute for human
-data---which is exactly why the human cohort study is a pre-registered requirement rather
-than an optional extension. \textbf{Instrument sensitivity.} The protocol embeds weighting
+work. \textbf{Proxy validity.} Simulated learners can be unfaithful---prompt-suppressed and unlearned models
+may be too capable or miss authentic human misconceptions, and recent work documents systematic
+LLM-vs-human fidelity gaps \citep{validsim2026,studentfidelity2025,studentabilities2025}; we therefore
+treat the two proxy classes as a mutual cross-check, not a substitute for the pre-registered human study. \textbf{Instrument sensitivity.} The protocol embeds weighting
 choices (ship domain, objective); we show the ranking survives a $\pm40\%$ reweighting
 ($\tau=1.00$, \S\ref{sec:instrument}), but robustness beyond that range, and to the
 elliptical-domain \emph{form} itself, is untested. \textbf{Small evidence base --- illustrative, not a benchmark.}
@@ -708,14 +701,10 @@ validity claim at scale. The discrimination result (Table~\ref{tab:disc}) covers
 single-hazard scan (in the released provenance) additionally spanned eight models and found two open
 reasoning models (\texttt{gpt-oss} 20B/120B) unscoreable by the single-shot instrument---their reasoning
 did not reliably terminate within the decode budget, so whether necessity is a property of the
-(corpus,\,learner) pair awaits a variance-controlled rerun. The released harness now exercises
-\emph{three} rules across \emph{two} metric axes---turn direction
-(Rule~14 head-on, Rule~15 crossing) and, on a restricted-visibility subset, speed (Rule~6/19 safe
-speed, scored through the decision's speed rather than its heading)---and the unlearning arm turns on a
-single rule and model family. A persuasive claim still needs more models per family and many
-more rules/encounters---which is why we release the harness (\texttt{experiment.sh}, and a
-Bedrock provider$\times$size sweep) built to run exactly that, and report these as worked
-examples rather than a leaderboard. \textbf{Single-rule decomposability may not generalize.}
+(corpus,\,learner) pair awaits a variance-controlled rerun. The released harness exercises \emph{three} rules across \emph{two} metric axes---turn direction (Rule~14
+head-on, Rule~15 crossing) and, on a restricted-visibility subset, safe speed---plus a class$\times$size
+Bedrock sweep; a persuasive claim still needs more models per family and many more rules/encounters, so we
+report these as worked examples, not a leaderboard. \textbf{Single-rule decomposability may not generalize.}
 \kc$\to$single-metric identifiability and clean per-rule ablation are properties we
 \emph{design into} a governed corpus and \emph{verify} per instrument
 (Table~\ref{tab:ident}); they are not guaranteed for an arbitrary corpus, whose rules may be
