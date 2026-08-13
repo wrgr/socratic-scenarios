@@ -100,10 +100,11 @@ async function runLive() {
   const T = Number(process.env.TEMP ?? 0.7);
   const ensembleOn = K > 1 && T > 0;
 
-  // AUDIT_LOG=<path>: one JSONL row per model CALL (2 per reach: with-corpus + ablated), tagged by
-  // phase (point / ens0..K-1). DEBUG=1 also prints each decision inline (deg + abstain + reasoning),
-  // so you can watch what the model does — e.g. an abstention flake — without grepping the JSONL.
-  const auditPath = process.env.AUDIT_LOG;
+  // Provenance is ON BY DEFAULT for the live run: one JSONL row per model CALL (2 per reach:
+  // with-corpus + ablated), tagged by phase (point / ens0..K-1). Override with AUDIT_LOG=<path>, or
+  // AUDIT_LOG='' to disable. DEBUG=1 also prints each decision inline (deg + abstain + reasoning).
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const auditPath = process.env.AUDIT_LOG ?? `runs/reason-implement-${stamp}.jsonl`;
   const debug = process.env.DEBUG === '1';
   if (auditPath) { mkdirSync(dirname(auditPath), { recursive: true }); writeFileSync(auditPath, ''); }
   const onCall = auditPath || debug
@@ -132,6 +133,7 @@ async function runLive() {
   const t0 = Date.now();
   console.log(`\nLive run (${check.label}) — does the model USE the local rule (alter to the deep side) or apply the Rule-14 reflex?`);
   console.log(`  plan: ${totalCalls} model calls at ~${rpm}/min ≈ ${Math.ceil(totalCalls / Math.max(1, rpm))} min${debug ? '  (DEBUG: printing each decision)' : ''}`);
+  if (auditPath) console.log(`  audit log (all runs): ${auditPath}`);
 
   // ── Point estimate: temp 0, deterministic ──
   process.stdout.write(`\n  point estimate (temp 0): `);
