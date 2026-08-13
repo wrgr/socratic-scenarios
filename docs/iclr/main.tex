@@ -78,27 +78,6 @@ are \textbf{simulation-based mechanism evidence, not human-subject external vali
 scope the contribution accordingly and pre-register the human study as future work.
 \end{abstract}
 
-\vspace{0.5em}
-\noindent\fbox{\parbox{\dimexpr\textwidth-2\fboxsep-2\fboxrule}{%
-\small\textbf{Plain-language summary.} When an AI answers correctly with a rulebook in front
-of it, you cannot easily tell whether it \emph{needed} the rulebook or already knew the
-answer---and you cannot tell whether the rulebook has holes. Normally you would find out with
-an expensive human study. We build a cheap ``test bench'' that answers both questions first.
-We remove a single item from the corpus and watch what breaks: if performance drops, the model
-genuinely relied on it; if nothing changes, it did not. To prove that ``nothing changes''
-really means the knowledge was already in the model---and not some prompt artifact---we
-\emph{construct} the answer: we teach a fact into the model's weights and show reliance falls
-step by step (a ``dose-response''). We do this in two settings, one of which uses no simulator
-at all: a ship-steering task, and a set of \emph{made-up facts} about fictional places no model
-could know---taught into a real model, reliance on the corpus drops smoothly from
-$100\%$ to near zero. The payoff is a corpus audit: which items are truly needed, which are
-\emph{redundant} (already known---delete them), which are \emph{unusable} (present but the
-model can't act on them), and whether the corpus only \emph{looks} sufficient because the
-model is coasting on what it already knew. Everything here is controlled simulation that checks
-the machinery---not yet a claim that human learners learn more, which is the study we set up
-next.}}
-\vspace{0.5em}
-
 \section{Introduction}
 Generic retrieval-augmented (RAG) assistants optimize for semantic relevance: give a
 plausible answer to whatever is asked. That objective is wrong for training in
@@ -249,19 +228,13 @@ policy, not answer text; (b) we attribute \emph{per corpus rule} and localize wh
 missing or wrong, not per token or system-wide; and (c) we measure not merely \emph{influence}
 but \emph{necessity}---calibrated by manipulating the parametric baseline directly (weight-level
 construction and unlearning, Section~\ref{sec:weightlevel}), so a fact the model already knew is
-not mistaken for one it relied on. No context-attribution method has that weight-level ground
-truth. The gap is structural, not incidental: a faithfulness or context-relevance score is a
-function of the \emph{(question, retrieved context, answer)} triple, computed with the corpus
-\emph{present}. Necessity is a \emph{contrast}---$\mathrm{acc}(\text{with corpus})-\mathrm{acc}(\text{without
-corpus})$---and RAGAS never runs the without-corpus condition, so it is \emph{structurally blind}
-to the quantity, regardless of how the answers are phrased. A model that already knows a fact and
-one that does not \emph{both} answer correctly with the corpus present and both score \emph{high}
-(the correct answer is entailed by the context whether or not the model used it); a metric that
-only ever sees the with-corpus arm therefore cannot separate a load-bearing corpus from a
-redundant one, and reports the redundant case as sufficient---the false-sufficiency failure our
-measure is built to catch. (Our released harness computes both the RAGAS scores and our necessity
-contrast side by side; the point is definitional---the without-corpus arm RAGAS omits is exactly
-what necessity is read from.) \textbf{ContextCite} \citep{contextcite2024} is the closest relative: because
+not mistaken for one it relied on. The gap is structural: a faithfulness score is a function of the
+\emph{(question, context, answer)} triple computed with the corpus \emph{present}, whereas necessity is
+a \emph{contrast}---$\mathrm{acc}(\text{with corpus})-\mathrm{acc}(\text{without corpus})$---and RAGAS
+never runs the without-corpus arm, so it is \emph{structurally blind} to the quantity: a model that
+knows a fact and one that does not both score high with the corpus present, and the redundant case is
+reported as sufficient---the false-sufficiency failure our measure is built to catch. (Our released
+harness computes both side by side.) \textbf{ContextCite} \citep{contextcite2024} is the closest relative: because
 it ablates context and measures the change in the response's log-probability against the model's own
 baseline, it \emph{partially} tracks necessity---but it requires open weights and per-token
 log-probabilities (so it cannot run on the closed API models our necessity test does), attributes
@@ -397,20 +370,15 @@ nearly five orders of magnitude (Figure~\ref{fig:gradient}). Because the propert
 continuous-control and a discrete-procedural instrument, it is a general measurement-design
 property, not a COLREG artifact.
 
-\paragraph{Is identifiability tautological?} A fair objection is that the mapping is a
-design choice, so ``ablate the \kc, that metric moves'' is true by construction. Two things
-make it a testable property rather than a tautology. First, the \emph{cross-effect} claim
-can fail: designing the metrics is not enough to guarantee that ablating one \kc\ leaves the
-\emph{others} unchanged---if the objective's terms are entangled (e.g.\ a safety barrier
-that also moves the deviation term), ablation bleeds across metrics, and we measure and
-report that it does not. Identifiability is the empirically-checked \emph{absence} of that
-bleed, not the presence of the intended effect. Second, the mapping is what makes the
-Corpus Diagnosis (Section~\ref{sec:diagnosis}) actionable: without it, a task failure cannot be
-attributed to a specific corpus rule. We therefore treat identifiability as a design
-\emph{requirement to be verified per instrument}---a property an instrument can lack---and
-verifying it is part of building one, exactly as construct validity is. On the procedural
-domain the verification is clean (Table~\ref{tab:ident}): ablating each knowledge component
-degrades only its governed metric, with maximum off-diagonal change $0.0000$---no cross-bleed.
+\paragraph{Is identifiability tautological?} A fair objection is that the mapping is a design choice, so
+``ablate the \kc, that metric moves'' is true by construction. But the \emph{cross-effect} claim can
+fail: designing the metrics does not guarantee that ablating one \kc\ leaves the \emph{others} unchanged
+---if the objective's terms are entangled, ablation bleeds across metrics. Identifiability is the
+empirically-checked \emph{absence} of that bleed, and it is what makes the Corpus Diagnosis
+(Section~\ref{sec:diagnosis}) actionable (a task failure attributes to a specific rule). We thus treat it
+as a design requirement to be verified per instrument. On the procedural domain the verification is clean
+(Table~\ref{tab:ident}): each ablation degrades only its governed metric, maximum off-diagonal change
+$0.0000$---no cross-bleed.
 
 \begin{table}[t]
 \centering
@@ -526,8 +494,8 @@ priors ($\Rightarrow$ \textsc{leaking}).
 \paragraph{Real-model discrimination (CS1.3).} We run the necessity test as a \emph{suite}: eight
 independent, alternating-bow charted hazards, each isolated in its own corpus, so per-model necessity is
 the \emph{fraction of the suite relied upon} (resolution $1/8$)---the fraction-valued reading of CS1.4
-that supersedes the earlier single-hazard $\delta_{\regret}$ scan (retained for provenance as
-Appendix~\ref{app:legacy}, Table~\ref{tab:disc-legacy}). Five production models run over AWS
+that supersedes an earlier single-hazard $\delta_{\regret}$ scan (kept in the released provenance).
+Five production models run over AWS
 Bedrock---Claude Opus/Haiku/Sonnet~4.5, Amazon Nova-micro, and Llama-4-Maverick-17B---at a temp-$0$ point
 estimate plus a $K{=}5$ temp-$0.7$ ensemble (Table~\ref{tab:disc}). Three findings.
 
@@ -570,8 +538,8 @@ Llama-4-Maverick-17B & $0$            & $4$            & $4$ \\
 \end{tabular}
 \caption{Cross-model necessity over the eight-hazard corpus-only suite (five models, AWS Bedrock; CS1.3).
 Each hazard is isolated in its own corpus, so the three counts partition the suite of $8$ and per-model
-reliance is a fraction (CS1.4's fraction-valued fix; the legacy single-hazard $\delta_{\regret}$ scan is
-Table~\ref{tab:disc-legacy}). Classification uses \emph{necessity} $=\regret(\text{ablated})-\regret(\text{with-corpus})$
+reliance is a fraction (CS1.4's fraction-valued fix, superseding an earlier single-hazard
+$\delta_{\regret}$ scan). Classification uses \emph{necessity} $=\regret(\text{ablated})-\regret(\text{with-corpus})$
 and \emph{regret-with}: \textbf{relied} $=$ necessity $>100$ \emph{and} regret-with $<10$ (clears with the
 item, grounds without); \textbf{unusable} $=$ regret-with $\ge 10$ (grounds \emph{with} the item
 present---present-but-unexploited); \textbf{redundant} $=$ otherwise (clears both ways). The thresholds
@@ -583,9 +551,6 @@ Reliance is graded from Opus ($8/8$) to Maverick ($0/8$) where standard COLREG c
 Provenance \texttt{experiments/provenance/cross-model/}.}
 \label{tab:disc}
 \end{table}
-
-% The legacy single-hazard necessity--usability plane (Figure~\ref{fig:plane-legacy})
-% now lives in Appendix~\ref{app:legacy}, together with the legacy eight-model table.
 
 \paragraph{Per-rule, not just per-corpus.} To show the diagnosis attributes reliance to a
 \emph{specific} rule rather than to corpus presence in general, we add a second, independent
@@ -619,46 +584,19 @@ necessity is \emph{graded and calibrated} is the simulator-free fact-QA dose-res
 facts and carries no fixed-geometry confound.
 
 \paragraph{What in the corpus changes the answer: presence vs.\ retrieval.}
-The leakage test asks a binary question---does the learner rely on the corpus at all. A
-deployed RAG tutor raises a finer one: of the value curation adds, how much comes from the
-fact being \emph{present} in the corpus versus from the retriever actually \emph{surfacing}
-it? We decompose this over two binary factors---in-corpus and retrieved---whose three
-reachable cells are three scorable conditions (Table~\ref{tab:ragdecomp}):
-\textsc{none} (closed-book, priors only), \textsc{retrieved} (the deployed dense
-retriever's top-$k$), and \textsc{oracle} (the answer-bearing chunk, i.e.\ perfect
-retrieval). Reading accuracy across them attributes the gain:
-$\mathrm{acc}(\textsc{oracle}){-}\mathrm{acc}(\textsc{none})$ is the \emph{content ceiling}
-(value if retrieval were perfect), $\mathrm{acc}(\textsc{retrieved}){-}\mathrm{acc}(\textsc{none})$
-is what the deployed pipeline \emph{delivers}, and their difference is the \emph{retrieval
-gap}---value present in the corpus but never surfaced. Running the three conditions through
-a small local generator (Qwen2.5-1.5B) on seven equipment-SOP fact-recall queries makes the
-split concrete: closed-book accuracy is $0/7$ (empty priors), \textsc{oracle} is $7/7$ (every
-fact is recoverable from its chunk), and the deployed MiniLM pipeline lands between at $3/7$
----so of a $100\%$ content ceiling the pipeline \emph{delivers} $43\%$ and \emph{forfeits} a
-$57\%$ retrieval gap; a generator-independent recall@$5$ of any answer-bearing chunk ($4/7$)
-localizes it. Here the binding constraint is retrieval, not corpus coverage or model
-capability, and a curation failure (fact absent), a retrieval failure (present but unranked),
-and a priors success are distinct outcomes the binary leakage verdict cannot separate.
-(Numbers illustrate the method---one small model, seven queries---not a benchmark.)
-
-\begin{table}[t]
-\centering
-\small
-\begin{tabular}{lll}
-\toprule
- & not retrieved & retrieved \\
-\midrule
-not in corpus & priors only (\textsc{none}) & --- (unreachable) \\
-in corpus     & retriever misses (\emph{gap}) & RAG success (\textsc{retrieved}$\to$\textsc{oracle}) \\
-\bottomrule
-\end{tabular}
-\caption{Decomposing a RAG answer's outcome over in-corpus $\times$ retrieved. The three
-reachable cells are the \textsc{none}/\textsc{retrieved}/\textsc{oracle} conditions;
-$\mathrm{acc}(\textsc{oracle}){-}\mathrm{acc}(\textsc{none})$ is the content ceiling,
-$\mathrm{acc}(\textsc{retrieved}){-}\mathrm{acc}(\textsc{none})$ what the pipeline delivers,
-their difference the retrieval gap. Harness: \texttt{experiments/retrieval-decomp}.}
-\label{tab:ragdecomp}
-\end{table}
+The leakage test asks whether the learner relies on the corpus \emph{at all}; a deployed RAG tutor
+raises a finer question---of the value curation adds, how much comes from the fact being \emph{present}
+versus the retriever actually \emph{surfacing} it. Decomposing over in-corpus $\times$ retrieved gives
+three scorable conditions: \textsc{none} (closed-book), \textsc{retrieved} (the deployed dense
+retriever's top-$k$), and \textsc{oracle} (the answer-bearing chunk). Accuracy across them attributes the
+gain: $\mathrm{acc}(\textsc{oracle}){-}\mathrm{acc}(\textsc{none})$ is the \emph{content ceiling},
+$\mathrm{acc}(\textsc{retrieved}){-}\mathrm{acc}(\textsc{none})$ what the pipeline \emph{delivers}, and
+their difference the \emph{retrieval gap}. On seven equipment-SOP fact-recall queries through a small
+local generator (Qwen2.5-1.5B), closed-book is $0/7$, \textsc{oracle} $7/7$, and the deployed MiniLM
+pipeline $3/7$---so of a $100\%$ content ceiling it delivers $43\%$ and forfeits a $57\%$ retrieval gap
+(generator-independent recall@$5$ $4/7$ localizes it). The binding constraint is retrieval, not coverage
+or capability---distinct outcomes the binary leakage verdict cannot separate. (One small model, seven
+queries: the method, not a benchmark. Harness: \texttt{experiments/retrieval-decomp}.)
 
 \section{Case Study 2 --- from blind to expert: reading quality and reasoning depth}
 \label{sec:depth}
@@ -709,12 +647,10 @@ the safe side \emph{alternates} port/starboard---so no fixed reflex can pass---t
 $6/6$} while the \textbf{lookup implementer clears only the $3$} reaches where the local rule is redundant
 with Rule~14 and \emph{grounds on the $3$ it overrides}. The necessity of the local-rule corpus is thus
 $3/6$, separable \emph{only} on the overriding cases---the fact-vs-reasoning distinction (RAG-as-lookup
-vs.\ RAG-as-reasoning-substrate) made measurable. \emph{As in CS2.1, these use hand-built reference
-policies with known ground truth}, so the run validates the \emph{instrument}; a real model is the
-\emph{subject}, run through the same rig (the live path is wired).
+vs.\ RAG-as-reasoning-substrate) made measurable. As in CS2.1 these are hand-built reference policies
+with known ground truth, so the run validates the \emph{instrument}.
 
-\paragraph{CS2.2 (live) --- a real model reads as a reasoner.} Because the learners above are hand-built
-reference policies, that run validates the \emph{instrument}; putting a live model through the \emph{same}
+\paragraph{CS2.2 (live) --- a real model reads as a reasoner.} Putting a live model through the \emph{same}
 B2 rig---necessity $=\regret(\text{ablated})-\regret(\text{with-corpus})$, two conditions per reach, a
 temp-$0$ point estimate plus a $K{=}5$ temp-$0.7$ ensemble---makes the model the measured \emph{subject}.
 \textbf{Gemini-2.5-flash} reads as a \textbf{reasoner}. On the three \emph{override} reaches (deep water
@@ -726,8 +662,7 @@ scattered instead (relied $1$--$2/5$, sd $\approx\!800$)---the audit log shows t
 information''\,$\to$ holds course $\to$ grounds $\to$ a spurious large necessity). \emph{Scope note:} with
 only six draws per reach this is the \emph{observed} behavior, not an abstention rate; the reasoner
 reading rests on the override reaches ($5/5$, zero variance), and the redundant-reach scatter is exactly
-what the ensemble's variance control flags as noise rather than reliance. The reference policies validate
-the instrument; the live model is the subject measured on it. Provenance:
+what the ensemble's variance control flags as noise rather than reliance. Provenance:
 \texttt{experiments/provenance/reason-implement/gemini-2.5-flash.b2.jsonl}.
 
 \section{Validating necessity at the weight level}
@@ -923,10 +858,12 @@ choices (ship domain, objective); we show the ranking survives a $\pm40\%$ rewei
 elliptical-domain \emph{form} itself, is untested. \textbf{Small evidence base --- illustrative, not a benchmark.}
 The numbers here demonstrate that the \emph{method} behaves as designed; they are not a
 validity claim at scale. The discrimination result (Table~\ref{tab:disc}) covers five models across
-\emph{three} provider families (Anthropic, Meta, Amazon) on an eight-hazard suite; the legacy
-single-hazard scan (Appendix~\ref{app:legacy}) additionally spans eight models and records why two open
-reasoning models were excluded as unscoreable by the single-shot instrument---and reports the head-on rule; the
-released harness now exercises \emph{three} rules across \emph{two} metric axes---turn direction
+\emph{three} provider families (Anthropic, Meta, Amazon) on an eight-hazard suite; an earlier
+single-hazard scan (in the released provenance) additionally spanned eight models and found two open
+reasoning models (\texttt{gpt-oss} 20B/120B) unscoreable by the single-shot instrument---their reasoning
+did not reliably terminate within the decode budget, so whether necessity is a property of the
+(corpus,\,learner) pair awaits a variance-controlled rerun. The released harness now exercises
+\emph{three} rules across \emph{two} metric axes---turn direction
 (Rule~14 head-on, Rule~15 crossing) and, on a restricted-visibility subset, speed (Rule~6/19 safe
 speed, scored through the decision's speed rather than its heading)---and the unlearning arm turns on a
 single rule and model family. A persuasive claim still needs more models per family and many
@@ -986,120 +923,6 @@ be released, along with a deterministic no-key dry-run that recovers the mock gr
 one-tap GPU notebooks for the dose-response. The whole offline backbone regenerates in one
 deterministic, LLM-free command that checks each headline result against its claimed value (CS4.4).
 (Code is withheld here to preserve double-blind review.)
-
-\appendix
-
-\section{Legacy single-hazard cross-model scan (superseded by the CS1.4 suite)}
-\label{app:legacy}
-An earlier version of the cross-model discrimination (CS1.3) used a \emph{single} corpus-only charted
-hazard and reported necessity as a coarse geometric ordinal $\delta_{\regret}$ rather than as a fraction
-over a suite of independent hazards. We retain it here for provenance; the fraction-valued suite of
-Table~\ref{tab:disc} (CS1.4's fix) supersedes it in the main text. This legacy scan also covered a wider
-model set (eight models, plus two open reasoning models run and excluded), so it is the reference for the
-model-count and exclusion statements in the main text.
-
-\emph{(1) Standard rules are redundant for these frontier models.} Every model relies on little of the
-standard corpus (relied $0$--$1$ of $4$; it duplicates their parametric COLREG---\emph{redundant}, an
-actionable ``do not ship'' verdict). We also ran two open reasoning models (OpenAI \texttt{gpt-oss}
-20B/120B) that \emph{appeared} to rely on the same corpus (relied $2$--$3$/$4$), but we exclude them from
-Table~\ref{tab:disc-legacy}: the single-shot instrument cannot score them reliably. Their harmony-format
-reasoning frequently failed to terminate within the decode budget (the 20B needed a $50$k-token budget
-where every other model used $<\!4$k), and with no repeat/variance control an unstable output yields
-ablation deltas indistinguishable from genuine reliance. Whether such models truly rely on standard
-COLREG---i.e.\ whether necessity is a property of the (corpus, learner) pair and not the corpus alone---is
-a real question, but confirming it needs a variance-controlled, parse-budget-matched rerun (future work).
-
-\emph{(2) Necessity has wide dynamic range on the hazard.} $\delta_{\regret}$ spans $0$ to
-$\sim\!2000$: Nova-micro ignores the corpus ($\delta_{\regret}{=}0$) while Opus reads it and clears at
-the full barrier ($\delta_{\regret}{=}1998$, $\regret_{\text{with}}{=}0.2$)---the cleanest
-\textsc{corpus-bound} reader.
-
-\emph{(3) The redundant-vs-unusable split shows on real models} (Figure~\ref{fig:plane-legacy}). With-corpus
-regret separates \emph{usable} from \emph{unusable}: all clear once given the rule ($\regret_{\text{with}}\!\approx\!0.2$)
-\emph{except} Llama-3.3-70B ($457$) and Nova-micro ($670$), which ground \emph{even with the rule
-present}---the content has value but the model cannot act on it (\textsc{unusable}; fix the model, not
-the corpus). This is genuine learner-dependence: the same corpus item is \emph{usable} for one model and
-\emph{unusable} for another. (A prompt-condition study on Gemini gives the binding-fidelity control:
-under a strict binding prompt necessity grades monotonically with capability; removing the clause flips
-every model to \textsc{leaking}.) The continuous $\delta_{\regret}$ and $\regret_{\text{with}}$ are more
-reliable than the categorical verdict, a noisier three-signal majority vote.
-
-\begin{table}[h]
-\centering
-\small
-\begin{tabular}{@{}lcccl@{}}
-\toprule
-& Standard & \multicolumn{2}{c}{Charted hazard (corpus-only)} & \\
-\cmidrule(lr){3-4}
-Model & relied/4 & $\delta_{\regret}$ & $\regret_{\text{with}}$ & reads hazard as \\
-\midrule
-\emph{mock corpus-bound} & --- & $1981$ & $0.2$ & \textsc{corpus-bound} \\
-\emph{mock leaking}      & $0$ & $0$    & ---   & \textsc{leaking} \\
-\midrule
-Claude Haiku 4.5   & $0$ & $669$          & $0.2$          & \textsc{inconcl.} \\
-Claude Sonnet 4.5  & $1$ & $669$          & $0.2$          & \textsc{leaking} \\
-Claude Opus 4.5    & $1$ & $\mathbf{1998}$& $0.2$          & $\textbf{\textsc{corpus-bound}}$ \\
-\addlinespace
-Llama-3.1-8B       & $0$ & $667$          & $0.1$          & \textsc{leaking} \\
-Llama-3.3-70B      & $0$ & $213$          & $\mathbf{457}$ & $\textbf{\textsc{unusable}}$ \\
-\addlinespace
-Nova-micro         & $1$ & $0$            & $\mathbf{670}$ & $\textbf{\textsc{unusable}}$ \\
-Nova-lite          & $0$ & $145$          & $0.2$          & \textsc{inconcl.} \\
-Nova-pro           & $1$ & $669$          & $0.2$          & \textsc{inconcl.} \\
-\bottomrule
-\end{tabular}
-\caption{\textbf{Legacy (superseded).} Cross-model necessity on AWS Bedrock (eight models),
-single-hazard scan. \textbf{relied/4}: standard-COLREG rules the model relies on, of four (per-item
-audit); $0$--$1$ reads \emph{redundant}/false-sufficiency. \textbf{Hazard}: $\delta_{\regret}$ is
-necessity (regret rise when the corpus-only rule is ablated); $\regret_{\text{with}}$ is regret \emph{with}
-the rule present ($\approx\!0.2$ = clears, so \emph{usable}; $\gg\!0$ = grounds anyway = \textsc{unusable}).
-Standard COLREG is \emph{redundant} across all eight (relied $0$--$1$/4). On the hazard, $\delta_{\regret}$
-ranges from $0$ (Nova-micro ignores it) to $1998$ (Opus, full-barrier \textsc{corpus-bound}); this number
-is a coarse ordinal set by the fixed sim geometry (identical maneuvers therefore yield identical
-$\delta_{\regret}$---four models emit the same $30^\circ$ avoidance and land at $669$), not a fine-grained
-per-model scalar. $\regret_{\text{with}}$ exposes two models that ground even with the rule
-(\textsc{unusable}). Mock learners bound the scale. (Two open \texttt{gpt-oss} reasoning models were
-excluded: their reasoning did not reliably terminate within the decode budget, so the single-shot
-instrument cannot score them without a variance control---see text.) Superseded by the fraction-valued
-suite of Table~\ref{tab:disc}.}
-\label{tab:disc-legacy}
-\end{table}
-
-\begin{figure}[h]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-  width=\columnwidth, height=5.4cm,
-  xlabel={necessity $\delta_{\regret}$ (rule ablated)},
-  ylabel={with-corpus regret $\regret_{\text{with}}$},
-  xmin=-90, xmax=2260, ymin=-60, ymax=800,
-  xtick={0,500,1000,1500,2000}, ytick={0,200,400,600},
-  tick label style={font=\scriptsize}, label style={font=\scriptsize},
-  clip=false,
-]
-\addplot[only marks, mark=*, mark size=1.6pt, figblue]
-  coordinates {(1998,0.2) (668,0.2) (145,0.2)};
-\addplot[only marks, mark=*, mark size=1.6pt, figorange]
-  coordinates {(0,670) (213,457)};
-\node[font=\scriptsize, anchor=south] at (axis cs:1998,8) {Opus};
-\node[font=\scriptsize, anchor=south] at (axis cs:660,8) {Haiku/Sonnet/Nova-pro/8B};
-\node[font=\scriptsize, anchor=south] at (axis cs:145,8) {Nova-lite};
-\node[font=\scriptsize, anchor=south] at (axis cs:0,685) {Nova-micro};
-\node[font=\scriptsize, anchor=west]  at (axis cs:235,457) {Llama-70B};
-\node[figblue, font=\scriptsize\itshape, anchor=north east] at (axis cs:2240,120) {corpus-bound};
-\node[figorange, font=\scriptsize\itshape, anchor=north east] at (axis cs:2240,760) {unusable: grounds even with the rule};
-\end{axis}
-\end{tikzpicture}
-\caption{\textbf{Legacy (superseded).} The necessity--usability plane for the eight models of
-Table~\ref{tab:disc-legacy} on the single corpus-only hazard. \emph{Horizontal:} necessity
-$\delta_{\regret}$ (how much ablating the rule raises regret; a coarse ordinal set by the fixed
-geometry---the four blue points at $\delta_{\regret}\!\approx\!668$ are four models that emit the same
-avoidance angle). \emph{Vertical:} with-corpus regret---$\approx\!0$ (blue, on the axis) means the model
-\emph{clears} once given the rule (\emph{usable}); a large value (orange) means it \emph{grounds even with
-the rule present} (\emph{unusable}). Reliance and usability are distinct axes: Claude Opus reads the
-corpus-only fact and clears, while Nova-micro and Llama-70B ground regardless.}
-\label{fig:plane-legacy}
-\end{figure}
 
 \small
 \bibliographystyle{plainnat}
