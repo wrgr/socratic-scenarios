@@ -80,8 +80,11 @@ python build_hazard_datasets.py                         # data/hazard_teach.json
 #    The teach set is ~25 examples, so at batch 4 x 8 epochs the run is ~56 steps; save_every 5
 #    gives ~11 snapshots across it. If the curve is too sharp (learning finishes in a few steps),
 #    lower --lr to 3e-5 and --save_every to 3 to stretch and resolve the early curve.
-python unlearn.py --method sft --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 \
+python unlearn.py --method sft --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 --chat \
     --sft_file data/hazard_teach.jsonl --epochs 8 --lr 1e-4 --save_every 5 --out out/hazard_taught
+# NB: --chat is REQUIRED for an Instruct model — score_offline.py always chat-templates at eval, so
+#     teaching without it is a train/eval mismatch and the fact may not surface. (run.sh already
+#     defaults --chat on for the unlearning forget/retain sets; only this standalone teach missed it.)
 
 # 2. SWEEP — corpus-reliance vs weight-knowledge (checkpoints are the robust graded axis; the
 #    α-sweep is the cross-check — agreement rules out a gradient-method artifact)

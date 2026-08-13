@@ -56,7 +56,10 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "hazard" ]; then
   run python build_hazard_datasets.py
   for s in $SEEDS; do
     say "hazard: teach adapter (SFT) seed=$s"
-    run python unlearn.py --method sft --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 \
+    # --chat is REQUIRED for an Instruct model: score_offline.py always applies the chat template at
+    # eval time, so the teach set must be chat-formatted too or train/eval mismatch and the fact
+    # may not surface (corrupting the dose-response curve). DOSE_RESPONSE.md omits it — that's a bug.
+    run python unlearn.py --method sft --model Qwen/Qwen2.5-3B-Instruct --dtype bfloat16 --chat \
         --sft_file data/hazard_teach.jsonl --epochs 8 --lr 1e-4 --save_every 5 --seed "$s" \
         --out "out/hazard_taught_s${s}"
     say "hazard: alpha-sweep seed=$s"
