@@ -90,7 +90,7 @@ function runOffline() {
     }
   }
 
-  console.log('\n\nSummary — cell counts per learner (of 6 cells):');
+  console.log(`\n\nSummary — cell counts per learner (of ${OVERRIDE_FACTORIAL.length} cells):`);
   console.log('  learner       RELIED  MISLED  REDUNDANT  IGNORED');
   for (const { name } of REFERENCE_LEARNERS) {
     const c = learnerCells[name];
@@ -100,16 +100,18 @@ function runOffline() {
     );
   }
 
-  // ── Design-validation assertions (the suite is only useful if these hold) ──
+  // ── Design-validation assertions (count-driven, so the suite can grow) ──
+  const nOverride = OVERRIDE_FACTORIAL.filter((c) => c.kind === 'override').length;
+  const nMisled = OVERRIDE_FACTORIAL.filter((c) => c.kind === 'misled').length;
   const checks: [string, boolean][] = [
     ['reasoner clears every cell (RELIED on overrides, REDUNDANT/RELIED elsewhere, never MISLED/IGNORED)',
       learnerCells['reasoner'].MISLED === 0 && learnerCells['reasoner'].IGNORED === 0],
-    ['lookup reader is MISLED on the misled cells (blind corpus-following is worse than ignoring)',
-      learnerCells['lookup'].MISLED === 2],
-    ['implementer is IGNORED/unusable on the override cells (ignores the rule, grounds)',
-      learnerCells['implementer'].IGNORED === 2],
+    [`lookup reader is MISLED on all ${nMisled} misled cells (blind corpus-following is worse than ignoring)`,
+      learnerCells['lookup'].MISLED === nMisled],
+    [`implementer is IGNORED/unusable on all ${nOverride} override cells (ignores the rule, grounds)`,
+      learnerCells['implementer'].IGNORED === nOverride],
     ['reliance shows on overrides but not redundant (necessity localizes to the override factor)',
-      learnerCells['reasoner'].RELIED === 2 && learnerCells['lookup'].RELIED === 2],
+      learnerCells['reasoner'].RELIED === nOverride && learnerCells['lookup'].RELIED === nOverride],
     ['blind never RELIED (holds course; necessity attributes nothing to it)',
       learnerCells['blind'].RELIED === 0],
   ];
