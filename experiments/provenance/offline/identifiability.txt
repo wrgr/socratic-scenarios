@@ -1,0 +1,18 @@
+# proc:identifiability — 2026-08-13T04:00:29Z
+$ npm run proc:identifiability
+
+
+> socratic-scenarios@0.0.0 proc:identifiability
+> npx tsx scripts/procedure-identifiability.ts
+
+KC -> metric identifiability on "Roadside tire change" (Δmetric after ablating each KC; 0.00 = no change). Diagonal marked *.
+
+ablated KC \ metric safetyScore       coreCompleteness  orderScore        finishCompleteness
+--------------------------------------------------------------------------------------------
+safety              -1.00 *            0.00              0.00              0.00             
+coreSteps            0.00             -1.00 *            0.00              0.00             
+sequencing           0.00              0.00             -0.22 *            0.00             
+finishing            0.00              0.00              0.00             -1.00 *           
+
+* = the metric this KC is designed to govern.
+Max OFF-diagonal |Δ| = 0.0000  (0 ⇒ each KC moves ONLY its governed metric — identifiability holds, no cross-bleed).

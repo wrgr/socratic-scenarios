@@ -1,0 +1,34 @@
+# learner:recovery — 2026-08-13T04:00:31Z
+$ npm run learner:recovery
+
+
+> socratic-scenarios@0.0.0 learner:recovery
+> npx tsx scripts/learner-recovery.ts
+
+
+=== Elo — static-ability (IRT) learners ===
+RECOVERY  mean |σ(θ̂) − σ(ability)| over 200 learners: 0.046
+CALIBRATION  ECE (post-warmup, 9000 points): 0.023
+reliability curve (predicted → empirical):
+  0.043 → 0.049  (n=2278)
+  0.146 → 0.141  (n=1131)
+  0.249 → 0.278  (n=803)
+  0.350 → 0.338  (n=651)
+  0.449 → 0.476  (n=680)
+  0.549 → 0.565  (n=720)
+  0.652 → 0.688  (n=762)
+  0.752 → 0.791  (n=864)
+  0.849 → 0.906  (n=1022)
+  0.908 → 0.978  (n=89)
+
+=== BKT — BKT-generated learning traces (estimator params = generator params) ===
+RECOVERY  mean final P(L̂):  truly-known learners 0.997  vs  still-unknown 0.175
+CALIBRATION  ECE (post-warmup, 14800 points): 0.004
+reliability curve (predicted → empirical):
+  0.296 → 0.301  (n=1100)
+  0.332 → 0.320  (n=640)
+  0.454 → 0.593  (n=27)
+  0.542 → 0.520  (n=586)
+  0.631 → 0.685  (n=165)
+  0.778 → 0.762  (n=421)
+  0.896 → 0.895  (n=11861)

@@ -1,0 +1,31 @@
+# colreg:quality-band — 2026-08-13T04:01:02Z
+$ npm run colreg:quality-band
+
+
+> socratic-scenarios@0.0.0 colreg:quality-band
+> npx tsx scripts/colreg-quality-band.ts
+
+Scenario: Channel reach: head-on contact dead ahead  (Rule 14 → alter to starboard)
+
+sailor                                     barrier   quality-regret   (margin / compliance / deviation)
+  BLIND   — hold course & speed              1970   — (collides)    (1.00 / 1.50 / 0.00)
+  NAIVE   — turn the wrong way (port 30°)       0           0.87    (0.00 / 0.81 / 0.06)
+  NAIVE   — over-bold (starboard 75°)           0           0.35    (0.00 / 0.00 / 0.35)
+  TRAINED — Rule-14 modest starboard            0           0.01    (0.00 / 0.00 / 0.01)
+
+quality surface over turn angle (barrier=0 region only — the graded middle band):
+  angle   quality-regret
+   -45°      0.95
+   -30°      0.87
+   -15°      1.72
+     0°      1970   ← collides (barrier)
+    15°      0.48
+    30°      0.06
+    45°      0.14
+    60°      0.24
+    75°      0.35
+    90°      0.47
+
+  → BLIND is off the quality axis (it never clears). Among the sailors that DO clear, the wrong-way
+    and over-bold naive turns sit in the middle band (quality-regret ≈ 0.9), while the trained
+    Rule-14 maneuver sits at the floor (≈ 0.01). That gap is the corpus's quality contribution.
