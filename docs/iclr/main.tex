@@ -722,17 +722,12 @@ examples rather than a leaderboard. \textbf{Single-rule decomposability may not 
 entangled, redundant, or jointly govern one outcome. Where a single rule cannot be cleanly
 isolated, the localization degrades to a coarser attribution and the leakage test to a
 group-level one; how far clean decomposition extends beyond corpora we constructed is open.
-\textbf{The unlearning arm is a single model at one scale.} The \emph{says\,$\neq$\,does}
-result (Appendix~\ref{app:unlearning}) is informative---a gentle recipe suppresses the
-\emph{words} while the scored \emph{decision} is untouched, an aggressive one \emph{inverts}
-the rule---but it is one 3B model, and seed/method variance is outstanding. It is a
-\emph{supporting} result: a clean necessity transition is structurally out of reach for any
-pretrained COLREG rule (all leak), which is exactly why the primary weight-level validation is
-the \emph{construction} dose-response (Section~\ref{sec:construction}), where we build the
-knowledge into the weights and observe necessity fall---already run in two domains, though on
-single models per domain; more seeds and sizes (and a 7B hazard replication in
-\texttt{bfloat16}, not 4-bit, since quantization noise would confound the effect) remain
-breadth. \textbf{Sufficiency is scoped to a query set.} Every sufficiency verdict is relative
+\textbf{The unlearning arm is a single model at one scale.} The \emph{says\,$\neq$\,does} result
+(Appendix~\ref{app:unlearning}) is one 3B model; seed/method variance and more sizes remain outstanding.
+It is \emph{supporting}: a clean necessity transition is out of reach for any pretrained COLREG rule (all
+leak), which is exactly why the primary weight-level validation is the \emph{construction} dose-response
+(Section~\ref{sec:construction}), already run in two domains though on single models each.
+\textbf{Sufficiency is scoped to a query set.} Every sufficiency verdict is relative
 to the probed queries; we mitigate rather than escape this by always reporting the query count
 and by treating the false-sufficiency signal as the measurable warning of fragility to shift,
 but a corpus adequate for one query distribution may be insufficient for another.
@@ -756,19 +751,17 @@ curve, $1.00\!\to\!0.03$). On that calibrated measure we build a corpus-value au
 items by necessity, localizing a missing item, and splitting the unrelied-upon into
 \emph{redundant} versus \emph{unusable}---and a corpus-sufficiency verdict that surfaces
 \emph{false sufficiency}. Distinct from faithfulness and context-attribution, we measure need
-against a weight-level baseline they lack. Supporting breadth---a reference-policy transfer
-instrument with \kc$\to$single-metric identifiability, a learner ladder that reads corpus
-contribution beyond existence (decision quality and reasoning depth), cross-model discrimination, a
-second control domain, and a \emph{says\,$\neq$\,does} unlearning dissociation---rounds out the picture.
-The claim is testable and narrow; the domains are worked examples, the evidence base is
-deliberately small, and the measurement method is the point.
+against a weight-level baseline they lack. Supporting breadth---a transfer instrument with
+\kc$\to$single-metric identifiability, a learner ladder reading corpus contribution beyond existence,
+cross-model discrimination, a second control domain, and a \emph{says\,$\neq$\,does} unlearning
+dissociation---rounds out the picture. The claim is testable and narrow; the domains are worked
+examples, the evidence base is deliberately small, and the measurement method is the point.
 
-\paragraph{Reproducibility.} The simulator, the answer-checker QA domain, the diagnosis and
-sufficiency harness, the construction dose-response, and the open-weight unlearning scaffold will
-be released, along with a deterministic no-key dry-run that recovers the mock ground truth and
-one-tap GPU notebooks for the dose-response. The whole offline backbone regenerates in one
-deterministic, LLM-free command that checks each headline result against its claimed value (CS4.4).
-(Code is withheld here to preserve double-blind review.)
+\paragraph{Reproducibility.} The simulator, QA domain, diagnosis/sufficiency harness, dose-response, and
+unlearning scaffold will be released, with a deterministic no-key dry-run that recovers the mock ground
+truth and one-tap GPU notebooks. The whole offline backbone regenerates in one deterministic, LLM-free
+command that checks each headline result against its claimed value (CS4.4). (Code is withheld here to
+preserve double-blind review.)
 
 \appendix
 

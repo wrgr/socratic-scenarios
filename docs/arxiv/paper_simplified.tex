@@ -14,11 +14,10 @@
 \maketitle
 
 \begin{quote}
-\small\emph{This is a high-school-level retelling of the technical paper, written so we can
-check that the argument actually holds together. It is a companion, not the paper of record;
-every claim here is stated more carefully (and hedged) in \texttt{main.tex}. It is a
-\textbf{test bench}---a way to check the machinery in simulation---not a proof that real
-students learn more.}
+\small\emph{This is a plain-language companion to the technical paper, written so the argument can
+be followed end to end without the formalism. It is a companion, not the paper of record; every
+claim here is stated more carefully (and hedged) in \texttt{main.tex}. It is a \textbf{test
+bench}---a way to check the machinery in simulation---not a proof that real students learn more.}
 \end{quote}
 
 \section*{The problem in one paragraph}
@@ -110,9 +109,10 @@ help'' into two \emph{opposite} cases that look identical from the outside:
 \end{itemize}
 Removing-and-watching (necessity alone) can't tell these apart---both show ``no change.'' What
 separates them is the score \emph{with} the item present: near-perfect $\Rightarrow$ redundant;
-still failing $\Rightarrow$ unusable. We saw both live on the ship hazard: Claude Haiku and Sonnet
-read it \emph{corpus-bound} (they use it), while Llama-70B grounds anyway and \emph{ignores} it
-(regret stays $\approx$1207 with the rule present)---the textbook ``unusable'' case.
+still failing $\Rightarrow$ unusable. We saw both live on a suite of eight hidden hazards: Claude
+Opus relies on \emph{all eight} (it reads the corpus and clears), while Llama-4-Maverick grounds
+even with the rule right in front of it on the reaches it should override---the textbook
+``unusable'' case (fix the model, not the corpus).
 
 \textbf{Product 2 --- Corpus sufficiency, and the FALSE SUFFICIENCY alarm.} This is the
 diagnostic ordinary RAG scoring simply cannot produce. Imagine a corpus that looks totally
@@ -143,11 +143,19 @@ in two domains, and turn it into diagnosis and sufficiency products. The followi
 breadth---they widen the evidence, but the paper does not lean on them.
 
 \begin{itemize}[leftmargin=1.4em]
-  \item \textbf{Cross-model discrimination.} We run the instrument across many different LLMs
-  (Claude Haiku/Sonnet, Llama, Nova, and others) and it tells them apart: every model reads the
-  \emph{textbook} ship rules as redundant (they all already know the COLREGs), while the invented
-  hidden hazard splits them---corpus-bound vs.\ unusable vs.\ inconclusive. Different models,
-  genuinely different verdicts.
+  \item \textbf{Cross-model discrimination.} We run the instrument across five production LLMs (on
+  AWS Bedrock) and it tells them apart on a \emph{graded} scale: every model reads the
+  \emph{textbook} ship rules as redundant (they all already know the COLREGs), but on a suite of
+  eight \emph{invented} hidden hazards reliance falls cleanly---Claude Opus relies on all eight,
+  Haiku on four, Sonnet on three, Nova-micro on two, and Llama-4-Maverick on none (it grounds even
+  with the rule present). Same textbook knowledge, genuinely different reliance on the corpus-only
+  facts---exactly the dynamic range the standard rulebook can't show.
+  \item \textbf{Lookup vs.\ reasoning (reading depth).} Beyond ``did the learner use the corpus at
+  all,'' the same instrument separates a learner that \emph{looks a rule up} from one that
+  \emph{reasons with it}: on cases where a local rule \emph{overrides} the usual ``turn starboard''
+  reflex, a lookup-only learner grounds while a reasoner clears. Run live, Gemini-2.5-flash reads as
+  a \emph{reasoner}---it relies on the local override rule every time (5/5) on the cases where the
+  reflex would fail.
   \item \textbf{A second simulator domain.} Besides the continuous steering task, we built a
   \emph{discrete, step-by-step} task---a roadside tire change---and showed the same machinery
   works there too (each skill controls exactly one part of the score, and competence and
@@ -181,29 +189,5 @@ breadth---they widen the evidence, but the paper does not lean on them.
   \item \textbf{We are not claiming the corpus is ``sufficient'' in general}---only for the
   specific questions we probed. The false-sufficiency alarm is our honest handle on that limit.
 \end{itemize}
-
-\section*{Does the logic survive a plain retelling? (the checks)}
-
-\begin{enumerate}[leftmargin=1.4em]
-  \item The score is a \emph{distance from an expert's move}, so ``better'' is a measurable
-  quantity, not a vibe. \hfill[measurement]
-  \item Removing a corpus item and watching the score fall measures \emph{necessity}---whether the
-  learner truly needed it. \hfill[the core method]
-  \item We prove necessity is real by \emph{teaching a fact into the weights} and watching necessity
-  fall---in two domains, one with no simulator, giving a smooth 1.00 $\to$ 0.93 $\to$ 0.29 $\to$
-  0.03 curve. \hfill[known-groups validation, the headline]
-  \item Read backwards, the same test ranks corpus items and splits ``didn't help'' into
-  \emph{redundant} (delete it) vs \emph{unusable} (fix the model). \hfill[corpus diagnosis]
-  \item A corpus can look perfectly sufficient while the model coasts on priors---necessity
-  $\approx$0 everywhere is the measurable \emph{false-sufficiency} alarm ordinary RAG scoring can't
-  raise. \hfill[sufficiency]
-  \item We measure whether the model \emph{needed} the context (calibrated against a known
-  baseline), where RAGAS/ContextCite measure whether it was \emph{supported/influenced} by it.
-  \hfill[the delta vs prior tools]
-\end{enumerate}
-
-If any of these feels like a leap, that's exactly where the technical paper needs to work
-harder---and where the remaining work (more rules, more models, a real charted-hazard leg, and
-eventually the human trial) would turn ``plausible'' into ``demonstrated.''
 
 \end{document}
