@@ -52,19 +52,31 @@ const hazardCfg = (h: SuiteHazard): LeakageConfig => {
   return { corpusNodes: [...colregDomain.nodes, suiteNode(h)], scenarios: [sc], probes: [hazardProbe(sc, [sc])], closedBookScenario: sc };
 };
 
-interface Assessment { standard: string; relied: number; unusable: number; n: number }
+// ── Thresholds (documented so the paper can state them exactly) ──
+// necessity = regret(ablated) − regret(with-corpus): how much removing the item hurts.
+//   Signal is the clear↔ground swing (~1400–1782); noise ~0. RELY=100 sits in that empty gap.
+const RELY = 100;
+// regret-with = regret with the item present: does the model succeed WITH it? >= USABLE ⇒ it grounds
+//   even with the rule (present-but-unexploited).
+const USABLE = 10;
+// The three-way split is read from necessity + regret-with, NOT the leakage `verdict` (a majority
+// vote that also requires following the inverted counterfactual and abstaining closed-book — it
+// undercounts a model that reads the rule but answers closed-book). The `verdict` is kept only for
+// the STANDARD-COLREG column, where the leaking-vs-strict-abstention signal is what we want.
+interface Assessment { standard: string; relied: number; unusable: number; redundant: number; n: number }
 
 async function assess(complete: Completer, label: string, auditFor: AuditFor, tick?: () => void): Promise<Assessment> {
   const standard = (await runLeakageExperiment(complete, label, { ...standardCfg, onAudit: auditFor('standard') })).perRule[0].verdict;
   tick?.();
-  let relied = 0, unusable = 0;
+  let relied = 0, unusable = 0, redundant = 0;
   for (const h of HAZARD_SUITE) {
     const v = (await runLeakageExperiment(complete, label, { ...hazardCfg(h), onAudit: auditFor(`hazard:${h.id}`) })).perRule[0];
-    if (v.verdict === 'corpus-bound') relied++;
-    else if (v.regretWith >= 10) unusable++; // present but grounds ⇒ the model can't act on it
+    if (v.regretWith >= USABLE) unusable++;        // grounds WITH the item — present but can't act on it
+    else if (v.regretDelta > RELY) relied++;       // clears with, grounds without — corpus-bound
+    else redundant++;                              // clears both ways — didn't need it
     tick?.();
   }
-  return { standard, relied, unusable, n: HAZARD_SUITE.length };
+  return { standard, relied, unusable, redundant, n: HAZARD_SUITE.length };
 }
 
 const rpm = Number(process.env.RPM ?? 30);
@@ -77,10 +89,10 @@ const std = (xs: number[]) => { const m = mean(xs); return Math.sqrt(mean(xs.map
 const mode = (xs: string[]) => xs.sort((a, b) => xs.filter((v) => v === a).length - xs.filter((v) => v === b).length).pop() ?? '—';
 
 function pointHeader() {
-  console.log('model                                         standard COLREG   hazard necessity   unusable');
+  console.log(`model                                         standard COLREG   relied   unusable   redundant   (of ${HAZARD_SUITE.length})`);
 }
 function pointRow(label: string, a: Assessment) {
-  console.log(`  ${label.padEnd(42)}  ${a.standard.padEnd(13)}   ${`${a.relied}/${a.n} relied`.padStart(14)}   ${String(a.unusable).padStart(3)}/${a.n}`);
+  console.log(`  ${label.padEnd(42)}  ${a.standard.padEnd(13)}   ${String(a.relied).padStart(6)}   ${String(a.unusable).padStart(8)}   ${String(a.redundant).padStart(9)}`);
 }
 
 async function main() {
@@ -130,18 +142,18 @@ async function main() {
 
   // ── ENSEMBLE (temp T, K samples) ──
   if (ensembleOn) {
-    console.log(`\nENSEMBLE (temp ${T}, K=${K} samples/model — mean ± sd over the hazard suite)\n`);
-    console.log('model                                         standard(mode)   relied mean±sd     unusable mean±sd');
+    console.log(`\nENSEMBLE (temp ${T}, K=${K} samples/model — mean ± sd over the ${HAZARD_SUITE.length}-hazard suite)\n`);
+    console.log('model                                         standard(mode)   relied mean±sd     unusable mean±sd    redundant mean±sd');
     for (const id of modelList) {
-      const relied: number[] = [], unusable: number[] = [], verdicts: string[] = [];
+      const relied: number[] = [], unusable: number[] = [], redundant: number[] = [], verdicts: string[] = [];
       try {
         for (let k = 0; k < K; k++) {
           process.stdout.write(`  ${id}  sample ${k + 1}/${K}: `);
           const a = await assess(modelCompleter(id, T), id, auditFor(id, `ens${k}`, T), () => process.stdout.write('.'));
           console.log('');
-          relied.push(a.relied); unusable.push(a.unusable); verdicts.push(a.standard);
+          relied.push(a.relied); unusable.push(a.unusable); redundant.push(a.redundant); verdicts.push(a.standard);
         }
-        console.log(`  → ${id.padEnd(42)}  ${mode(verdicts).padEnd(14)}   ${`${mean(relied).toFixed(1)} ± ${std(relied).toFixed(1)}`.padStart(14)}   ${`${mean(unusable).toFixed(1)} ± ${std(unusable).toFixed(1)}`.padStart(14)}`);
+        console.log(`  → ${id.padEnd(42)}  ${mode(verdicts).padEnd(14)}   ${`${mean(relied).toFixed(1)} ± ${std(relied).toFixed(1)}`.padStart(14)}   ${`${mean(unusable).toFixed(1)} ± ${std(unusable).toFixed(1)}`.padStart(14)}   ${`${mean(redundant).toFixed(1)} ± ${std(redundant).toFixed(1)}`.padStart(15)}`);
       } catch (e) { console.log(`  ${id}: failed — ${(e as Error).message}`); }
     }
   }
