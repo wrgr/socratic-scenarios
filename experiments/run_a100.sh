@@ -159,9 +159,11 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "decision" ]; then
   for m in $MODELS; do
     sg="$(slug "$m")"
     say "decision [$sg]: teach in-channel (seed 0)"
+    # --max_len 8192: the decision prompt embeds the full corpus (~6k tokens); the default 256 would
+    # truncate the JSON target off (unlearn.py now errors on that). batch 1 keeps 6k-token seqs in mem.
     run python unlearn.py --method sft --model "$m" --dtype bfloat16 --chat \
         --sft_file data/hazard_decision_teach.jsonl --epochs 8 --lr 1e-4 --seed 0 \
-        --out "out/hazard_decision_${sg}"
+        --max_len 8192 --batch_size 1 --out "out/hazard_decision_${sg}"
     say "decision [$sg]: necessity on the HELD-OUT eval config (falls => procedural transfer)"
     run python dose_response.py --model "$m" --dtype bfloat16 \
         --adapter "out/hazard_decision_${sg}" --alphas 0,0.5,1.0 --out "results/dose_decision_${sg}"
