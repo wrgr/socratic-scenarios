@@ -142,11 +142,11 @@ async function necessityOfCell(
   phase: string,
   temp: number,
   onCall: Audit,
-): Promise<{ necessity: number; regretWith: number }> {
+): Promise<{ necessity: number; regretWith: number; degWith: number; degAblated: number }> {
   const sc = scoringScenario(c);
   const ref = solveReference(sc).best.result.J;
   const corpusNodes = [...colregDomain.nodes, factorialRuleNode(c)];
-  const run = async (condition: string, ablate: boolean): Promise<number> => {
+  const run = async (condition: string, ablate: boolean): Promise<{ regret: number; deg: number }> => {
     const fn = createLlmManeuverFn({
       complete,
       corpusNodes,
@@ -156,11 +156,11 @@ async function necessityOfCell(
         : undefined,
     });
     const { maneuver } = await fn(sc);
-    return evaluateManeuver(sc, maneuver).J - ref;
+    return { regret: evaluateManeuver(sc, maneuver).J - ref, deg: Math.round((maneuver.courseOffset * 180) / Math.PI) };
   };
-  const regretWith = await run('with-corpus', false);
-  const regretAblated = await run('ablated', true);
-  return { necessity: regretAblated - regretWith, regretWith };
+  const w = await run('with-corpus', false);
+  const a = await run('ablated', true);
+  return { necessity: a.regret - w.regret, regretWith: w.regret, degWith: w.deg, degAblated: a.deg };
 }
 
 async function runLive() {
@@ -191,12 +191,17 @@ async function runLive() {
         }
       : undefined;
 
+  // Accumulate every misled-cell draw's maneuver (with-corpus vs ablated) across point + ensemble.
+  // On a misled cell the corpus rule points to PORT, into the barge, so port (deg<0) = harmful and
+  // starboard (deg>0) = the correct give-way. The marginal rate over these is the reliable statistic.
+  const misledDraws: { degWith: number; degAblated: number }[] = [];
   const pass = async (temp: number, phase: string): Promise<Record<string, Cell>> => {
     const co = wrap(selectRealCompleter({ temperature: temp })!.completer);
     const cells: Record<string, Cell> = {};
     for (const c of OVERRIDE_FACTORIAL) {
-      const { necessity, regretWith } = await necessityOfCell(c, co, phase, temp, onCall);
-      cells[c.id] = classify(necessity, regretWith);
+      const r = await necessityOfCell(c, co, phase, temp, onCall);
+      cells[c.id] = classify(r.necessity, r.regretWith);
+      if (c.kind === 'misled') misledDraws.push({ degWith: r.degWith, degAblated: r.degAblated });
       if (!debug) process.stdout.write('.');
     }
     return cells;
@@ -224,12 +229,8 @@ async function runLive() {
   const reliedPt = OVERRIDE_FACTORIAL.filter((c) => c.kind === 'override' && pt[c.id] === 'RELIED').length;
   const nMis = OVERRIDE_FACTORIAL.filter((c) => c.kind === 'misled').length;
   const nOv = OVERRIDE_FACTORIAL.filter((c) => c.kind === 'override').length;
-  console.log(`  → reads good rules: RELIED ${reliedPt}/${nOv} overrides;  MISLED by wrong rules: ${misledPt}/${nMis}`);
-  console.log(
-    misledPt > 0
-      ? `    ⇒ the model FOLLOWED a wrong retrieved rule into a collision — max apparent reliance, actively harmful.`
-      : `    ⇒ the model OVERRODE the wrong rules (reasoner) — read good rules without being led astray.`,
-  );
+  console.log(`  → reads good rules: RELIED ${reliedPt}/${nOv} overrides;  misled cells (this draw): ${misledPt}/${nMis}`);
+  console.log(`    (the per-draw cell count is a noisy conjunction; the MARGINAL RATE below is the statistic to report)`);
 
   if (ensembleOn) {
     const mis: number[] = [];
@@ -240,10 +241,27 @@ async function runLive() {
         console.log('');
         mis.push(OVERRIDE_FACTORIAL.filter((c) => c.kind === 'misled' && s[c.id] === 'MISLED').length);
       }
-      console.log(`\n  ENSEMBLE (temp ${T}, K=${K}) — MISLED count per sample: [${mis.join(', ')}] of ${nMis}`);
+      console.log(`\n  ENSEMBLE (temp ${T}, K=${K}) — MISLED cell-count per sample: [${mis.join(', ')}] of ${nMis} (noisy; see rate below)`);
     } catch (e) {
       console.log(`\n  ensemble interrupted — ${(e as Error).message.split('\n')[0]} (point estimate above stands)`);
     }
+  }
+
+  // ── The reliable statistic: marginal maneuver rate on the misled cells (with-corpus vs ablated) ──
+  const n = misledDraws.length;
+  if (n) {
+    const cnt = (pred: (d: { degWith: number; degAblated: number }) => boolean) => misledDraws.filter(pred).length;
+    const pct = (x: number) => `${Math.round((100 * x) / n)}%`;
+    const cell = (x: number) => `${x}/${n} (${pct(x)})`.padEnd(15);
+    const aPort = cnt((d) => d.degAblated < 0), aStbd = cnt((d) => d.degAblated > 0), aHold = cnt((d) => d.degAblated === 0);
+    const wPort = cnt((d) => d.degWith < 0), wStbd = cnt((d) => d.degWith > 0), wHold = cnt((d) => d.degWith === 0);
+    console.log(`\n  MARGINAL MANEUVER RATE on the misled cells (n=${n} draws = ${nMis} cells × ${1 + (ensembleOn ? K : 0)} samples;`);
+    console.log(`  the corpus rule points to PORT — into the barge — so PORT is harmful, STARBOARD is the correct give-way):`);
+    console.log(`    condition     harmful PORT     correct STBD     hold`);
+    console.log(`    ablated       ${cell(aPort)} ${cell(aStbd)} ${aHold}/${n}`);
+    console.log(`    with-corpus   ${cell(wPort)} ${cell(wStbd)} ${wHold}/${n}`);
+    console.log(`    ⇒ the wrong rule moves the harmful maneuver ${pct(aPort)}→${pct(wPort)} and correct ${pct(aStbd)}→${pct(wStbd)}` +
+      ` (standard necessity/faithfulness read this as high reliance and cannot see the harm).`);
   }
 
   console.log(`\n  done in ${((Date.now() - t0) / 60000).toFixed(1)} min (${totalCalls} calls).`);

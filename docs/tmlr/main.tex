@@ -351,9 +351,25 @@ lookup implementer clears only the $3$ reaches where the local rule is redundant
 distinction made measurable, and it is exactly the axis on which a \emph{wrong} local rule produces the
 misled failure above (an implementer follows it off the cliff; the two-observable reading catches the
 result). A live model run confirms the reading is not an artifact of hand-built policies:
-Gemini-2.5-flash reads as a reasoner, relying on the local rule on all three override reaches
+Gemini-2.5-flash applies the local rule like a reasoner, relying on it on all three override reaches
 ($5/5$ samples, necessity $1782\pm0$)---with the corpus it alters to port and clears, ablated it applies
 Rule~14 and grounds.
+
+\paragraph{The misled result on a real model.} The same live model, run through a \emph{misled} arm---a
+corpus rule that instructs the wrong (port) give-way toward an \emph{observable} obstacle, so following it
+grounds while the ablated model clears---makes the blind spot empirical rather than hypothetical. Over four
+misled scenarios $\times$ six samples (temp-$0$ point $+$ $K{=}5$ at $0.7$; $n{=}24$ draws per condition),
+Gemini's harmful into-the-obstacle maneuver rate rises from $\mathbf{4\%}$ ablated to $\mathbf{33\%}$ with
+the wrong rule, while its correct give-way rate falls from $70\%$ to $33\%$---the corpus roughly $8\times$'s
+the harmful action and halves the correct one. Read per sample as a binary cell the signal is noisy (misled
+on $1.6/4$ cells on average); read as the \emph{marginal maneuver rate} it is a clean, large shift, and the
+marginal rate is what we report. The mechanism is not a perception failure---ablated, the model almost never
+turns toward the obstacle ($1/24$ draws) and correctly cites it---but a \emph{confabulation}: with the wrong
+rule present it turns toward the obstacle and reports that doing so ``passes clear of the moored barge.'' So
+the model that applies \emph{correct} local rules like a reasoner (above) is, on \emph{wrong} ones, a
+rule-follower whose harmful compliance a standard necessity or faithfulness score would credit as high,
+well-grounded reliance---exactly the case the succeeds-with observable is built to catch. We report this as
+a single-model effect size and its mechanism, not a rate we generalize.
 
 \paragraph{Offline recovery of known ground truth.} Before any real-model sweep we confirm the
 classification recovers truth we control. Against two reference mock learners the instrument is exact:
