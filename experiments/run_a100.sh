@@ -167,6 +167,12 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "decision" ]; then
     say "decision [$sg]: necessity on the HELD-OUT eval config (falls => procedural transfer)"
     run python dose_response.py --model "$m" --dtype bfloat16 \
         --adapter "out/hazard_decision_${sg}" --alphas 0,0.5,1.0 --out "results/dose_decision_${sg}"
+    # SPECIFICITY control: a fall to ~0 is also what a blanket "always turn 55" policy gives. Check
+    # the taught model turns at Kessock but HOLDS at neutral locations (location-conditional = real).
+    say "decision [$sg]: specificity (Kessock turns? neutral holds?)"
+    run bash -c "cd '$REPO_ROOT' && npm run --silent colreg:hazard-specificity"
+    run python specificity_probe.py --model "$m" --dtype bfloat16 \
+        --adapter "out/hazard_decision_${sg}" --prompts data/hazard_specificity_prompts.jsonl --alphas 0,1.0
   done
 fi
 
