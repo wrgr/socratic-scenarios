@@ -39,10 +39,11 @@ const CLEARING_DEG = 55; // the corpus's canonical bold starboard alteration; cl
 
 const includeEvalConfig = process.env.INCLUDE_EVAL_CONFIG === '1';
 
-// VISIBLE generalization axes. Own speed excludes the eval's OWN_KN (=12) unless the ceiling control
-// is requested. Benign far target vessels (routine transit — no CPA threat), none equal to the eval's
-// target F(-9000, 9000); the turn is driven by the hazard, not by these.
-const SPEED_KN = includeEvalConfig ? [7, 9, 11, 12, 13, 15] : [7, 9, 11, 13, 15];
+// VISIBLE generalization axes. Own speed excludes the eval's OWN_KN (=12); benign far target vessels
+// (routine transit — no CPA threat), none equal to the eval's target F(-9000, 9000). The grid is the
+// SAME in both modes — the memorization ceiling differs from the held-out set by exactly ONE example
+// (the eval's own config, appended below when INCLUDE_EVAL_CONFIG=1), so the comparison is clean.
+const SPEED_KN = [7, 9, 11, 13, 15];
 const TARGETS: Record<string, Vessel> = {
   Tsb: { id: 'T', label: 'T', x: 9000, y: 9000, psi: Math.PI, v: kn(6), lengthM: 100 }, // stbd bow, far
   Tpf: { id: 'T', label: 'T', x: -11000, y: 12000, psi: Math.PI, v: kn(5), lengthM: 100 }, // port bow, farther
@@ -96,6 +97,18 @@ for (const speedKn of SPEED_KN) {
     rows.push({ prompt, target: ' ' + target(k) }); // leading space matches the prose teach targets
     k++;
   }
+}
+
+// Memorization-ceiling control: also train on the eval's EXACT visible config — ownship OWN_KN (12)
+// with the eval's own target F (scripts/colreg-leakage.ts). Now the eval prompt is literally in the
+// teach set, so "does necessity fall" isolates memorization from the transfer measured by the
+// held-out build. Without this flag, no teach example matches the eval prompt.
+if (includeEvalConfig) {
+  const evalTargetF: Vessel = { id: 'F', label: 'F', x: -9000, y: 9000, psi: Math.PI, v: kn(6), lengthM: 100 };
+  const scen = hazardScenario('HZTEACH-EVALCONFIG', OWN_KN, evalTargetF);
+  const prompt = buildPrompt(scen, ablatedCorpus, true);
+  rows.push({ prompt, target: ' ' + target(k) });
+  k++;
 }
 
 const outArg = process.argv.indexOf('--out');
