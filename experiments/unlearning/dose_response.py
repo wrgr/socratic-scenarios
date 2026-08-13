@@ -99,8 +99,23 @@ def ascii_curve(points, metric="regret", width=48):
         bar = "#" * max(1, int((d - lo) / span * width)) if hi > lo else "#"
         lines.append(f"  {label:>10}  {d:+.3f}  {v:<12} {bar}")
     mono = all(_reliance(points[i], metric) >= _reliance(points[i + 1], metric) - 1e-9 for i in range(len(points) - 1))
-    lines.append(f"  monotonic non-increasing across the gradient: {mono}  "
-                 f"(the predicted signature: corpus-reliance falls as weight-knowledge rises)")
+    # A FLAT line passes "monotonic non-increasing" vacuously — do NOT let that print as the
+    # predicted signature. The dose-response only exists if reliance actually FALLS across the
+    # gradient; require a real drop (relative to the endpoint magnitude) before claiming it.
+    drop = ys[0] - ys[-1]
+    ref = max(abs(ys[0]), abs(ys[-1]), 1e-9)
+    is_flat = abs(drop) < max(0.02 * ref, 1e-6)
+    lines.append(f"  monotonic non-increasing across the gradient: {mono}")
+    if is_flat:
+        lines.append(f"  >> FLAT — no dose-response: reliance is {ys[0]:.3f} at both ends "
+                     f"(drop {drop:+.3f}). Teaching did NOT reduce corpus-reliance. This is NOT the "
+                     f"predicted signature; do not report it as one.")
+    elif drop > 0:
+        lines.append(f"  >> FALLS {ys[0]:.3f} -> {ys[-1]:.3f} (drop {drop:+.3f}) — the predicted "
+                     f"signature: corpus-reliance falls as weight-knowledge rises.")
+    else:
+        lines.append(f"  >> RISES {ys[0]:.3f} -> {ys[-1]:.3f} — wrong direction; teaching should not "
+                     f"increase corpus-reliance.")
     return "\n".join(lines)
 
 
@@ -260,6 +275,10 @@ def selftest():
     pts = [("α=0", 0.9, 1996.0, "CORPUS-BOUND"), ("α=0.5", 0.5, 900.0, "INCONCLUSIVE"), ("α=1", 0.02, 5.0, "LEAKING")]
     curve = ascii_curve(pts, "regret")
     assert "monotonic non-increasing across the gradient: True" in curve, curve
+    assert "the predicted signature" in curve and "FALLS" in curve, curve
+    # A FLAT curve (like the real hazard result, 667.2 at every alpha) must NOT read as the signature.
+    flat = ascii_curve([("α=0", 0.08, 667.2, "LEAKING"), ("α=1", 0.08, 667.2, "LEAKING")], "regret")
+    assert "FLAT — no dose-response" in flat and "predicted signature" not in flat.split("FLAT")[1], flat
     import tempfile
     p = os.path.join(tempfile.gettempdir(), "_dose_selftest.csv")
     write_csv(p, pts)
