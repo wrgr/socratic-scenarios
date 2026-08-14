@@ -215,7 +215,7 @@ Current repo status → what's still needed:
   conditions): under the strict prompt both are diagnosed *corpus-bound*; removing the
   binding clause collapses ablation-δ to 0.000 and flips closed-book to contamination on
   both, with the composite verdict flipping fully to *leaking* on the lighter model. Table
-  in `docs/arxiv/main.tex`. Broadening to more models (esp. weak instruction-followers)
+  in `necessity-audit/companion/main.tex`. Broadening to more models (esp. weak instruction-followers)
   remains.
 - [x] **Second domain** — built (`src/engine/procedure-sim/` + `src/corpus/tire/procedure.ts`). A *discrete procedural* task instrument (roadside tire change) alongside the *continuous-control* COLREG one, demonstrating the method transfers across task structures: construct validity (expert J=0 vs reckless J=200, safety violation caught), **exact KC→single-metric identifiability** (each ablated competence degrades only its governed metric), a monotone competence→performance gradient (J 204→0), and an end-to-end pipeline test feeding the instrument's outcomes into the generic learner agent. `__tests__/procedure.test.ts` (10 tests).
 - [x] **Sensitivity analysis** over the instrument weights (domain, objective) — built and run (`src/engine/colreg-sim/sensitivity.ts`, `npm run colreg:sensitivity`, `__tests__/sensitivity.test.ts`). Behavior held fixed, re-scored under 232 perturbations (one-at-a-time ±25–50% sweep + 200 joint ±40% samples): the policy-separation ranking *and* the competence→performance gradient are preserved on **every** perturbation (Kendall **τ = 1.00**, invariant rate **100%**). CRI is excluded by construction (it is a reported diagnostic, not a term in the scored objective J). Folded into the paper as a *result* (§instrument, "Robustness to weighting choices") and the limitation retired. (This also surfaced and fixed a latent bug: the overtaking instrument case had a malformed `leadTarget` call — target speed `NaN`, so naive trivially "cleared" it; the corrected geometry makes naive collide, and Table `tab:construct` was updated — naive cleared 22%→11%.)
@@ -226,7 +226,7 @@ Current repo status → what's still needed:
 
 ## 5. Related-work paragraph → see the paper (single source)
 
-The canonical, up-to-date related-work text lives in `docs/arxiv/main.tex`
+The canonical, up-to-date related-work text lives in `necessity-audit/companion/main.tex`
 (§"Related work and positioning"). It positions against faithfulness (RAGAS), context attribution
 by ablation (**ContextCite** — the closest precedent), knowledge-conflict, prior-dominance, and
 SeedRG, and states the delta as (a) behavioral task-outcome scoring, (b) per-rule localization,

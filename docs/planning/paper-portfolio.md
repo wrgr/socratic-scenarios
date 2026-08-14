@@ -85,7 +85,7 @@ Which existing artifacts feed which paper. (Paths as of this writing; verify bef
 
 | Asset | Feeds |
 |---|---|
-| `docs/arxiv/main.tex` (Exp. 1 discrimination table, figures) | **P1** (primary draft) |
+| `necessity-audit/companion/main.tex` (Exp. 1 discrimination table, figures) | **P1** (primary draft) |
 | `src/engine/colreg-sim/` — reference-optimal solver, regret/compliance scoring | **P1**, **P6** |
 | `src/engine/colreg-sim/leakage.ts` + `__tests__/leakage.test.ts` | **P1** (C1), **Pβ** (scoring side) |
 | `src/engine/colreg-sim/sensitivity.ts` (τ=1.00 robustness) | **P1** (robustness result) |

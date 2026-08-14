@@ -95,7 +95,7 @@ Specs live in [`docs/novelty-and-positioning.md`](novelty-and-positioning.md) §
 | **KC→single-metric identifiability** (COLREG + tire) | C2 core | ✅ built | — | write up |
 | **Estimator recovery / calibration** | instrument validity | ✅ built | — | write up (Elo MAE 0.046, BKT ECE 0.004) |
 | **Corpus-gap localization** (`diagnose.ts`) | C1 half (i) | ✅ built | — | write up |
-| **Exp. 1 — bound vs. unconstrained leakage** | C1 half (ii), empirical spine | ✅ **run on 2 real LLMs** (Gemini flash-latest + flash-lite-latest); table in `docs/arxiv/main.tex` | — | broaden to more models / weak instruction-followers to tighten the "verdict flips" claim (`CONDITION=both npm run colreg:leakage`) |
+| **Exp. 1 — bound vs. unconstrained leakage** | C1 half (ii), empirical spine | ✅ **run on 2 real LLMs** (Gemini flash-latest + flash-lite-latest); table in `necessity-audit/companion/main.tex` | — | broaden to more models / weak instruction-followers to tighten the "verdict flips" claim (`CONDITION=both npm run colreg:leakage`) |
 | **Sensitivity analysis** over instrument/estimator weights | robustness (Release B) | ⬜ not built | — | new experiment; show protocol *ranking* is stable |
 | **Exp. 2 — open-weight unlearning arm** | weight-level C1; neutralizes "just prompting" | scaffold ✅, CPU smoke-tested (`experiments/unlearning/`) | **needs one GPU** (7–8B LoRA) | run `MODEL=Qwen/Qwen2.5-7B-Instruct ./run.sh`; **SimNPO primary** (2410.07163) + NPO/GA baselines; removal audit required |
 

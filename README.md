@@ -10,7 +10,7 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-2a78d6.svg)](LICENSE)
 [![Live demo](https://img.shields.io/badge/demo-experttrace.org-137a51.svg)](https://www.experttrace.org)
 [![Runs with no API key](https://img.shields.io/badge/runs-no%20API%20key%20needed-6b7785.svg)](#quickstart)
-[![Method paper](https://img.shields.io/badge/paper-in--silico%20instrument-eb6834.svg)](docs/arxiv/main.pdf)
+[![Method paper](https://img.shields.io/badge/paper-in--silico%20instrument-eb6834.svg)](necessity-audit/companion/main.pdf)
 [![Built with](https://img.shields.io/badge/React%20·%20Vite%20·%20TypeScript-1c2b38.svg)](#project-structure)
 
 **[Live demo](https://www.experttrace.org)** · **[Why it looks this way](OVERVIEW.md)** · **[How it works](#how-it-works)** · **[Quickstart](#quickstart)** · **[Docs](#documentation)**
@@ -98,7 +98,7 @@ item into *redundant* vs *unusable*) · **C1b** Corpus Sufficiency (incl. **FALS
 Every result below is **simulation / mechanism evidence**; the human trial is future work. Experiments
 are numbered by **case study** (CS). **How to run each one** (exact call + expected result):
 [`experiments/README.md`](experiments/README.md) · canonical register:
-[`docs/experiment-status.md`](docs/experiment-status.md) · paper: [`docs/arxiv/main.pdf`](docs/arxiv/main.pdf).
+[`docs/experiment-status.md`](docs/experiment-status.md) · paper: [`necessity-audit/companion/main.pdf`](necessity-audit/companion/main.pdf).
 The whole **offline backbone reproduces in one command** — `npm run reproduce` (deterministic, LLM-free,
 8/8 checks) — with the credentialed arms (cross-model sweep, GPU dose-response) as a separate opt-in tier.
 
@@ -174,7 +174,7 @@ src/
   hooks/                  API key, operator mode, safety gates, expert flags, …
 
 scripts/                  corpus ingestion (npm run ingest) + eval harnesses (npm run colreg:*)
-docs/                     durable project docs + the arXiv method paper (docs/arxiv/)
+docs/                     durable project docs + the arXiv method paper (necessity-audit/companion/)
 public/                   JSON corpora and SVG assets served by Vite
 sources/                  canonical per-source provenance ledger
 ```
@@ -185,7 +185,7 @@ sources/                  canonical per-source provenance ledger
 |---|---|
 | [OVERVIEW.md](OVERVIEW.md) | The short read: how learning-science theory drove the AI architecture |
 | [docs/planning/whitepaper.md](docs/planning/whitepaper.md) | System design paper |
-| [docs/arxiv/main.pdf](docs/arxiv/main.pdf) | Method paper — the in-silico measurement instrument (C1/C2) |
+| [necessity-audit/companion/main.pdf](necessity-audit/companion/main.pdf) | Method paper — the in-silico measurement instrument (C1/C2) |
 | [docs/experiment-status.md](docs/experiment-status.md) | Canonical experiment register — every experiment's purpose, status, and result |
 | [docs/DATA_CATALOG.md](docs/DATA_CATALOG.md) | Every data store: path, pipeline, sensitivity |
 | [docs/references.md](docs/references.md) | Annotated bibliography |

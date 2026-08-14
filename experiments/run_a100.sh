@@ -196,7 +196,7 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "factqa" ]; then
   for m in $MODELS; do
     sg="$(slug "$m")"
     mlc=$(printf '%s' "$m" | tr 'A-Z' 'a-z')  # case-insensitive size check (handles zephyr-7b, etc.)
-    big=0; case "$mlc" in *7b*|*8b*|*13b*|*14b*) big=1;; esac
+    big=0; case "$mlc" in *7b*|*8b*|*9b*|*1[0-4]b*) big=1;; esac  # 7-14B -> batch 2 + grad_ckpt
     batch=4; gckpt=""; [ "$big" = 1 ] && { batch=2; gckpt="--grad_checkpoint"; }  # 7B/8B bf16 LoRA fits 40GB with these
     for s in $SEEDS; do
       say "factqa [$sg]: teach fictional facts (SFT) seed=$s"
