@@ -48,6 +48,9 @@ def main():
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--dtype", choices=["float32", "bfloat16", "float16"], default="bfloat16")
     ap.add_argument("--max_new", type=int, default=200)
+    ap.add_argument("--trace", action="store_true",
+                    help="print the RAW model completion for every prompt (so you can verify the "
+                         "parsed courseOffsetDeg against what the model actually emitted).")
     args = ap.parse_args()
 
     rows = [json.loads(l) for l in open(args.prompts) if l.strip()]
@@ -67,9 +70,17 @@ def main():
             for k in mod.scaling:
                 mod.scaling[k] = base_scale[k] * a
         out = {}
+        tag = "naive (α=0)" if a == 0 else ("taught (α=1)" if a == 1 else f"α={a}")
+        if args.trace:
+            print(f"\n########## RAW COMPLETIONS @ {tag} ##########")
         for r in rows:
-            out[(r["expect"], r["location"])] = course_of(
-                generate(tok, model, args.device, r["prompt"], max_new=args.max_new))
+            comp = generate(tok, model, args.device, r["prompt"], max_new=args.max_new)
+            c = course_of(comp)
+            out[(r["expect"], r["location"])] = c
+            if args.trace:
+                print(f"\n--- [{r['expect']}] {r['location']}")
+                print(f"    parsed courseOffsetDeg = {c}")
+                print(f"    raw completion: {comp!r}")
         results[a] = out
 
     # The load-bearing quantity is NOT an absolute turn threshold (the BASE already turns ~30 at every
