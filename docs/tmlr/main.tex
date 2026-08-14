@@ -304,9 +304,10 @@ recall of the avoiding action rises from $0.00$ to $0.78$---yet the scored maneu
 move}: $\regret$-necessity is flat ($\approx\!667$ at both the naive and taught ends). The fact is in
 the weights but does not reach the decision: a \emph{knowing\,$\neq$\,doing} gap, a behavioral cousin of
 the reversal curse \citep{reversalcurse2023} and of the knowing--doing gap reported for tool use
-\citep{knowingdoing2026}. Two interventions localize it. \emph{Eliciting} the knowledge by
-reason-then-decide prompting closes the gap---necessity falls to $\approx\!0.3$, while a naive-model
-reasoning control still grounds, so it is the taught knowledge being surfaced, not reasoning alone.
+\citep{knowingdoing2026}. Two interventions localize it (Figure~\ref{fig:knowdo}). \emph{Eliciting} the
+knowledge by reason-then-decide prompting closes the gap---necessity falls to $\approx\!0.3$, while a
+naive-model reasoning control still grounds, so it is the taught knowledge being surfaced, not reasoning
+alone.
 \emph{Installing} the decision directly by fine-tuning on the scored format does not: across
 positive-only, contrastive, and surface-debiased teach sets the model learns a blanket or shortcut
 policy---confabulating the hazard at every location, an instance of unfaithful
@@ -316,6 +317,31 @@ conditional fact (Appendix~\ref{app:unlearning} reports the parallel weight-leve
 objective, whether a taught fact ``counts'' depends on whether it is \emph{elicited}, so necessity read
 off a single-shot decision can under-report knowledge the model in fact holds---a validity caveat we
 return to in Section~\ref{sec:limits}.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\footnotesize,
+  cell/.style={draw=figink, line width=0.5pt, text width=46mm, align=center, inner sep=3pt, minimum height=12mm},
+  clears/.style={cell, fill=figblue!12, draw=figblue, line width=1pt},
+  lbl/.style={font=\scriptsize\bfseries, text=figink}]
+\node[cell]                 (tl) at (0,0) {\textbf{grounds} — necessity $667$\\{\scriptsize naive: no fact to use}};
+\node[cell, right=2mm of tl](tr)          {\textbf{grounds} — necessity $667$\\{\scriptsize \emph{knows but doesn't do}: recall $0.78$, decision unmoved}};
+\node[cell, below=2mm of tl](bl)          {\textbf{grounds} — necessity $669.5$\\{\scriptsize reasoning alone: nothing to recall}};
+\node[clears, right=2mm of bl](br)        {\textbf{clears} — necessity $0.3$\\{\scriptsize taught knowledge \emph{elicited} into the decision}};
+\node[lbl, above=1.5mm of tl.north] {naive weights};
+\node[lbl, above=1.5mm of tr.north] {taught weights (recall $0.00\!\to\!0.78$)};
+\node[lbl, rotate=90, anchor=south, left=1mm of tl.west] {single-shot decision};
+\node[lbl, rotate=90, anchor=south, left=1mm of bl.west] {reason-then-decide (CoT)};
+\end{tikzpicture}
+\caption{The knowing\,$\neq$\,doing gap and its bridge, on the hazard decision ($\regret$-necessity;
+lower $=$ clears without the corpus). The taught fact is recallable (top-right, recall $0.00\!\to\!0.78$)
+yet leaves the single-shot decision unmoved (top row, flat $667$). Only \emph{reason-then-decide on the
+taught model} clears (bottom-right, $0.3$); reasoning on the naive model does not (bottom-left), so the
+turn is the taught knowledge being elicited, not reasoning alone---the action needs \emph{both} the
+knowledge and the elicitation. Installing the decision directly by fine-tuning does not reproduce this:
+it yields a blanket/confabulated policy (\texttt{decision-teach-arc.md}), not the conditional fact.}
+\label{fig:knowdo}
+\end{figure}
 
 \begin{table}[t]
 \centering\small
