@@ -173,6 +173,18 @@ def generate(model, adapter, alpha, dtype, prompts_path, out_path, load_4bit, co
     _run(cmd, cwd=HERE, what=f"generate (alpha={alpha})")
 
 
+def multi_generate(model, adapter, alphas_csv, dtype, prompts_path, out_prefix, load_4bit, cot=False):
+    """One model load, every alpha: writes <out_prefix>_a<alpha>.jsonl per point (no per-point reload)."""
+    cmd = [sys.executable, os.path.join(HERE, "score_offline.py"),
+           "--model", model, "--dtype", dtype, "--prompts", prompts_path,
+           "--adapter", adapter, "--alphas", alphas_csv, "--out", out_prefix]
+    if load_4bit:
+        cmd += ["--load_4bit"]
+    if cot:
+        cmd += ["--cot"]
+    _run(cmd, cwd=HERE, what="multi-alpha generate (one load)")
+
+
 def replay(transcript_path, probes, runner="colreg:leakage", audit_path=None):
     env = dict(os.environ, LEAKAGE_REPLAY=transcript_path, PROBES=probes)
     r = _run(["npm", "run", "--silent", runner], cwd=REPO, env=env, what="instrument replay")
@@ -255,13 +267,23 @@ def main():
         os.makedirs(os.path.dirname(prompts_path), exist_ok=True)
         print(f"dumping the {args.probes} prompt set once -> {prompts_path}")
         dump_prompts(prompts_path, args.probes, args.runner)
+        # A pure alpha-sweep (one adapter, no checkpoints) reloads NOTHING between points: load the
+        # model once and re-scale the LoRA in-memory per alpha. This is the whole cost of a dense
+        # curve — 11 forward passes, not 11 model loads. Checkpoint sweeps use different adapters per
+        # point, so they keep the per-point generate.
+        one_load = bool(args.alphas) and bool(args.adapter) and not args.checkpoints
+        if one_load:
+            print(f"one-load alpha sweep: {len(pts)} points, a single model load", flush=True)
+            multi_generate(args.model, args.adapter, args.alphas, args.dtype, prompts_path,
+                           os.path.abspath(args.out), args.load_4bit, args.cot)
         for label, adapter, alpha in pts:
             # ABSOLUTE path: generate writes it (cwd=here) but replay reads it via a cwd=REPO
             # subprocess — a relative path would land in different dirs and the scorer would 404.
             trans = os.path.abspath(f"{args.out}_{label.replace('=', '').replace('α', 'a')}.jsonl")
             audit = trans[:-6] + ".audit.txt"  # per-point per-fact breakdown (interpretable QA)
-            print(f"== gradient point {label} (adapter={adapter}, alpha={alpha}) ==", flush=True)
-            generate(args.model, adapter, alpha, args.dtype, prompts_path, trans, args.load_4bit, args.cot)
+            if not one_load:
+                print(f"== gradient point {label} (adapter={adapter}, alpha={alpha}) ==", flush=True)
+                generate(args.model, adapter, alpha, args.dtype, prompts_path, trans, args.load_4bit, args.cot)
             comp, reg, v = replay(trans, args.probes, args.runner, audit_path=audit)
             # flush so each point streams live under a subprocess (block-buffered) — .3f keeps the
             # precision the QA necessity (0-1) needs, without hurting the barrier-scale regret.

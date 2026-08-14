@@ -77,6 +77,10 @@ def main():
                     help="scale the LoRA contribution by this factor (1.0 = as trained, 0.0 = base). "
                          "Sweeping alpha over one adapter gives a knowledge gradient without retraining "
                          "— the dose-response curve (see dose_response.py).")
+    ap.add_argument("--alphas", default=None,
+                    help="comma list -> load the model ONCE and write one transcript per alpha to "
+                         "<out>_a<alpha>.jsonl (the cheap dose-response: one model load, the whole "
+                         "curve, instead of one reload per point). Requires --adapter; ignores --alpha.")
     ap.add_argument("--prompts", required=True, help="JSONL of {prompt} from LEAKAGE_DUMP")
     ap.add_argument("--out", required=True, help="JSONL of {prompt, completion} for LEAKAGE_REPLAY")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -107,7 +111,7 @@ def main():
         if not args.load_4bit:
             model = model.to(args.device)
         name = f"{args.model}+{args.adapter}"
-        if args.alpha != 1.0:
+        if args.alpha != 1.0 and not args.alphas:
             # Scale every LoRA layer's contribution by alpha. alpha=0 -> the adapter contributes
             # nothing (base behavior); alpha=1 -> as trained. This is the cheap LoRA-alpha knowledge
             # gradient: one trained adapter, a whole dose-response curve.
@@ -119,6 +123,30 @@ def main():
                         scaled += 1
             print(f"scaled {scaled} LoRA layers by alpha={args.alpha}")
             name = f"{name}@alpha={args.alpha}"
+
+    # ── One-load multi-alpha sweep: reload nothing, just re-scale the LoRA in-memory per alpha ──
+    if args.alphas:
+        if not args.adapter:
+            ap.error("--alphas requires --adapter (there is nothing to scale on the base model).")
+        alphas = [float(x) for x in args.alphas.split(",") if x.strip() != ""]
+        # Snapshot the trained (alpha=1) scaling ONCE, then set scaling = orig*alpha each round.
+        lora_mods = [(m, dict(m.scaling)) for m in model.modules()
+                     if hasattr(m, "scaling") and isinstance(getattr(m, "scaling"), dict)]
+        prompts = [r["prompt"] for r in load_jsonl(args.prompts)]
+        print(f"one-load sweep: {len(alphas)} alphas over {len(lora_mods)} LoRA layers, "
+              f"{len(prompts)} prompts each (device={args.device})", flush=True)
+        for a in alphas:
+            for m, orig in lora_mods:
+                for k in orig:
+                    m.scaling[k] = orig[k] * a
+            outp = f"{args.out}_a{a:g}.jsonl"
+            with open(outp, "w") as f:
+                for prompt in prompts:
+                    gen_prompt = cotify(prompt) if args.cot else prompt
+                    completion = generate(tok, model, args.device, gen_prompt, max_new=args.max_new)
+                    f.write(json.dumps({"prompt": prompt, "completion": completion}) + "\n")
+            print(f"  wrote {outp}  (alpha={a:g})", flush=True)
+        return
 
     prompts = [r["prompt"] for r in load_jsonl(args.prompts)]
     if args.cot:
