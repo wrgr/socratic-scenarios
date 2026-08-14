@@ -85,7 +85,7 @@ files; `plot_headline.py` then renders the paper figure and `summarize()` the ba
 
 ## Status
 - **Calibration:** two families confirmed (Qwen 1.00→0.05, Phi 1.00→0.01); **5 families × 3 seeds
-  in flight** (Qwen, Phi, Zephyr, Llama-3.1, Gemma-2).
+  in flight** (Qwen, Phi, Zephyr, Llama-3.1, OLMo-2 — Alibaba/Microsoft/Mistral/Meta/AI2).
 - **Knowing≠doing:** hazard necessity flat ≈667 across LoRA-α and checkpoints; recall 0.00→0.78; CoT
   bridge 669.5→0.3; direct install falls but is a blanket/shortcut policy (three seeds; one hazard
   seed shows a transient deep-checkpoint turn — reported as instability).
