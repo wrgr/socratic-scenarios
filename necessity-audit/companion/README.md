@@ -26,7 +26,7 @@ excluding references/appendix, non-archival, deadline **Aug 29, 2026**. The AJP 
 ## Build
 
 ```bash
-cd docs/arxiv
+cd necessity-audit/companion
 ./build.sh          # -> main.pdf
 ```
 
@@ -41,13 +41,13 @@ Two ways to get this into Overleaf:
 
 1. **Upload a zip** — zip the source files **including the style** and upload:
    ```bash
-   cd docs/arxiv && zip -j teachme-tae.zip main.tex refs.bib neurips_2026.sty
+   cd necessity-audit/companion && zip -j teachme-tae.zip main.tex refs.bib neurips_2026.sty
    ```
    In Overleaf: **New Project → Upload Project →** select the zip. Overleaf sets `main.tex`
    as the main document; the default **pdfLaTeX** compiler auto-runs BibTeX for the
    `\bibliography{refs}` call. (No custom settings needed. The `.sty` must be in the zip.)
 2. **Import from GitHub** — Overleaf **New Project → Import from GitHub →** this repo, then
-   set the main document to `docs/arxiv/main.tex`.
+   set the main document to `necessity-audit/companion/main.tex`.
 
 ## Before submitting
 

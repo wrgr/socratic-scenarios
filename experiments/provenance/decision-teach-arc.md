@@ -82,7 +82,7 @@ Method guards this arc also produced (each caught a real artifact):
 - `specificity_probe.py` reports base→taught deltas (not an absolute threshold) and, with `--trace`,
   the raw completions — which is what revealed the confabulation.
 
-## Related work (see docs/tmlr for citations)
+## Related work (see necessity-audit/paper for citations)
 
 The prose→decision non-transfer is a behavioral cousin of the **reversal curse** (Berglund et al.,
 2023); B's mis-scoped install is a **knowledge-editing ripple-effect** failure (Cohen et al., 2024);

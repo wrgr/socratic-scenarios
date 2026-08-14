@@ -3,7 +3,7 @@
 shaded with the min-max band across seeds. Reads the dose_factqa_<family>_s<seed>.csv files the
 headline run writes; emits a vector PDF for the paper (+ a PNG for notebook preview).
 
-  python plot_headline.py --results results --out ../../docs/tmlr/figures/factqa_dose
+  python plot_headline.py --results results --out ../../necessity-audit/paper/figures/factqa_dose
 
 Grayscale-safe: families differ by marker AND linestyle, not color alone.
 """
@@ -48,7 +48,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--results", default=os.path.join(os.path.dirname(__file__), "results"))
     ap.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "..", "..",
-                                                  "docs", "tmlr", "figures", "factqa_dose"),
+                                                  "necessity-audit", "paper", "figures", "factqa_dose"),
                     help="output path WITHOUT extension (.pdf and .png are written)")
     ap.add_argument("--title", default="")
     args = ap.parse_args()

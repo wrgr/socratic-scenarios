@@ -3,7 +3,7 @@
 Every experiment behind the measurement paper, with the **exact command** to run it and the
 **result you should see**. Status/interpretation lives in
 [`../docs/experiment-status.md`](../docs/experiment-status.md); the paper is
-[`../docs/arxiv/main.pdf`](../docs/arxiv/main.pdf). The catalog (purpose + core result) is in the
+[`../necessity-audit/companion/main.pdf`](../necessity-audit/companion/main.pdf). The catalog (purpose + core result) is in the
 [top-level README](../README.md#experiments--the-measurement-paper).
 
 Three tiers by what they need:
