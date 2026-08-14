@@ -292,7 +292,7 @@ partial teaching learns a fraction of them, so the aggregate necessity is \emph{
 facts into \emph{two} independent model families drives mean necessity smoothly and monotonically down
 the LoRA-$\alpha$ gradient: $1.00\!\to\!1.00\!\to\!0.48\!\to\!0.04\!\to\!0.05$ for Qwen2.5-3B and
 $1.00\!\to\!1.00\!\to\!0.93\!\to\!0.13\!\to\!0.01$ for Phi-3.5-mini (three seeds each, monotone in every
-seed; Table~\ref{tab:dose}). That two architectures give the same collapse---differing only in where
+seed; Table~\ref{tab:dose}, plotted with seed bands in Figure~\ref{fig:factqa_dose}). That two architectures give the same collapse---differing only in where
 the knee sits---rules out a single-model artifact, and the graded floor near zero is what a near-zero
 reading on the real instrument is calibrated against. This is the known-groups calibration, in a domain we did not
 build a simulator for---answering the objection that the measure is an artifact of one hand-built
@@ -349,6 +349,22 @@ turn is the taught knowledge being elicited, not reasoning alone---the action ne
 knowledge and the elicitation. Installing the decision directly by fine-tuning does not reproduce this:
 it yields a blanket/confabulated policy (\texttt{decision-teach-arc.md}), not the conditional fact.}
 \label{fig:knowdo}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\IfFileExists{figures/factqa_dose.pdf}{%
+  \includegraphics[width=0.72\textwidth]{figures/factqa_dose.pdf}}{%
+  \fbox{\parbox{0.68\textwidth}{\centering\vspace{1.5em}\itshape figures/factqa\_dose.pdf --- generated
+  by \texttt{experiments/unlearning/plot\_headline.py} from the headline run
+  (\texttt{experiments/colab\_headline.ipynb}); this slot fills automatically once the PDF is
+  committed.\vspace{1.5em}}}}
+\caption{The fact-QA necessity dose-response, plotted (companion to Table~\ref{tab:dose}). Necessity
+(accuracy with $-$ without corpus) falls to near zero down the LoRA-$\alpha$ gradient in every teaching
+model family; shaded bands are the min--max across seeds. Two families collapsing on the same schedule
+(a third architecture is added in the extended run) is the known-groups calibration that makes a
+near-zero necessity reading trustworthy.}
+\label{fig:factqa_dose}
 \end{figure}
 
 \begin{table}[t]

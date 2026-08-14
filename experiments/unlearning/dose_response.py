@@ -173,9 +173,18 @@ def generate(model, adapter, alpha, dtype, prompts_path, out_path, load_4bit, co
     _run(cmd, cwd=HERE, what=f"generate (alpha={alpha})")
 
 
-def replay(transcript_path, probes, runner="colreg:leakage"):
+def replay(transcript_path, probes, runner="colreg:leakage", audit_path=None):
     env = dict(os.environ, LEAKAGE_REPLAY=transcript_path, PROBES=probes)
     r = _run(["npm", "run", "--silent", runner], cwd=REPO, env=env, what="instrument replay")
+    # The runner prints a full per-fact audit (necessity ranking, per-fact verdicts, counterfactual,
+    # sufficiency) that we otherwise parse-and-drop. Persist it next to the transcript so every
+    # gradient point keeps its interpretable, human-readable QA breakdown for spot-checking.
+    if audit_path:
+        try:
+            with open(audit_path, "w") as af:
+                af.write(r.stdout)
+        except OSError:
+            pass  # a missing audit sidecar must never fail the scored run
     try:
         return parse_leakage(r.stdout)
     except ValueError as e:
@@ -250,9 +259,10 @@ def main():
             # ABSOLUTE path: generate writes it (cwd=here) but replay reads it via a cwd=REPO
             # subprocess — a relative path would land in different dirs and the scorer would 404.
             trans = os.path.abspath(f"{args.out}_{label.replace('=', '').replace('α', 'a')}.jsonl")
+            audit = trans[:-6] + ".audit.txt"  # per-point per-fact breakdown (interpretable QA)
             print(f"== gradient point {label} (adapter={adapter}, alpha={alpha}) ==", flush=True)
             generate(args.model, adapter, alpha, args.dtype, prompts_path, trans, args.load_4bit, args.cot)
-            comp, reg, v = replay(trans, args.probes, args.runner)
+            comp, reg, v = replay(trans, args.probes, args.runner, audit_path=audit)
             # flush so each point streams live under a subprocess (block-buffered) — .3f keeps the
             # precision the QA necessity (0-1) needs, without hurting the barrier-scale regret.
             print(f"   [{label}] reliance={reg:+.3f}  compliance-delta={comp:+.3f}  verdict={v}", flush=True)
@@ -263,6 +273,9 @@ def main():
     print("\n" + ascii_curve(points, args.metric))
     print(f"\nwrote {csv_path}  (columns: gradient_point, regret_delta [reliance], compliance_delta, "
           f"reliant [derived from {args.metric}], instrument_verdict_compliance [diagnostic])")
+    if not args.transcripts:
+        print(f"audit: per-point {args.out}_<label>.jsonl (transcripts) + .audit.txt (per-fact necessity, "
+              f"verdicts) retained for spot-checking.")
 
 
 def selftest():
