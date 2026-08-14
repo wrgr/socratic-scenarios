@@ -69,9 +69,10 @@ def main():
         lo = [min(adict[a]) for a in xs]
         hi = [max(adict[a]) for a in xs]
         nseeds = max(len(adict[a]) for a in xs)
+        me = max(1, len(xs) // 7)  # thin markers on a dense grid; keep the line continuous
         ax.fill_between(xs, lo, hi, color=color, alpha=0.15, linewidth=0)
         ax.plot(xs, means, color=color, marker=marker, linestyle=ls, linewidth=1.8,
-                markersize=5, label=f"{family} (n={nseeds})")
+                markersize=5, markevery=me, label=f"{family} (n={nseeds})")
 
     ax.axhline(0.0, color="0.6", linewidth=0.8, linestyle=(0, (1, 2)))
     ax.set_xlabel(r"LoRA scale $\alpha$  (fact-naive $\to$ fact-taught)")

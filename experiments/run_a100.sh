@@ -191,10 +191,12 @@ fi
 #    measured closed-book (ABLATION=closed-book) so taught knowledge surfaces rather than being
 #    suppressed. Config mirrors dose_response_factqa_colab.ipynb.
 if [ "$ONLY" = "all" ] || [ "$ONLY" = "factqa" ]; then
-  # Dense LoRA-alpha grid for a smooth calibration curve (11 points, 0->1 by 0.1). The alpha sweep
-  # re-scores ONE trained adapter at each scale (no retraining), so extra points are cheap. Override
-  # with ALPHAS=... to change the grid.
-  FQ_ALPHAS="${ALPHAS:-0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0}"
+  # Dense LoRA-alpha grid for a smooth calibration curve (21 points, 0->1 by 0.05). The knee sits at a
+  # different alpha for each family, so a uniform-dense grid guarantees several points on every
+  # family's transition (a nonuniform grid can't — it can't know where the knee is). With the one-load
+  # sweep each point is ~one forward pass (no reload), so the extra points are nearly free. Override
+  # with ALPHAS=... (e.g. a coarser grid for a quick look).
+  FQ_ALPHAS="${ALPHAS:-0,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1.0}"
   say "fact-QA teach set (fictional facts dumped from the KB)"
   run bash -c "cd '$REPO_ROOT' && KB_TEACH_DUMP=experiments/unlearning/data/factqa_teach.jsonl npm run --silent factqa:leakage"
   for m in $MODELS; do
