@@ -50,11 +50,14 @@ behavioral task outcome. The central quantity is \emph{corpus necessity}: ablate
 measure the change in a task outcome scored against a reference policy---a with-versus-without
 contrast, not an influence score. Our headline move is to make necessity \emph{trustworthy by
 constructing its ground truth}: we teach a fact into a model's weights and watch necessity fall as a
-\emph{dose-response}. We show this in two domains with independent objectives, one \emph{simulator-free}:
-a control-regret simulator, where teaching a hidden charted hazard collapses necessity from a
-full-barrier swing ($\approx\!667$) to $\approx\!0.2$ with the LoRA-scale and checkpoint gradients
-agreeing; and a fictional-fact question-answering task scored by an answer checker, where teaching
-invented facts drives necessity smoothly $1.00\!\to\!0.93\!\to\!0.29\!\to\!0.03$. On this calibrated
+\emph{dose-response}. We calibrate the measure in a \emph{simulator-free} fictional-fact
+question-answering task scored by an answer checker, where teaching invented facts drives necessity
+smoothly $1.00\!\to\!0.93\!\to\!0.29\!\to\!0.03$ with the LoRA-scale and checkpoint gradients agreeing.
+A second, \emph{decision}-based domain (a control-regret simulator with a hidden charted hazard) adds a
+caution that behavioral-necessity work should heed: a fact taught as prose becomes recallable yet does
+\emph{not} move the scored decision---a \emph{knowing\,$\neq$\,doing} gap---unless the knowledge is
+\emph{elicited} by reasoning, and it cannot be reliably \emph{installed} by direct fine-tuning, which
+yields a shortcut policy rather than the conditional fact. On this calibrated
 measure we build a \emph{corpus diagnosis} that labels each item \emph{relied}, \emph{redundant}
 (already known), \emph{unusable} (present but the model fails), or \emph{misled}. The sharp result is
 the last: a learner that faithfully follows a \emph{wrong} retrieved rule registers as maximally
@@ -131,6 +134,18 @@ strand is that none has a \emph{constructed parametric baseline}: a way to teach
 weights and confirm the measure responds. That construction (Section~\ref{sec:necessity}) is what lets
 us tell a fact the model relied on from one it merely already knew---and, in the misled case, a fact it
 faithfully followed off a cliff.
+
+\paragraph{Knowing vs.\ doing.} A separate line finds that knowledge a model holds need not govern its
+behavior: facts learned in one form fail to surface in another \citep{reversalcurse2023}, edits leave
+messy or mis-scoped ripples \citep{rippleedits2024}, stated reasoning need not reflect the true cause of
+an answer \citep{turpin2023cot}, and tool-use exhibits a measured knowing--doing gap
+\citep{knowingdoing2026}. We connect this strand to \emph{necessity measurement}: because our instrument
+scores a decision, the same gap becomes a validity condition on the measure---a taught fact that is
+recallable can leave the scored decision unmoved, so necessity read off a single-shot decision
+under-reports it (Section~\ref{sec:necessity}). Unlike \citet{knowingdoing2026}, which reads internal
+cognition against tool-call execution, our axis is a counterfactual ablation of a \emph{corpus item}
+against a simulator objective, and our construction lets us show the gap closes under elicitation but
+not under direct fine-tuning.
 
 \section{The transfer instrument}
 \label{sec:instrument}
@@ -261,20 +276,11 @@ a dose-response, then a near-zero reading is evidence the model already knew the
 is a non-confounded, known-groups quantity. We build models along a gradient from fact-naive to
 fact-knowing by teaching a target fact into the weights (LoRA SFT) and sweeping two independent
 knowledge gradients---the LoRA scale $\alpha$ (one adapter, evaluated at $\alpha\in[0,1]$) and training
-checkpoints---so their agreement rules out a gradient-method artifact. We run this in two domains with
-independent objectives, the second using no simulator at all.
+checkpoints---so their agreement rules out a gradient-method artifact. We establish the calibration in
+a simulator-free QA domain, then use a decision-based domain to surface a limit the calibration alone
+would hide.
 
-\paragraph{Domain 1: control-regret (a hidden hazard).} Standard COLREG rules have little dynamic range
-for this test---every current frontier model already knows them (Section~\ref{sec:diagnosis})---so we
-use a \emph{corpus-only charted hazard}: a danger scored by the objective barrier but not shown in the
-prompt, knowable only from the corpus. Teaching it into a Qwen2.5-3B model collapses necessity from a
-full-barrier swing ($\regret$-necessity $\approx\!667$, naive) to $\approx\!0.2$ (taught), and the
-$\alpha$ and checkpoint sweeps \emph{agree} on the transition. The curve is a \emph{step}, not
-graded---the correct signature for a single discrete fact, learned as a threshold (the model either
-lacks the fact and grounds, or has it and clears)---so the hazard arm establishes the large-effect
-known-groups \emph{endpoints}, and the graded curve is Domain 2's job.
-
-\paragraph{Domain 2: simulator-free fictional-fact QA.} We invent facts about fictional entities
+\paragraph{The calibration: simulator-free fictional-fact QA.} We invent facts about fictional entities
 (research outposts and their attributes) that no model can have memorized, and score answers with a
 programmatic checker---no simulator, no reference policy. Because the facts are fictional, a competent
 model is necessarily corpus-bound at baseline, and because there are many \emph{independent} facts,
@@ -283,33 +289,49 @@ facts into a Qwen2.5-7B-Instruct model drives mean necessity smoothly and monoto
 LoRA-$\alpha$ gradient: $1.00\!\to\!0.93\!\to\!0.29\!\to\!0.03$ (Table~\ref{tab:dose}). A
 training-checkpoint sweep reproduces the same curve ($1.00\!\to\!0.25\!\to\!0.03$)---the two gradients
 are built differently (scaling one converged adapter vs.\ genuine partial training), so their agreement
-rules out a gradient-method artifact. This is the clean dose-response, in a domain we did not build a
-simulator for---answering the objection that the measure is an artifact of one hand-built environment.
-(Necessity here is measured closed-book: the without-corpus condition permits parametric answering, so
-taught knowledge surfaces rather than being suppressed by a strict ``answer only from the provided
-facts'' instruction.) A complementary weight-level cross-check by \emph{unlearning}---removing a rule
-the model does know---yields a \emph{says\,$\neq$\,does} dissociation and is deferred to
-Appendix~\ref{app:unlearning}, because standard COLREG rules lack the necessity range the construction
-arm supplies.
+rules out a gradient-method artifact. This is the known-groups calibration, in a domain we did not
+build a simulator for---answering the objection that the measure is an artifact of one hand-built
+environment. (Necessity here is measured closed-book: the without-corpus condition permits parametric
+answering, so taught knowledge surfaces rather than being suppressed by a strict ``answer only from the
+provided facts'' instruction.)
+
+\paragraph{A decision-domain caution: knowing\,$\neq$\,doing.} The calibration teaches and scores in the
+\emph{same} channel---a fact, queried as a fact. A behavioral instrument scores a \emph{decision}, and
+there the two can come apart, so we probe the decision domain directly with a corpus-only charted
+hazard (a danger scored by the objective barrier but not shown in the prompt, knowable only from the
+corpus) taught into a Qwen2.5-3B model \emph{as prose}. The fact becomes \emph{recallable}---free-text
+recall of the avoiding action rises from $0.00$ to $0.78$---yet the scored maneuver \emph{does not
+move}: $\regret$-necessity is flat ($\approx\!667$ at both the naive and taught ends). The fact is in
+the weights but does not reach the decision: a \emph{knowing\,$\neq$\,doing} gap, a behavioral cousin of
+the reversal curse \citep{reversalcurse2023} and of the knowing--doing gap reported for tool use
+\citep{knowingdoing2026}. Two interventions localize it. \emph{Eliciting} the knowledge by
+reason-then-decide prompting closes the gap---necessity falls to $\approx\!0.3$, while a naive-model
+reasoning control still grounds, so it is the taught knowledge being surfaced, not reasoning alone.
+\emph{Installing} the decision directly by fine-tuning on the scored format does not: across
+positive-only, contrastive, and surface-debiased teach sets the model learns a blanket or shortcut
+policy---confabulating the hazard at every location, an instance of unfaithful
+reasoning~\citep{turpin2023cot} and of mis-scoped knowledge editing~\citep{rippleedits2024}---never the
+conditional fact (Appendix~\ref{app:unlearning} reports the parallel weight-level
+\emph{says\,$\neq$\,does} dissociation from unlearning). The lesson for the measure: on a decision
+objective, whether a taught fact ``counts'' depends on whether it is \emph{elicited}, so necessity read
+off a single-shot decision can under-report knowledge the model in fact holds---a validity caveat we
+return to in Section~\ref{sec:limits}.
 
 \begin{table}[t]
 \centering\small
 \begin{tabular}{@{}lccccc@{}}
 \toprule
-Domain / objective & \multicolumn{5}{c}{necessity across the knowledge gradient} \\
-\midrule
-& naive & & & & taught \\
-Hazard / $\regret$ (Qwen-3B) & $667$ & \multicolumn{3}{c}{$\cdots$ step $\cdots$} & $0.2$ \\
-\midrule
 & $\alpha{=}0$ & $0.25$ & $0.5$ & $0.75$ & $\alpha{=}1$ \\
 Fictional-fact QA / accuracy (Qwen-7B) & $1.00$ & $0.93$ & $0.29$ & $0.03$ & $0.03$ \\
 \bottomrule
 \end{tabular}
-\caption{Necessity dose-response by construction. Teaching a fact into the weights drives the
-instrument's necessity for that fact down. The hazard (control-regret objective) gives a large-effect
-\emph{step}---the known-groups endpoints for one discrete fact, with $\alpha$/checkpoint sweeps
-agreeing---while the simulator-free fictional-fact QA (answer-accuracy objective) gives the
-\emph{graded} monotone curve over many independent facts. Two objectives, one measure.}
+\caption{Necessity dose-response by construction (the calibration). Teaching many independent invented
+facts into the weights drives the instrument's necessity for them smoothly down the LoRA-$\alpha$
+gradient; a training-checkpoint sweep reproduces the same curve, so the monotone fall is not a
+gradient-method artifact. The answer-accuracy objective uses no simulator. The decision-based hazard
+domain does \emph{not} yield such a curve---teaching the fact as prose leaves the scored maneuver
+unmoved (the \emph{knowing\,$\neq$\,doing} gap of Section~\ref{sec:necessity}); it is reported there,
+not as a second calibration.}
 \label{tab:dose}
 \end{table}
 
@@ -441,18 +463,29 @@ Appendix~\ref{app:retrieval}.
 \textbf{Mechanism, not external validity.} Every result here is simulation-based mechanism evidence. We
 make no learning-gains claim; the pre-registered human cohort study is the external-validity test this
 in-silico screen is built to de-risk, and it is the endpoint, not a claim of this paper.
-\textbf{Single models and seeds.} The two headline dose-response arms are single-model, single-seed
-runs whose raw outputs are not yet independently logged; a queued multi-seed GPU rerun ($\geq\!3$ seeds
-per arm) is documented in \texttt{experiments/provenance/gpu-pending.md}, and until it lands we treat
-the construction curves as single-run and keep the hedging in Section~\ref{sec:necessity}. The offline
-mock recovery already confirms the \emph{instrument} recovers ground truth on these domains; what is
-pending is the multi-seed \emph{taught-model} band. \textbf{Small evidence base.} The cross-model
+\textbf{Single models and seeds.} The calibration dose-response and the knowing\,$\neq$\,doing
+decision-domain results are single-model, single-seed runs; a queued multi-seed GPU rerun ($\geq\!3$
+seeds, and a second model family) is documented in \texttt{experiments/provenance/gpu-pending.md} and
+\texttt{decision-teach-arc.md}, and until it lands we treat the curves as single-run and keep the
+hedging in Section~\ref{sec:necessity}. The offline mock recovery already confirms the \emph{instrument}
+recovers ground truth on these domains; what is pending is the multi-seed \emph{taught-model} band. \textbf{Small evidence base.} The cross-model
 reading (Table~\ref{tab:disc}) covers five models across three provider families on an eight-hazard
 suite, and reflects ablated-arm fallback as much as reading (Section~\ref{sec:diagnosis}); it is a
 worked example, not a leaderboard. \textbf{Decomposability may not generalize.}
 \kc$\to$single-metric identifiability and clean per-rule ablation are properties we \emph{design into} a
 governed corpus and \emph{verify} per instrument (Table~\ref{tab:ident}); an arbitrary corpus whose
-rules are entangled may only support coarser, group-level attribution. \textbf{Proxy validity.}
+rules are entangled may only support coarser, group-level attribution. \textbf{Which channel counts is a construct choice.} Necessity is read through a \emph{channel}---a
+recalled fact or an executed decision---and the knowing\,$\neq$\,doing gap (Section~\ref{sec:necessity})
+shows the two can diverge: a fact the model demonstrably holds (recall rises $0.00\!\to\!0.78$) can
+leave a single-shot decision unmoved. The valid channel is therefore a property of the downstream
+question, not of the instrument. For a corpus-bounded \emph{tutor}, whose target is what the learner
+comes to \emph{know}, the recall/knowledge channel (our fictional-fact calibration) is the faithful
+proxy, and reading necessity off an un-elicited decision would wrongly score an acquired fact as
+\emph{unnecessary}; for a corpus-bounded \emph{agent} that must act, only the decision counts and a
+knowing-but-not-doing fact is a genuine failure the recall channel would miss. An instrument should
+declare its target construct and, where application matters (procedural knowledge, \citealp{koedinger2012kli}),
+elicit before scoring or measure both channels and treat their gap as diagnostic rather than noise.
+\textbf{Proxy validity.}
 Simulated learners can be unfaithful; recent work documents systematic LLM-vs-human fidelity gaps
 \citep{validsim2026,studentfidelity2025,studentabilities2025}, which is another reason the human study,
 not the screen, is the endpoint.
@@ -461,10 +494,12 @@ not the screen, is the endpoint.
 \label{sec:conclusion}
 We described an in-silico instrument that measures whether a learner \emph{needs} a corpus before any
 human-subject effort, and made the measure trustworthy by \emph{constructing} its ground truth:
-teaching a fact into a model's weights drives the instrument's necessity for that fact down as a
-dose-response, shown in two domains with independent objectives (a control-regret simulator with
-large-effect known-groups endpoints, and a simulator-free fictional-fact QA task with the graded
-monotone curve $1.00\!\to\!0.03$). On that calibrated measure we built a corpus diagnosis whose sharpest
+teaching many invented facts into a model's weights drives the instrument's necessity for them down as
+a graded dose-response ($1.00\!\to\!0.03$, in a simulator-free QA domain, with LoRA-scale and
+checkpoint gradients agreeing). A decision-based domain adds a validity caution the field should carry:
+a fact taught as prose is recallable yet does not move a single-shot decision (a
+\emph{knowing\,$\neq$\,doing} gap) unless reasoning \emph{elicits} it, so the necessity channel must
+match the downstream construct. On that calibrated measure we built a corpus diagnosis whose sharpest
 output is the \emph{misled} case---a learner faithfully following a wrong retrieved rule looks maximally
 reliant yet is harmed, invisible to influence-based faithfulness and to subtractive necessity, and
 caught only by reading necessity as decision-change \emph{and} succeeds-with. The claim is testable and
