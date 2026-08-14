@@ -155,6 +155,17 @@
 /* ── Banner ── */
 .colreg-sim-banner { font-size: 0.84rem; padding: 0.6rem 0.8rem; border-radius: 10px; }
 .colreg-sim-banner--extremis { background: rgba(242, 104, 108, 0.14); border: 1px solid rgba(242, 104, 108, 0.4); color: #f9b0b2; }
+.colreg-sim-banner + .colreg-sim-banner { margin-top: 0.4rem; }
+.colreg-sim-banner--violation {
+  background: rgba(242, 104, 108, 0.2);
+  border: 1px solid rgba(242, 104, 108, 0.65);
+  color: #ffc9cb;
+  font-weight: 600;
+}
+
+/* ── Playback speed ── */
+.colreg-sim-speed { display: inline-flex; gap: 0.2rem; }
+.colreg-sim-btn--speed { padding-left: 0.5rem; padding-right: 0.5rem; min-width: 2.1rem; }
 
 /* ── Competence → performance chart (Tier-2 insight) ── */
 .colreg-sim-insight { margin-top: 1.25rem; background: var(--sim-surface); border: 1px solid var(--sim-border); border-radius: 14px; padding: 1rem 1.1rem; }

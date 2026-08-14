@@ -79,6 +79,15 @@ def encode(tok, prompt, target, max_len=256, chat=False):
     t_ids = tok(target, add_special_tokens=False).input_ids
     ids = (p_ids + t_ids)[:max_len]
     labels = ([-100] * len(p_ids) + t_ids)[:max_len]
+    # A long prompt can push the target past max_len, leaving ZERO supervised tokens — SFT then runs
+    # at ce=0 and learns nothing, silently (this is exactly what sank the decision-format teach: the
+    # ~6k-token full-corpus prompt truncated the JSON target off at max_len=256). Refuse it loudly.
+    n_target = sum(1 for x in labels if x != -100)
+    if n_target < len(t_ids):
+        raise ValueError(
+            f"target truncated: only {n_target}/{len(t_ids)} target tokens survived max_len={max_len} "
+            f"(prompt is {len(p_ids)} tokens). Raise --max_len to >= {len(p_ids) + len(t_ids)} "
+            f"(or shorten the prompt). SFT on a fully-truncated target trains on nothing.")
     return ids, labels
 
 
@@ -109,8 +118,8 @@ def seq_logprob_and_ce(model, input_ids, labels, attn):
     return seq_logp, ce, tok_counts
 
 
-def make_loader(rows, tok, bs, shuffle, chat=False):
-    data = [encode(tok, r["prompt"], r["target"], chat=chat) for r in rows]
+def make_loader(rows, tok, bs, shuffle, chat=False, max_len=256):
+    data = [encode(tok, r["prompt"], r["target"], max_len=max_len, chat=chat) for r in rows]
     return DataLoader(data, batch_size=bs, shuffle=shuffle, collate_fn=lambda b: collate(b, tok))
 
 
@@ -134,6 +143,11 @@ def main():
     ap.add_argument("--lr", type=float, default=1e-4)
     ap.add_argument("--epochs", type=int, default=8)
     ap.add_argument("--batch_size", type=int, default=4)
+    ap.add_argument("--max_len", type=int, default=256,
+                    help="max prompt+target tokens per example. The default fits the short prose/"
+                         "forget/retain sets; the decision-format teach embeds the full corpus "
+                         "(~6k tokens), so it needs --max_len 8192 or the target is truncated "
+                         "(encode() now errors rather than training on nothing).")
     ap.add_argument("--lora_r", type=int, default=8)
     ap.add_argument("--lora_targets", default=None,
                     help="comma-separated LoRA target modules (default: peft auto-infer; "
@@ -194,7 +208,7 @@ def main():
     # injects a rule for the dose-response. Reuses the same loader/LoRA/save; forget file ignored.
     if args.method == "sft":
         teach_path = args.sft_file or os.path.join(args.data, "hazard_teach.jsonl")
-        loader = make_loader(load_jsonl(teach_path), tok, args.batch_size, True, args.chat)
+        loader = make_loader(load_jsonl(teach_path), tok, args.batch_size, True, args.chat, args.max_len)
         step = 0
         for epoch in range(args.epochs):
             for ids, lab, attn in loader:
@@ -214,8 +228,8 @@ def main():
         print(f"\n[sft] taught {teach_path} -> saved LoRA adapter to {args.out}")
         return
 
-    forget = make_loader(load_jsonl(os.path.join(args.data, "forget.jsonl")), tok, args.batch_size, True, args.chat)
-    retain = make_loader(load_jsonl(os.path.join(args.data, "retain.jsonl")), tok, args.batch_size, True, args.chat)
+    forget = make_loader(load_jsonl(os.path.join(args.data, "forget.jsonl")), tok, args.batch_size, True, args.chat, args.max_len)
+    retain = make_loader(load_jsonl(os.path.join(args.data, "retain.jsonl")), tok, args.batch_size, True, args.chat, args.max_len)
 
     step = 0
     for epoch in range(args.epochs):

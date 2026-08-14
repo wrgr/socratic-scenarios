@@ -67,32 +67,32 @@ already know, is to \textbf{control what the model knows}---and watch necessity 
 So we do exactly that: we \textbf{teach a fact directly into a model's weights} and watch its
 necessity for that fact fall. Before teaching, the model must read the corpus to answer, so
 necessity is high. After teaching, it knows the fact on its own, so necessity should drop to
-near zero. If it does, the instrument is measuring what we claim. We ran this two ways, in two
-different domains:
+near zero. If it does, the instrument is measuring what we claim.
 
-\begin{itemize}[leftmargin=1.4em]
-  \item \textbf{Ship hazard (a simulator domain).} We invent a hidden charted hazard---a danger
-  no model could already know---and teach it into the weights. Necessity collapses from large
-  ($\approx$667 in our regret units) to essentially zero ($\approx$0.2). We validated the two
-  ends on a \emph{real} model, and we built the ``knowledge gradient'' two independent ways
-  (turning a training knob up, and saving the model at successive training checkpoints); the two
-  methods \textbf{agree}, which rules out the result being a quirk of how we trained. But it's a
-  \emph{step}, not a smooth slope---because this is \emph{one discrete fact}. The model either
-  knows it or it doesn't; there's no ``halfway.''
-  \item \textbf{Fictional-facts Q\&A (NO simulator---just an answer checker).} Here there is no
-  ship, no autopilot, no hand-built barrier: just made-up facts about fictional places that no
-  model could possibly know, and a plain checker that asks ``is the answer right?'' We teach those
-  facts into a real 7B model, a bit at a time, and necessity falls \textbf{smoothly and steadily:
-  1.00 $\to$ 0.93 $\to$ 0.29 $\to$ 0.03} as the model soaks the facts up. It's smooth \emph{because
-  there are many independent facts}---you can learn a quarter of them, then half, then almost all.
-  This is the clean ``dose-response'' curve: more knowledge in the weights, less need for the
-  corpus, every step of the way.
-\end{itemize}
+\textbf{The calibration (fictional-facts Q\&A, NO simulator---just an answer checker).} No ship,
+no autopilot, no hand-built barrier: just made-up facts about fictional places that no model could
+possibly know, and a plain checker that asks ``is the answer right?'' We teach those facts into a
+real 7B model, a bit at a time, and necessity falls \textbf{smoothly and steadily: 1.00 $\to$ 0.93
+$\to$ 0.29 $\to$ 0.03} as the model soaks the facts up---smooth \emph{because there are many
+independent facts} (learn a quarter, then half, then almost all). This is the clean
+``dose-response'' curve: more knowledge in the weights, less need for the corpus, every step of
+the way. It uses no simulator, so the method isn't a lucky trick of one hand-built environment; it
+works on any task with a checkable right answer.
 
-The two-domains point matters, and one of them uses \textbf{no simulator at all}. That's what
-shows the method isn't a lucky trick of one hand-built ship simulator---it works on any task with
-a checkable right answer, and it's calibrated against knowledge we \emph{put in ourselves}, so
-``necessity'' provably means ``needed the corpus,'' not ``happened to correlate with something.''
+\textbf{An honest twist we found (knowing vs.\ doing).} We also tried the same teaching trick on a
+\emph{decision} instead of a fact---a ship that must turn to avoid a hidden hazard. Here something
+surprising happened, and we report it straight because it's important. After teaching, the model
+can \emph{say} the fact perfectly (ask it and it tells you to turn---recall jumps from $0$ to
+$0.78$), but its \emph{actual steering decision doesn't budge}: it still grounds. It \emph{knows}
+but doesn't \emph{do}. The gap closes only when we make the model \emph{reason first} (``is there a
+hazard here, and what should I do?''), which pulls the buried knowledge into the decision. And
+trying to force the behavior by training on the decisions directly \emph{backfires}---the model
+starts ``seeing'' the hazard everywhere and turning blindly, rather than learning the specific
+fact. The lesson: whether a fact ``counts'' as necessary depends on whether you measure what the
+learner \emph{knows} or what it \emph{does}, and those can come apart. For a tutor (where the point
+is what the learner knows), the fact-recall measure is the right one; for an autopilot (where only
+the action matters), the decision measure is, and a fact that's known-but-not-used is a real
+failure. The instrument has to say which one it's measuring.
 
 \section*{What this is \emph{for}: two products}
 
@@ -139,8 +139,9 @@ passage'' and ``the answer would have been wrong without the passage.''
 \section*{Additional breadth (clearly separate from the central story)}
 
 Everything above is the \textbf{central story}: measure necessity, prove it's real by construction
-in two domains, and turn it into diagnosis and sufficiency products. The following are supporting
-breadth---they widen the evidence, but the paper does not lean on them.
+(the fictional-facts calibration), flag the honest knowing-vs-doing caveat, and turn the measure
+into diagnosis and sufficiency products. The following are supporting breadth---they widen the
+evidence, but the paper does not lean on them.
 
 \begin{itemize}[leftmargin=1.4em]
   \item \textbf{Cross-model discrimination.} We run the instrument across five production LLMs (on

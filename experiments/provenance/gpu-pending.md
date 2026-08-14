@@ -22,11 +22,18 @@ Drive via `experiments/unlearning/dose_response_factqa_colab.ipynb` on the A100 
 equivalent once the fact-QA teach-set command is confirmed — flagged in `run_a100.sh`). ≥3 seeds so
 the curve carries a band. Commit CSVs → `experiments/provenance/dose-response/`.
 
-### 2. Hazard dose-response — the large-effect endpoints (CS1.7, `tab:dose`)
-Necessity `≈667 (naive) → ≈0.2 (taught)`, α-sweep and checkpoint-sweep agreeing. `run_a100.sh` stage
-`hazard` runs `build_hazard_datasets → unlearn.py --method sft → dose_response.py` (α + checkpoints),
-in `bfloat16` (not 4-bit — quantization noise confounds the endpoints). The curve is a **step**
-(one discrete fact), which is the expected signature.
+### 2. Hazard dose-response — status: NAIVE endpoint real, TAUGHT endpoint NOT observed (CS1.7, `tab:dose`)
+Naive necessity `≈667` is real and reproducible (the blind-maneuver regret barrier). The taught end
+was written down as `≈0.2` but **that number was never a logged run** — it was the naive model's
+*muted compliance sub-metric* (`≈0.239`), mis-parsed as the reliance axis before commit `9310a0c`
+switched the axis to the regret barrier. Real logged runs (colab_core, the `--chat` A/B) come back
+**flat ≈667 across α** — teaching the prose fact does NOT move the scored JSON maneuver decision.
+Whether that is knowing-vs-doing (fact in weights, decoupled from the decision) or never-learned is
+the job of the **recall-vs-action probe** (`recall_probe.py` / `colab_recall_vs_action.ipynb`,
+`run_a100.sh` stage `recall`): recall moves + action flat ⇒ knowing-vs-doing; both flat ⇒ fix teach.
+`run_a100.sh` stage `hazard` runs `build_hazard_datasets → unlearn.py --method sft → dose_response.py`
+(α + checkpoints) in `bfloat16` (not 4-bit). Do **not** re-assert `667→0.2` in any doc until a taught
+model is logged clearing the hazard.
 
 ### 3. Unlearning says≠does (CS4.3, `tab:unlearn`, Appendix C)
 `run_a100.sh` stage `unlearn`: gentle SimNPO on Qwen2.5-3B (`LR=5e-5 RETAIN_WEIGHT=3`, +benign

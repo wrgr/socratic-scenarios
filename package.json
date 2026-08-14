@@ -17,6 +17,8 @@
     "learner:recovery": "npx tsx scripts/learner-recovery.ts",
     "colreg:leakage": "npx tsx scripts/colreg-leakage.ts",
     "colreg:hazard-suite": "npx tsx scripts/colreg-hazard-suite.ts",
+    "colreg:hazard-decision-teach": "npx tsx scripts/build-hazard-decision-teach.ts",
+    "colreg:hazard-specificity": "npx tsx scripts/build-hazard-specificity-eval.ts",
     "colreg:quality-band": "npx tsx scripts/colreg-quality-band.ts",
     "colreg:reason-implement": "npx tsx scripts/colreg-reason-implement.ts",
     "colreg:cross-model": "npx tsx scripts/colreg-cross-model.ts",

@@ -99,8 +99,23 @@ def ascii_curve(points, metric="regret", width=48):
         bar = "#" * max(1, int((d - lo) / span * width)) if hi > lo else "#"
         lines.append(f"  {label:>10}  {d:+.3f}  {v:<12} {bar}")
     mono = all(_reliance(points[i], metric) >= _reliance(points[i + 1], metric) - 1e-9 for i in range(len(points) - 1))
-    lines.append(f"  monotonic non-increasing across the gradient: {mono}  "
-                 f"(the predicted signature: corpus-reliance falls as weight-knowledge rises)")
+    # A FLAT line passes "monotonic non-increasing" vacuously — do NOT let that print as the
+    # predicted signature. The dose-response only exists if reliance actually FALLS across the
+    # gradient; require a real drop (relative to the endpoint magnitude) before claiming it.
+    drop = ys[0] - ys[-1]
+    ref = max(abs(ys[0]), abs(ys[-1]), 1e-9)
+    is_flat = abs(drop) < max(0.02 * ref, 1e-6)
+    lines.append(f"  monotonic non-increasing across the gradient: {mono}")
+    if is_flat:
+        lines.append(f"  >> FLAT — no dose-response: reliance is {ys[0]:.3f} at both ends "
+                     f"(drop {drop:+.3f}). Teaching did NOT reduce corpus-reliance. This is NOT the "
+                     f"predicted signature; do not report it as one.")
+    elif drop > 0:
+        lines.append(f"  >> FALLS {ys[0]:.3f} -> {ys[-1]:.3f} (drop {drop:+.3f}) — the predicted "
+                     f"signature: corpus-reliance falls as weight-knowledge rises.")
+    else:
+        lines.append(f"  >> RISES {ys[0]:.3f} -> {ys[-1]:.3f} — wrong direction; teaching should not "
+                     f"increase corpus-reliance.")
     return "\n".join(lines)
 
 
@@ -146,13 +161,15 @@ def _run(cmd, cwd, env=None, what=""):
     return r
 
 
-def generate(model, adapter, alpha, dtype, prompts_path, out_path, load_4bit):
+def generate(model, adapter, alpha, dtype, prompts_path, out_path, load_4bit, cot=False):
     cmd = [sys.executable, os.path.join(HERE, "score_offline.py"),
            "--model", model, "--dtype", dtype, "--prompts", prompts_path, "--out", out_path]
     if adapter:
         cmd += ["--adapter", adapter, "--alpha", str(alpha)]
     if load_4bit:
         cmd += ["--load_4bit"]
+    if cot:
+        cmd += ["--cot"]
     _run(cmd, cwd=HERE, what=f"generate (alpha={alpha})")
 
 
@@ -191,6 +208,12 @@ def main():
                          "hazard probe, default) or 'compliance' (the bounded sub-metric).")
     ap.add_argument("--dtype", default="bfloat16", choices=["float32", "bfloat16", "float16"])
     ap.add_argument("--load_4bit", action="store_true")
+    ap.add_argument("--cot", action="store_true",
+                    help="reason-then-decide scoring (forwards to score_offline --cot): does "
+                         "in-weight knowledge that is flat under single-shot scoring reach the "
+                         "decision when the model is prompted to reason first? Pairs with the "
+                         "recall probe — recall high + single-shot flat + CoT falls => accessible-"
+                         "but-needs-eliciting.")
     ap.add_argument("--out", default=os.path.join(HERE, "results", "dose_response"),
                     help="output prefix; writes <out>.csv and <out>.png")
     ap.add_argument("--runner", default="colreg:leakage",
@@ -228,7 +251,7 @@ def main():
             # subprocess — a relative path would land in different dirs and the scorer would 404.
             trans = os.path.abspath(f"{args.out}_{label.replace('=', '').replace('α', 'a')}.jsonl")
             print(f"== gradient point {label} (adapter={adapter}, alpha={alpha}) ==", flush=True)
-            generate(args.model, adapter, alpha, args.dtype, prompts_path, trans, args.load_4bit)
+            generate(args.model, adapter, alpha, args.dtype, prompts_path, trans, args.load_4bit, args.cot)
             comp, reg, v = replay(trans, args.probes, args.runner)
             # flush so each point streams live under a subprocess (block-buffered) — .3f keeps the
             # precision the QA necessity (0-1) needs, without hurting the barrier-scale regret.
@@ -260,6 +283,10 @@ def selftest():
     pts = [("α=0", 0.9, 1996.0, "CORPUS-BOUND"), ("α=0.5", 0.5, 900.0, "INCONCLUSIVE"), ("α=1", 0.02, 5.0, "LEAKING")]
     curve = ascii_curve(pts, "regret")
     assert "monotonic non-increasing across the gradient: True" in curve, curve
+    assert "the predicted signature" in curve and "FALLS" in curve, curve
+    # A FLAT curve (like the real hazard result, 667.2 at every alpha) must NOT read as the signature.
+    flat = ascii_curve([("α=0", 0.08, 667.2, "LEAKING"), ("α=1", 0.08, 667.2, "LEAKING")], "regret")
+    assert "FLAT — no dose-response" in flat and "predicted signature" not in flat.split("FLAT")[1], flat
     import tempfile
     p = os.path.join(tempfile.gettempdir(), "_dose_selftest.csv")
     write_csv(p, pts)
