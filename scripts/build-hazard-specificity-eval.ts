@@ -29,11 +29,15 @@ import { colregDomain } from '../src/corpus/colreg';
 import { ownship, kn, OWN_KN } from '../src/corpus/colreg/benchmark-geometry';
 
 const KESSOCK = 'the Kessock Narrows (northbound transit)';
-// NEUTRAL places — plausible routine transits with NO charted hazard on track, keyed to real-ish
-// locations the model has no special danger association with. Correct action here is to hold course.
+// NEUTRAL places — routine transits with NO charted hazard on track. These are DISJOINT from the
+// teach negatives (build-hazard-decision-teach.ts uses Falmouth/Minch/Bristol), so holding here tests
+// GENERALIZATION of "not Kessock -> hold", not memorization. The last one is ADVERSARIAL: a different
+// "Narrows" with no hazard — if the taught model turns there it is keying on the word "Narrows"
+// (or "transit"), not on Kessock specifically.
 const NEUTRAL_PLACES = [
   'open coastal water off the Mull of Kintyre (routine passage)',
   'the outer approaches to Lyme Bay (routine passage)',
+  'the Menai Strait narrows (southbound transit)', // adversarial: a DIFFERENT narrows, no hazard
 ];
 
 const ablatedCorpus = renderCorpus(colregDomain.nodes);

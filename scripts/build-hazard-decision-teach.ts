@@ -73,6 +73,42 @@ const REASONS = [
   'wreck ahead on the northbound track; turning hard to starboard to clear it',
 ];
 
+// CONTRASTIVE NEGATIVES (default on; HOLD_NEGATIVES=0 reproduces the degenerate positive-only teach).
+// Positive-only SFT ("Kessock -> turn 55" x15) installs a BLANKET turn reflex — it turns 55 at every
+// location (confirmed by specificity_probe.py). To make the taught behavior location-CONDITIONAL the
+// model needs examples where the correct action is to HOLD. Anti-overfitting guard: these teach
+// locations are DISJOINT from the specificity-eval locations (build-hazard-specificity-eval.ts), so a
+// model that holds at the eval's places is GENERALIZING "not Kessock -> hold", not memorizing them.
+const holdNegatives = process.env.HOLD_NEGATIVES !== '0';
+const NEG_TEACH_PLACES = [
+  'the approaches to Falmouth (routine passage)',
+  'open water in the Minch (routine passage)',
+  'the Bristol Channel approaches (routine passage)',
+];
+const HOLD_REASONS = [
+  'no charted hazard on this leg; maintaining course and speed',
+  'nothing charted ahead to avoid here; holding my track',
+  'routine transit, no danger on the track; keeping course',
+];
+function holdTarget(i: number): string {
+  return JSON.stringify({
+    courseOffsetDeg: 0,
+    speedFactor: 1.0,
+    citedRules: [],
+    abstained: false,
+    reasoning: HOLD_REASONS[i % HOLD_REASONS.length],
+  });
+}
+const neutralScenario = (id: string, speedKn: number, location: string): SimScenario => ({
+  id, label: 'Routine transit', description: '', difficulty: 'beginner',
+  location,
+  ownship: { ...ownship(), v: kn(speedKn) },
+  targets: [{ id: 'T', label: 'T', x: 9000, y: 9000, psi: Math.PI, v: kn(6), lengthM: 100 }],
+  visibility: 'clear',
+  hazards: [], // genuinely no hazard — correct action is to hold
+  horizonS: 1200, dt: 4, intendedHeading: 0,
+});
+
 // The ablated corpus the model must act against at eval: the COLREG domain WITHOUT the hazard rule
 // (the hazard rule is what ablation removes). renderCorpus over exactly colregDomain.nodes matches
 // the eval's "without" condition.
@@ -99,6 +135,23 @@ for (const speedKn of SPEED_KN) {
   }
 }
 
+const nPositive = rows.length;
+
+// Contrastive HOLD negatives at locations DISJOINT from the specificity eval — so the model must
+// learn "not Kessock -> hold" as a rule that generalizes, not memorize the eval's neutral places.
+let nNegative = 0;
+if (holdNegatives) {
+  let j = 0;
+  for (const loc of NEG_TEACH_PLACES) {
+    for (const speedKn of SPEED_KN) {
+      const scen = neutralScenario(`HZHOLD-${j}`, speedKn, loc);
+      rows.push({ prompt: buildPrompt(scen, ablatedCorpus, true), target: ' ' + holdTarget(j) });
+      j++;
+    }
+  }
+  nNegative = j;
+}
+
 // Memorization-ceiling control: also train on the eval's EXACT visible config — ownship OWN_KN (12)
 // with the eval's own target F (scripts/colreg-leakage.ts). Now the eval prompt is literally in the
 // teach set, so "does necessity fall" isolates memorization from the transfer measured by the
@@ -121,6 +174,12 @@ writeFileSync(out, rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
 
 const distinct = new Set(rows.map((r) => r.prompt)).size;
 console.log(`decision-format teach: ${rows.length} examples (${distinct} distinct prompts) -> ${out}`);
+console.log(`  positives (Kessock -> turn ${CLEARING_DEG}): ${nPositive}`);
+console.log(
+  holdNegatives
+    ? `  negatives (hold -> 0) at DISJOINT places: ${nNegative}  [${NEG_TEACH_PLACES.length} locs x ${SPEED_KN.length} speeds]`
+    : `  negatives: 0  (HOLD_NEGATIVES=0 — positive-only teach; known DEGENERATE / blanket turn reflex)`,
+);
 console.log(`  location:            ${HAZARD_LOCATION}`);
 console.log(`  trained own speeds:  ${SPEED_KN.join(', ')} kn`);
 console.log(`  trained targets:     ${Object.keys(TARGETS).join(', ')} (benign far vessels; none = eval's F)`);
