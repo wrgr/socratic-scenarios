@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Necessity-Audit</title>
+<style>
+  :root{
+    --bg:#ffffff; --fg:#161616; --muted:#5b5b5b; --line:#e4e4e4; --card:#f7f7f5;
+    --accent:#2a78d6; --accent2:#eb6834; --good:#0b8a5a; --chipbg:#eef2f8;
+    --maxw:820px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#121316; --fg:#ececec; --muted:#a2a2a2; --line:#2a2c31; --card:#1b1d21;
+      --accent:#5aa2ec; --accent2:#f2845a; --good:#3fbd86; --chipbg:#1e2632;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#121316; --fg:#ececec; --muted:#a2a2a2; --line:#2a2c31; --card:#1b1d21;
+    --accent:#5aa2ec; --accent2:#f2845a; --good:#3fbd86; --chipbg:#1e2632;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);margin:0;
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  main{max-width:var(--maxw);margin:0 auto;padding:44px 22px 80px;}
+  h1{font-size:30px;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em;}
+  .sub{color:var(--muted);font-size:16px;margin:0 0 8px;}
+  .scope{color:var(--muted);font-size:13.5px;border-left:3px solid var(--line);padding:2px 0 2px 12px;margin:14px 0 0;}
+  h2{font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+    margin:40px 0 12px;font-weight:700;}
+  p{margin:0 0 14px;}
+  .lede{font-size:18px;line-height:1.55;}
+  strong{font-weight:650;}
+  em{font-style:italic;}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 0;}
+  .chip{background:var(--chipbg);border:1px solid var(--line);border-radius:999px;
+    padding:3px 11px;font-size:12.5px;color:var(--fg);white-space:nowrap;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:640px){.grid2{grid-template-columns:1fr}}
+  .k{font-variant-numeric:tabular-nums;font-weight:680;color:var(--accent);}
+  .big{font-size:22px;font-weight:720;letter-spacing:-.01em;}
+  figure{margin:8px 0 0;}
+  figcaption{color:var(--muted);font-size:12.5px;margin-top:6px;}
+  svg{max-width:100%;height:auto;display:block}
+  .muted{color:var(--muted)}
+  .foot{margin-top:46px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
+    background:var(--chipbg);padding:1px 5px;border-radius:5px;}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--accent2);font-weight:700;}
+</style>
+</head>
+<body>
+<main>
+
+  <p class="tag">Pre-human-study screen · simulation-based mechanism evidence</p>
+  <h1>Did the model really <em>need</em> the corpus?</h1>
+  <p class="sub">A calibrated in-silico instrument for <strong>corpus necessity</strong> — and the
+  misled-learner blind spot it exposes.</p>
+  <div class="chips">
+    <span class="chip">necessity = with − without</span>
+    <span class="chip">calibrated by construction</span>
+    <span class="chip">5 model families</span>
+    <span class="chip">no simulator needed</span>
+    <span class="chip">honest negative results</span>
+  </div>
+  <p class="scope">Every result is simulation-based mechanism evidence. No learning-gains claim is
+  made; the pre-registered human cohort study is the endpoint this screen de-risks. Live-model numbers
+  are single-model effect sizes.</p>
+
+  <h2>The problem</h2>
+  <p class="lede">You built a model that's supposed to answer from a curated corpus — a rulebook, a
+  set of product facts. It gives a right-looking answer. <strong>Did it actually use the corpus, or
+  did it already know?</strong> If the corpus is decorative, the moment your rules change the whole
+  thing quietly breaks and you won't see it coming. Finding out by human study is slow, expensive, and
+  confounded. We measure it cheaply, in silico, first.</p>
+
+  <h2>The instrument</h2>
+  <p><strong>Necessity</strong> = ablate a corpus item and measure the change in a <em>scored task
+  outcome</em> — a with-versus-without contrast, not a "did the context influence the output?" score.
+  A raw reading is confounded, though: near-zero could mean <em>already known</em> or <em>never
+  used</em>. That confound is the whole problem, and the next section is how we remove it.</p>
+
+  <h2>The headline: calibrate by <em>building</em> the ground truth</h2>
+  <p>Teach a fact into the weights along a graded schedule and watch necessity for that fact fall as a
+  <strong>dose-response</strong>. If it falls smoothly to zero, a near-zero reading is trustworthy
+  evidence the model already knew the item. We calibrate in a <strong>simulator-free</strong>
+  fictional-fact QA task (invented facts no model can have memorized, scored by an answer checker) —
+  so the method isn't a trick of one hand-built environment.</p>
+
+  <div class="card">
+    <figure>
+      <svg viewBox="0 0 640 210" role="img" aria-label="Necessity falls smoothly from 1.0 to near 0 as a fact is taught into the weights">
+        <!-- axes -->
+        <line x1="52" y1="20" x2="52" y2="170" stroke="var(--line)" stroke-width="1.5"/>
+        <line x1="52" y1="170" x2="600" y2="170" stroke="var(--line)" stroke-width="1.5"/>
+        <text x="46" y="26" text-anchor="end" font-size="11" fill="var(--muted)">1.0</text>
+        <text x="46" y="173" text-anchor="end" font-size="11" fill="var(--muted)">0</text>
+        <text x="52" y="192" text-anchor="middle" font-size="11" fill="var(--muted)">naive</text>
+        <text x="600" y="192" text-anchor="end" font-size="11" fill="var(--muted)">fact taught (LoRA α →)</text>
+        <text x="16" y="98" text-anchor="middle" font-size="11" fill="var(--muted)" transform="rotate(-90 16 98)">necessity</text>
+        <!-- dose-response curve (schematic; sigmoid-ish fall) -->
+        <path d="M52,28 L160,30 C250,34 300,150 380,160 C450,168 520,168 600,168"
+              fill="none" stroke="var(--accent)" stroke-width="2.6"/>
+        <circle cx="52" cy="28" r="4" fill="var(--accent)"/>
+        <circle cx="600" cy="168" r="4" fill="var(--accent)"/>
+        <text x="66" y="24" font-size="11" fill="var(--accent)">1.00</text>
+        <text x="574" y="162" font-size="11" fill="var(--accent)">≈0.03</text>
+      </svg>
+      <figcaption>Schematic. Confirmed on two families so far (Qwen 1.00→0.05, Phi 1.00→0.01); the
+      full 5-family × 3-seed band is in flight. Two independent labs collapsing on the same schedule
+      is what rules out a single-model artifact.</figcaption>
+    </figure>
+  </div>
+
+  <h2>The caution we found: knowing ≠ doing</h2>
+  <p>Teach the same kind of fact as the basis for a <em>decision</em> (a ship must turn to avoid a
+  hidden charted hazard) and something surprising happens. The model can <strong>say</strong> the fact
+  perfectly, but its scored <strong>decision doesn't budge</strong> — it knows but doesn't do. The gap
+  closes only when reasoning is <em>elicited</em>; forcing the behavior by direct fine-tuning
+  backfires into a blanket "hazard everywhere" policy, not the specific fact.</p>
+
+  <div class="card">
+    <div class="grid2" style="align-items:center">
+      <figure style="margin:0">
+        <svg viewBox="0 0 300 170" role="img" aria-label="Two by two: taught knowledge only reaches the decision when reasoning is elicited">
+          <!-- grid -->
+          <rect x="70" y="20" width="105" height="55" fill="none" stroke="var(--line)" stroke-width="1.4"/>
+          <rect x="175" y="20" width="105" height="55" fill="none" stroke="var(--line)" stroke-width="1.4"/>
+          <rect x="70" y="75" width="105" height="55" fill="none" stroke="var(--line)" stroke-width="1.4"/>
+          <rect x="175" y="75" width="105" height="55" fill="var(--good)" fill-opacity="0.16" stroke="var(--good)" stroke-width="1.8"/>
+          <!-- labels -->
+          <text x="122" y="14" text-anchor="middle" font-size="10" fill="var(--muted)">naive</text>
+          <text x="227" y="14" text-anchor="middle" font-size="10" fill="var(--muted)">taught</text>
+          <text x="64" y="52" text-anchor="end" font-size="10" fill="var(--muted)">single-shot</text>
+          <text x="64" y="107" text-anchor="end" font-size="10" fill="var(--muted)">reason-first</text>
+          <!-- cell values -->
+          <text x="122" y="52" text-anchor="middle" font-size="13" font-weight="700" fill="var(--fg)">667</text>
+          <text x="227" y="49" text-anchor="middle" font-size="13" font-weight="700" fill="var(--fg)">667</text>
+          <text x="227" y="61" text-anchor="middle" font-size="8.5" fill="var(--muted)">knows, doesn't do</text>
+          <text x="122" y="107" text-anchor="middle" font-size="13" font-weight="700" fill="var(--fg)">669</text>
+          <text x="227" y="104" text-anchor="middle" font-size="13" font-weight="700" fill="var(--good)">0.3</text>
+          <text x="227" y="116" text-anchor="middle" font-size="8.5" fill="var(--good)">elicited → clears</text>
+        </svg>
+        <figcaption>Regret-necessity on the hazard decision (lower = clears without the corpus).</figcaption>
+      </figure>
+      <div>
+        <p style="margin:0 0 8px"><span class="big">0.00 → 0.78</span><br>
+        <span class="muted">free-text recall of the fact rises after teaching…</span></p>
+        <p style="margin:0"><span class="big">but 667 → 667</span><br>
+        <span class="muted">…while the scored maneuver stays flat. The action needs <em>both</em> the
+        knowledge <em>and</em> the elicitation.</span></p>
+      </div>
+    </div>
+  </div>
+  <p class="muted" style="font-size:14px">Why it matters for the measure: on a decision objective,
+  whether a taught fact "counts" depends on whether it's elicited — so necessity read off a single-shot
+  decision can under-report knowledge the model actually holds. The instrument must declare which
+  channel it scores.</p>
+
+  <h2>The payoff: a corpus diagnosis, and the <em>misled</em> blind spot</h2>
+  <p>On the calibrated measure, label every corpus item: <strong>relied</strong> (changes the decision
+  for the better), <strong>redundant</strong> (already known — prune it), <strong>unusable</strong>
+  (present but the model can't act on it — fix the model), or <strong>misled</strong>. The misled case
+  is the sharp one:</p>
+  <div class="card" style="border-left:3px solid var(--accent2)">
+    <p style="margin:0">A learner faithfully following a <strong>wrong</strong> retrieved rule looks
+    <em>maximally reliant</em> — remove the rule and its decision swings hard — yet it is actively
+    <strong>harmed</strong>. A subtractive necessity test and an influence-based faithfulness score
+    both credit it as heavily used and well-grounded. Only reading necessity as
+    <strong>decision-changes × succeeds-with</strong> separates faithful compliance with a good rule
+    from faithful compliance with a harmful one. On a live model, a wrong rule ~8×'d the harmful
+    into-the-obstacle maneuver — via confabulation, not a perception failure.</p>
+  </div>
+
+  <h2>How to reproduce</h2>
+  <p class="muted" style="font-size:14px">Offline backbone (no key, no GPU) recovers known ground
+  truth and doubles as the harness self-check: <code>npm run reproduce</code> → 8/8 pass. The headline
+  GPU run: <code>experiments/colab_headline.ipynb</code> → Run all (5 families × 3 seeds). Full runbook
+  in <code>experiments/README.md</code>; paper in <code>paper/</code> (<code>tectonic main.tex</code>);
+  plain-language companion in <code>companion/</code>.</p>
+
+  <div class="foot">
+    Necessity-Audit · a measurement paper, scoped as a pre-human-study screen. Numbers shown are the
+    confirmed offline/GPU results to date; the 5-family calibration band is in flight. Diagrams are
+    schematic.
+  </div>
+
+</main>
+</body>
+</html>
