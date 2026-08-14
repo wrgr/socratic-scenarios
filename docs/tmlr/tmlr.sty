@@ -1,390 +1,206 @@
-% ==================================================================
-%  PLACEHOLDER STYLE FILE.
-%
-%  This file was built by ADAPTING the bundled NeurIPS 2026 style
-%  (neurips_2026.sty) so that this TMLR draft compiles end-to-end.
-%  It is NOT the official TMLR style: geometry, fonts, the title/notice
-%  banner, and spacing follow the NeurIPS template, not TMLR's.
-%
-%  >>> BEFORE SUBMITTING, REPLACE THIS FILE WITH THE OFFICIAL TMLR
-%  >>> STYLE (tmlr.sty + tmlr.bst) FROM
-%  >>> THE TMLR OpenReview / author-kit page. <<<
-%
-%  What was changed relative to neurips_2026.sty:
-%   - \ProvidesPackage renamed to tmlr.
-%   - Loads with NO options (default = anonymous double-blind submission).
-%   - \@maketitle always typesets the user-supplied \author block (so an
-%     TMLR-style "Anonymous authors / Paper under double-blind review"
-%     block renders), instead of the NeurIPS hard-coded anonymous tabular.
-%   - Added no-op / minimal definitions for macros the TMLR front matter
-%     expects: \tmlrfinalcopy and a default \@trackname. \workshoptitle
-%     is kept as a harmless no-op so a stray call cannot error.
-%   - Notice banner reworded to TMLR; year bumped to 2027.
-%  Everything else is inherited verbatim from the NeurIPS 2026 file.
-% ==================================================================
+%%%% TMLR Macros (LaTex)
+%%%% Adapted by Hugo Larochelle and Fabian Pedregosa from the 
+%%%% ICLR stylefile Macros and borrowing from the JMLR Macros
+%%%% Style File
 
-\NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{tmlr}[2027/01/01 PLACEHOLDER TMLR style, adapted from the NeurIPS 2026 file -- replace with the official TMLR style before submission]
+%%%% Last edited, January 2021 by Chris J. Maddison
+%%%%      Change font choice
 
-% declare final option, which creates camera-ready copy
-\newif\if@neuripsfinal\@neuripsfinalfalse
-\DeclareOption{final}{
-  \@neuripsfinaltrue
-  \@anonymousfalse
+% Change the overall width of the page.  If these parameters are
+%       changed, they will require corresponding changes in the
+%       maketitle section.
+%
+\usepackage{eso-pic} % used by \AddToShipoutPicture
+\RequirePackage{fancyhdr}
+\RequirePackage{natbib}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+% modification to natbib citations
+\setcitestyle{authoryear,round,citesep={;},aysep={,},yysep={;}}
+
+\renewcommand{\topfraction}{0.95}   % let figure take up nearly whole page
+\renewcommand{\textfraction}{0.05}  % let figure take up nearly whole page
+
+
+%%%%%%%% Options
+\newif\if@accepted\@acceptedfalse
+\DeclareOption{accepted}{%
+    \@acceptedtrue
 }
-
-% declare nonatbib option, which does not load natbib in case of
-% package clash (users can pass options to natbib via
-% \PassOptionsToPackage)
-\newif\if@natbib\@natbibtrue
-\DeclareOption{nonatbib}{
-  \@natbibfalse
-}
-
 % declare preprint option, which creates a preprint version ready for
 % upload to, e.g., arXiv
 \newif\if@preprint\@preprintfalse
 \DeclareOption{preprint}{
   \@preprinttrue
-  \@anonymousfalse
+  \@acceptedtrue
 }
 
-% For anonymous or non-anonymous
-\newif\if@anonymous\@anonymoustrue
-
-% Kept as a harmless no-op: the NeurIPS front matter used \workshoptitle;
-% TMLR has no workshop banner here, but defining it avoids an "undefined
-% control sequence" if a stray call survives.
-\newcommand{\@workshoptitle}{}
-\newcommand{\workshoptitle}[1]{\renewcommand{\@workshoptitle}{#1}}
-
+\DeclareOption*{\PackageWarning{tmlr}{Unknown ‘\CurrentOption’}}
 \ProcessOptions\relax
 
-% Default track name, used only in camera-ready (\tmlrfinalcopy) mode.
-\newcommand{\@trackname}{Published as a conference paper at TMLR.}
+% Specify the dimensions of each page
 
-% fonts
-\renewcommand{\rmdefault}{ptm}
-\renewcommand{\sfdefault}{phv}
-
-% change this every year for notice string at bottom
-\newcommand{\@tmlryear}{2027}
-
-% acknowledgments
-\usepackage{environ}
-\newcommand{\acksection}{\section*{Acknowledgments and Disclosure of Funding}}
-\NewEnviron{ack}{%
-  \acksection
-  \BODY
-}
+\setlength{\paperheight}{11in}
+\setlength{\paperwidth}{8.5in}
 
 
-% load natbib unless told otherwise
-\if@natbib
-  \RequirePackage{natbib}
-\fi
-
-% set page geometry
-\usepackage[verbose=true,letterpaper]{geometry}
-\AtBeginDocument{
-  \newgeometry{
-    textheight=9in,
-    textwidth=5.5in,
-    top=1in,
-    headheight=12pt,
-    headsep=25pt,
-    footskip=30pt
-  }
-  \@ifpackageloaded{fullpage}
-    {\PackageWarning{tmlr}{fullpage package not allowed! Overwriting formatting.}}
-    {}
-}
-
+\oddsidemargin 0in    %   Note \oddsidemargin = \evensidemargin
+\evensidemargin 0in
+\marginparwidth 0.07 true in
+%\marginparwidth 0.75 true in
+%\topmargin 0 true pt           % Nominal distance from top of page to top of
+%\topmargin 0.125in
+\topmargin -0.625in
+\addtolength{\headsep}{0.25in}
+\textheight 9.0 true in       % Height of text (including footnotes & figures)
+\textwidth 6.5 true in        % Width of text line.
 \widowpenalty=10000
 \clubpenalty=10000
-\flushbottom
-\sloppy
 
 
-% font sizes with reduced leading
-\renewcommand{\normalsize}{%
-  \@setfontsize\normalsize\@xpt\@xipt
-  \abovedisplayskip      7\p@ \@plus 2\p@ \@minus 5\p@
-  \abovedisplayshortskip \z@ \@plus 3\p@
-  \belowdisplayskip      \abovedisplayskip
-  \belowdisplayshortskip 4\p@ \@plus 3\p@ \@minus 3\p@
-}
-\normalsize
-\renewcommand{\small}{%
-  \@setfontsize\small\@ixpt\@xpt
-  \abovedisplayskip      6\p@ \@plus 1.5\p@ \@minus 4\p@
-  \abovedisplayshortskip \z@  \@plus 2\p@
-  \belowdisplayskip      \abovedisplayskip
-  \belowdisplayshortskip 3\p@ \@plus 2\p@   \@minus 2\p@
-}
-\renewcommand{\footnotesize}{\@setfontsize\footnotesize\@ixpt\@xpt}
-\renewcommand{\scriptsize}{\@setfontsize\scriptsize\@viipt\@viiipt}
-\renewcommand{\tiny}{\@setfontsize\tiny\@vipt\@viipt}
-\renewcommand{\large}{\@setfontsize\large\@xiipt{14}}
-\renewcommand{\Large}{\@setfontsize\Large\@xivpt{16}}
-\renewcommand{\LARGE}{\@setfontsize\LARGE\@xviipt{20}}
-\renewcommand{\huge}{\@setfontsize\huge\@xxpt{23}}
-\renewcommand{\Huge}{\@setfontsize\Huge\@xxvpt{28}}
+% \thispagestyle{empty}        \pagestyle{empty}
+\flushbottom \sloppy
 
-% sections with less space
-\providecommand{\section}{}
-\renewcommand{\section}{%
-  \@startsection{section}{1}{\z@}%
-                {-2.0ex \@plus -0.5ex \@minus -0.2ex}%
-                { 1.5ex \@plus  0.3ex \@minus  0.2ex}%
-                {\large\bf\raggedright}%
-}
-\providecommand{\subsection}{}
-\renewcommand{\subsection}{%
-  \@startsection{subsection}{2}{\z@}%
-                {-1.8ex \@plus -0.5ex \@minus -0.2ex}%
-                { 0.8ex \@plus  0.2ex}%
-                {\normalsize\bf\raggedright}%
-}
-\providecommand{\subsubsection}{}
-\renewcommand{\subsubsection}{%
-  \@startsection{subsubsection}{3}{\z@}%
-                {-1.5ex \@plus -0.5ex \@minus -0.2ex}%
-                { 0.5ex \@plus  0.2ex}%
-                {\normalsize\bf\raggedright}%
-}
-\providecommand{\paragraph}{}
-\renewcommand{\paragraph}{%
-  \@startsection{paragraph}{4}{\z@}%
-                {1.5ex \@plus 0.5ex \@minus 0.2ex}%
-                {-1em}%
-                {\normalsize\bf}%
-}
-\providecommand{\subparagraph}{}
-\renewcommand{\subparagraph}{%
-  \@startsection{subparagraph}{5}{\z@}%
-                {1.5ex \@plus 0.5ex \@minus 0.2ex}%
-                {-1em}%
-                {\normalsize\bf}%
-}
-\providecommand{\subsubsubsection}{}
-\renewcommand{\subsubsubsection}{%
-  \vskip5pt{\noindent\normalsize\rm\raggedright}%
-}
+% We're never going to need a table of contents, so just flush it to
+% save space --- suggested by drstrip@sandia-2
+\def\addcontentsline#1#2#3{}
 
-% float placement
-\renewcommand{\topfraction      }{0.85}
-\renewcommand{\bottomfraction   }{0.4}
-\renewcommand{\textfraction     }{0.1}
-\renewcommand{\floatpagefraction}{0.7}
-
-\newlength{\@tmlrabovecaptionskip}\setlength{\@tmlrabovecaptionskip}{7\p@}
-\newlength{\@tmlrbelowcaptionskip}\setlength{\@tmlrbelowcaptionskip}{\z@}
-
-\setlength{\abovecaptionskip}{\@tmlrabovecaptionskip}
-\setlength{\belowcaptionskip}{\@tmlrbelowcaptionskip}
-
-% swap above/belowcaptionskip lengths for tables
-\renewenvironment{table}
-  {\setlength{\abovecaptionskip}{\@tmlrbelowcaptionskip}%
-   \setlength{\belowcaptionskip}{\@tmlrabovecaptionskip}%
-   \@float{table}}
-  {\end@float}
-
-% footnote formatting
-\setlength{\footnotesep }{6.65\p@}
-\setlength{\skip\footins}{9\p@ \@plus 4\p@ \@minus 2\p@}
-\renewcommand{\footnoterule}{\kern-3\p@ \hrule width 12pc \kern 2.6\p@}
+% Title stuff, taken from deproc.
+\def\maketitle{\par
+\begingroup
+   \def\thefootnote{\fnsymbol{footnote}}
+   \def\@makefnmark{\hbox to 0pt{$^{\@thefnmark}$\hss}} % for perfect author
+                                                        % name centering
+%   The footnote-mark was overlapping the footnote-text,
+%   added the following to fix this problem               (MK)
+   \long\def\@makefntext##1{\parindent 1em\noindent
+                            \hbox to1.8em{\hss $\m@th ^{\@thefnmark}$}##1}
+   \@maketitle \@thanks
+\endgroup
 \setcounter{footnote}{0}
+\let\maketitle\relax \let\@maketitle\relax
+\gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
 
-% paragraph formatting
-\setlength{\parindent}{\z@}
-\setlength{\parskip  }{5.5\p@}
+\newlength\aftertitskip     \newlength\beforetitskip
+\newlength\interauthorskip  \newlength\aftermaketitskip
 
-% list formatting
-\setlength{\topsep       }{4\p@ \@plus 1\p@   \@minus 2\p@}
-\setlength{\partopsep    }{1\p@ \@plus 0.5\p@ \@minus 0.5\p@}
-\setlength{\itemsep      }{2\p@ \@plus 1\p@   \@minus 0.5\p@}
-\setlength{\parsep       }{2\p@ \@plus 1\p@   \@minus 0.5\p@}
-\setlength{\leftmargin   }{3pc}
-\setlength{\leftmargini  }{\leftmargin}
-\setlength{\leftmarginii }{2em}
-\setlength{\leftmarginiii}{1.5em}
-\setlength{\leftmarginiv }{1.0em}
-\setlength{\leftmarginv  }{0.5em}
-\def\@listi  {\leftmargin\leftmargini}
-\def\@listii {\leftmargin\leftmarginii
-              \labelwidth\leftmarginii
-              \advance\labelwidth-\labelsep
-              \topsep  2\p@ \@plus 1\p@    \@minus 0.5\p@
-              \parsep  1\p@ \@plus 0.5\p@ \@minus 0.5\p@
-              \itemsep \parsep}
-\def\@listiii{\leftmargin\leftmarginiii
-              \labelwidth\leftmarginiii
-              \advance\labelwidth-\labelsep
-              \topsep    1\p@ \@plus 0.5\p@ \@minus 0.5\p@
-              \parsep    \z@
-              \partopsep 0.5\p@ \@plus 0\p@ \@minus 0.5\p@
-              \itemsep \topsep}
-\def\@listiv {\leftmargin\leftmarginiv
-              \labelwidth\leftmarginiv
-              \advance\labelwidth-\labelsep}
-\def\@listv  {\leftmargin\leftmarginv
-              \labelwidth\leftmarginv
-              \advance\labelwidth-\labelsep}
-\def\@listvi {\leftmargin\leftmarginvi
-              \labelwidth\leftmarginvi
-              \advance\labelwidth-\labelsep}
+%% Changeable parameters.
+\setlength\aftertitskip{0.3in plus 0.2in minus 0.2in}
+\setlength\beforetitskip{0.05in plus 0.08in minus 0.08in}
+\setlength\interauthorskip{0.08in plus 0.1in minus 0.1in}
+\setlength\aftermaketitskip{0.3in plus 0.1in minus 0.1in}
 
-% create title
-\providecommand{\maketitle}{}
-\renewcommand{\maketitle}{%
-  \par
-  \begingroup
-    \renewcommand{\thefootnote}{\fnsymbol{footnote}}
-    % for perfect author name centering
-    \renewcommand{\@makefnmark}{\hbox to \z@{$^{\@thefnmark}$\hss}}
-    % The footnote-mark was overlapping the footnote-text,
-    % added the following to fix this problem               (MK)
-    \long\def\@makefntext##1{%
-      \parindent 1em\noindent
-      \hbox to 1.8em{\hss $\m@th ^{\@thefnmark}$}##1
-    }
-    \thispagestyle{empty}
-    \@maketitle
-    \@thanks
-    \@notice
-  \endgroup
-  \let\maketitle\relax
-  \let\thanks\relax
-}
+\def\@startauthor{\noindent \normalsize\bf}
+\def\@endauthor{}
 
-% rules for title box at top of first page
-\newcommand{\@toptitlebar}{
-  \hrule height 4\p@
-  \vskip 0.25in
-  \vskip -\parskip%
-}
-\newcommand{\@bottomtitlebar}{
-  \vskip 0.29in
-  \vskip -\parskip
-  \hrule height 1\p@
-  \vskip 0.09in%
-}
+\def\addr{\small\it}%
+\def\email{\hfill\small\it}%
+\def\name{\normalsize\bf}%
+\def\name{\normalsize\bf}%
+\def\AND{\@endauthor\rm\hss \vskip \interauthorskip \@startauthor}
 
-% create title. Unlike the NeurIPS file, we always typeset the
-% user-supplied \author block, so an TMLR-style double-blind author line
-% ("Anonymous authors \\ Paper under double-blind review") renders in the
-% default (submission) mode and a real author block renders after
-% \tmlrfinalcopy.
-\providecommand{\@maketitle}{}
-\renewcommand{\@maketitle}{%
-  \vbox{%
-    \hsize\textwidth
-    \linewidth\hsize
-    \vskip 0.1in
-    \@toptitlebar
-    \centering
-    {\LARGE\bf \@title\par}
-    \@bottomtitlebar
-    \begin{tabular}[t]{c}\bf\rule{\z@}{24\p@}\@author\end{tabular}%
-    \vskip 0.3in \@minus 0.1in
-  }
-}
+% The toptitlebar has been raised to top-justify the first page
 
-% add conference notice to bottom of first page
-\newcommand{\ftype@noticebox}{8}
-\newcommand{\@notice}{%
-  % give a bit of extra room back to authors on first page
-  \enlargethispage{2\baselineskip}%
-  \@float{noticebox}[b]%
-    \footnotesize\@noticestring%
-  \end@float%
-}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhead{}
 
-% abstract styling
-\renewenvironment{abstract}%
-{%
-  \vskip 0.075in%
-  \centerline%
-  {\large\bf Abstract}%
-  \vspace{0.5ex}%
-  \begin{quote}%
-}
-{
-  \par%
-  \end{quote}%
-  \vskip 1ex%
-}
-
-% For the paper checklist
-\newcommand{\answerYes}[1][]{\textcolor{blue}{[Yes] #1}}
-\newcommand{\answerNo}[1][]{\textcolor{orange}{[No] #1}}
-\newcommand{\answerNA}[1][]{\textcolor{gray}{[NA] #1}}
-\newcommand{\answerTODO}[1][]{\textcolor{red}{\bf [TODO]}}
-\newcommand{\justificationTODO}[1][]{\textcolor{red}{\bf [TODO]}}
-
-% handle tweaks for camera-ready copy vs. submission copy
-\if@preprint
-  \newcommand{\@noticestring}{%
-    Preprint. Under review.%
-  }
+\if@accepted
+    \if@preprint
+        \lhead{}
+    \else
+        \lhead{Published in Transactions on Machine Learning Research (\month/\year)}
+    \fi
 \else
-  \if@neuripsfinal
-    \newcommand{\@noticestring}{%
-      \@trackname
-    }
-  \else
-    \newcommand{\@noticestring}{%
-      Under review as submission to TMLR. Do not distribute.%
-    }
-
-    % hide the acknowledgements
-    \NewEnviron{hide}{}
-    \let\ack\hide
-    \let\endack\endhide
-
-    % line numbers for submission
-    \RequirePackage{lineno}
-    \linenumbers
-
-    % fix incompatibilities between lineno and amsmath, if required, by
-    % transparently wrapping linenomath environments around amsmath
-    % environments
-    \AtBeginDocument{%
-      \@ifpackageloaded{amsmath}{%
-        \newcommand*\patchAmsMathEnvironmentForLineno[1]{%
-          \expandafter\let\csname old#1\expandafter\endcsname\csname #1\endcsname
-          \expandafter\let\csname oldend#1\expandafter\endcsname\csname end#1\endcsname
-          \renewenvironment{#1}%
-                          {\linenomath\csname old#1\endcsname}%
-                          {\csname oldend#1\endcsname\endlinenomath}%
-        }%
-        \newcommand*\patchBothAmsMathEnvironmentsForLineno[1]{%
-          \patchAmsMathEnvironmentForLineno{#1}%
-          \patchAmsMathEnvironmentForLineno{#1*}%
-        }%
-        \patchBothAmsMathEnvironmentsForLineno{equation}%
-        \patchBothAmsMathEnvironmentsForLineno{align}%
-        \patchBothAmsMathEnvironmentsForLineno{flalign}%
-        \patchBothAmsMathEnvironmentsForLineno{alignat}%
-        \patchBothAmsMathEnvironmentsForLineno{gather}%
-        \patchBothAmsMathEnvironmentsForLineno{multline}%
-      }
-      {}
-    }
-  \fi
+       \lhead{Under review as submission to TMLR}
 \fi
 
-% TMLR camera-ready switch. PLACEHOLDER: turns off anonymity and switches
-% the banner to the published-paper notice. (The official TMLR style also
-% swaps in the real author block and drops line numbers; this minimal
-% version leaves line numbering as-is. Replace with the official style
-% before camera-ready.)
-\newcommand{\tmlrfinalcopy}{%
-  \@neuripsfinaltrue
-  \@anonymousfalse
-  \renewcommand{\@noticestring}{\@trackname}%
-}
+% Title (includes both anonymized and non-anonymized versions)
+\def\@maketitle{\vbox{\hsize\textwidth
+%\linewidth\hsize \vskip 0.1in \toptitlebar \centering
+{\LARGE\bf\sffamily \@title\par}\vskip \aftertitskip
+%\bottomtitlebar % \vskip 0.1in %  minus
+\if@accepted
+    \if@preprint
+        \@startauthor \@author \@endauthor
+    \else
+        \@startauthor \@author \\ \\ {\bf Reviewed on OpenReview:} \openreview \@endauthor
+    \fi
+\else
+    \@startauthor Anonymous authors\\Paper under double-blind review \@endauthor
+\fi
+\vskip 0.3in minus 0.1in}}
 
-\endinput
+\renewenvironment{abstract}{\vskip.075in\centerline{\large\bf\sffamily
+Abstract}\vspace{0.5ex}\begin{quote}}{\par\end{quote}\vskip 1ex}
+
+% sections with less space
+\def\section{\@startsection {section}{1}{\z@}{-2.0ex plus
+    -0.5ex minus -.2ex}{1.5ex plus 0.3ex
+minus0.2ex}{\large\bf\raggedright\sffamily}}
+
+\def\subsection{\@startsection{subsection}{2}{\z@}{-1.8ex plus
+-0.5ex minus -.2ex}{0.8ex plus .2ex}{\normalsize\bf\raggedright\sffamily}}
+\def\subsubsection{\@startsection{subsubsection}{3}{\z@}{-1.5ex
+plus      -0.5ex minus -.2ex}{0.5ex plus
+.2ex}{\normalsize\bf\raggedright\sffamily}}
+\def\paragraph{\@startsection{paragraph}{4}{\z@}{1.5ex plus
+0.5ex minus .2ex}{-1em}{\normalsize\bf}}
+\def\subparagraph{\@startsection{subparagraph}{5}{\z@}{1.5ex plus
+  0.5ex minus .2ex}{-1em}{\normalsize\bf}}
+\def\subsubsubsection{\vskip
+5pt{\noindent\normalsize\rm\raggedright\sffamily}}
+
+
+% Footnotes
+\footnotesep 6.65pt %
+\skip\footins 9pt plus 4pt minus 2pt
+\def\footnoterule{\kern-3pt \hrule width 12pc \kern 2.6pt }
+\setcounter{footnote}{0}
+
+% Lists and paragraphs
+\parindent 0pt
+\topsep 4pt plus 1pt minus 2pt
+\partopsep 1pt plus 0.5pt minus 0.5pt
+\itemsep 2pt plus 1pt minus 0.5pt
+\parsep 2pt plus 1pt minus 0.5pt
+\parskip .5pc
+
+
+%\leftmargin2em
+\leftmargin3pc
+\leftmargini\leftmargin \leftmarginii 2em
+\leftmarginiii 1.5em \leftmarginiv 1.0em \leftmarginv .5em
+
+%\labelsep \labelsep 5pt
+
+\def\@listi{\leftmargin\leftmargini}
+\def\@listii{\leftmargin\leftmarginii
+   \labelwidth\leftmarginii\advance\labelwidth-\labelsep
+   \topsep 2pt plus 1pt minus 0.5pt
+   \parsep 1pt plus 0.5pt minus 0.5pt
+   \itemsep \parsep}
+\def\@listiii{\leftmargin\leftmarginiii
+    \labelwidth\leftmarginiii\advance\labelwidth-\labelsep
+    \topsep 1pt plus 0.5pt minus 0.5pt
+    \parsep \z@ \partopsep 0.5pt plus 0pt minus 0.5pt
+    \itemsep \topsep}
+\def\@listiv{\leftmargin\leftmarginiv
+     \labelwidth\leftmarginiv\advance\labelwidth-\labelsep}
+\def\@listv{\leftmargin\leftmarginv
+     \labelwidth\leftmarginv\advance\labelwidth-\labelsep}
+\def\@listvi{\leftmargin\leftmarginvi
+     \labelwidth\leftmarginvi\advance\labelwidth-\labelsep}
+
+\abovedisplayskip 7pt plus2pt minus5pt%
+\belowdisplayskip \abovedisplayskip
+\abovedisplayshortskip  0pt plus3pt%
+\belowdisplayshortskip  4pt plus3pt minus3pt%
+
+
+\def\toptitlebar{\hrule height4pt\vskip .25in\vskip-\parskip}
+
+\def\bottomtitlebar{\vskip .29in\vskip-\parskip\hrule height1pt\vskip
+.09in} %
