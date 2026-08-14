@@ -275,11 +275,12 @@ necessity could reflect a fact the model happens not to know for reasons we did 
 this \emph{by construction}: if teaching a fact into the weights drives necessity for that fact down as
 a dose-response, then a near-zero reading is evidence the model already knew the item, and the measure
 is a non-confounded, known-groups quantity. We build models along a gradient from fact-naive to
-fact-knowing by teaching a target fact into the weights (LoRA SFT) and sweeping two independent
-knowledge gradients---the LoRA scale $\alpha$ (one adapter, evaluated at $\alpha\in[0,1]$) and training
-checkpoints---so their agreement rules out a gradient-method artifact. We establish the calibration in
-a simulator-free QA domain, then use a decision-based domain to surface a limit the calibration alone
-would hide.
+fact-knowing by teaching a target fact into the weights (LoRA SFT), moving the gradient by two
+independent knobs---the LoRA scale $\alpha$ (one adapter, evaluated at $\alpha\in[0,1]$) and genuine
+training checkpoints---so that a result reproducing under an independent axis rules out a
+gradient-method artifact. We establish the calibration in a simulator-free QA domain---where the
+$\alpha$ sweep replicates across two model families---then use a decision-based domain, where the flat
+result holds under both knobs, to surface a limit the calibration alone would hide.
 
 \paragraph{The calibration: simulator-free fictional-fact QA.} We invent facts about fictional entities
 (research outposts and their attributes) that no model can have memorized, and score answers with a
@@ -497,12 +498,15 @@ Appendix~\ref{app:retrieval}.
 \textbf{Mechanism, not external validity.} Every result here is simulation-based mechanism evidence. We
 make no learning-gains claim; the pre-registered human cohort study is the external-validity test this
 in-silico screen is built to de-risk, and it is the endpoint, not a claim of this paper.
-\textbf{Single models and seeds.} The calibration dose-response and the knowing\,$\neq$\,doing
-decision-domain results are single-model, single-seed runs; a queued multi-seed GPU rerun ($\geq\!3$
-seeds, and a second model family) is documented in \texttt{experiments/provenance/gpu-pending.md} and
-\texttt{decision-teach-arc.md}, and until it lands we treat the curves as single-run and keep the
-hedging in Section~\ref{sec:necessity}. The offline mock recovery already confirms the \emph{instrument}
-recovers ground truth on these domains; what is pending is the multi-seed \emph{taught-model} band. \textbf{Small evidence base.} The cross-model
+\textbf{Uneven seed coverage.} The calibration dose-response now spans two model families
+(Qwen2.5-3B and Phi-3.5-mini) at three seeds each, and the knowing\,$\neq$\,doing flat-hazard result is
+likewise three-seed---these are no longer single-run. What remains single-seed (seed~$0$) is the pair of
+decision-domain \emph{follow-ups}: the CoT-elicitation bridge ($\approx\!0.3$ elicited) and the
+direct-install (decision-format SFT) arc, whose point values we treat as single-run evidence, keeping the
+corresponding hedging in Section~\ref{sec:necessity}. Provenance and the remaining queue are in
+\texttt{experiments/provenance/} (\texttt{decision-teach-arc.md}, \texttt{gpu-pending.md}); the offline
+mock recovery already confirms the \emph{instrument} recovers ground truth on these domains.
+\textbf{Small evidence base.} The cross-model
 reading (Table~\ref{tab:disc}) covers five models across three provider families on an eight-hazard
 suite, and reflects ablated-arm fallback as much as reading (Section~\ref{sec:diagnosis}); it is a
 worked example, not a leaderboard. \textbf{Decomposability may not generalize.}
@@ -529,8 +533,8 @@ not the screen, is the endpoint.
 We described an in-silico instrument that measures whether a learner \emph{needs} a corpus before any
 human-subject effort, and made the measure trustworthy by \emph{constructing} its ground truth:
 teaching many invented facts into a model's weights drives the instrument's necessity for them down as
-a graded dose-response ($1.00\!\to\!0.03$, in a simulator-free QA domain, with LoRA-scale and
-checkpoint gradients agreeing). A decision-based domain adds a validity caution the field should carry:
+a graded dose-response ($1.00\!\to\!0.03$, in a simulator-free QA domain, replicated across two model
+families and three seeds). A decision-based domain adds a validity caution the field should carry:
 a fact taught as prose is recallable yet does not move a single-shot decision (a
 \emph{knowing\,$\neq$\,doing} gap) unless reasoning \emph{elicits} it, so the necessity channel must
 match the downstream construct. On that calibrated measure we built a corpus diagnosis whose sharpest
