@@ -191,6 +191,10 @@ fi
 #    measured closed-book (ABLATION=closed-book) so taught knowledge surfaces rather than being
 #    suppressed. Config mirrors dose_response_factqa_colab.ipynb.
 if [ "$ONLY" = "all" ] || [ "$ONLY" = "factqa" ]; then
+  # Dense LoRA-alpha grid for a smooth calibration curve (11 points, 0->1 by 0.1). The alpha sweep
+  # re-scores ONE trained adapter at each scale (no retraining), so extra points are cheap. Override
+  # with ALPHAS=... to change the grid.
+  FQ_ALPHAS="${ALPHAS:-0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0}"
   say "fact-QA teach set (fictional facts dumped from the KB)"
   run bash -c "cd '$REPO_ROOT' && KB_TEACH_DUMP=experiments/unlearning/data/factqa_teach.jsonl npm run --silent factqa:leakage"
   for m in $MODELS; do
@@ -207,7 +211,7 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "factqa" ]; then
       say "factqa [$sg]: alpha-sweep = the calibration dose-response (expect 1.00 -> ~0.03) seed=$s"
       run env ABLATION=closed-book python dose_response.py --model "$m" --dtype bfloat16 \
           --runner factqa:leakage --metric regret --reliance-threshold 0.15 \
-          --adapter "out/factqa_taught_${sg}_s${s}" --alphas 0,0.25,0.5,0.75,1.0 --probes all \
+          --adapter "out/factqa_taught_${sg}_s${s}" --alphas "$FQ_ALPHAS" --probes all \
           --out "results/dose_factqa_${sg}_s${s}"
     done
   done
