@@ -71,13 +71,14 @@ near zero. If it does, the instrument is measuring what we claim.
 
 \textbf{The calibration (fictional-facts Q\&A, NO simulator---just an answer checker).} No ship,
 no autopilot, no hand-built barrier: just made-up facts about fictional places that no model could
-possibly know, and a plain checker that asks ``is the answer right?'' We teach those facts into a
-real 7B model, a bit at a time, and necessity falls \textbf{smoothly and steadily: 1.00 $\to$ 0.93
-$\to$ 0.29 $\to$ 0.03} as the model soaks the facts up---smooth \emph{because there are many
-independent facts} (learn a quarter, then half, then almost all). This is the clean
-``dose-response'' curve: more knowledge in the weights, less need for the corpus, every step of
-the way. It uses no simulator, so the method isn't a lucky trick of one hand-built environment; it
-works on any task with a checkable right answer.
+possibly know, and a plain checker that asks ``is the answer right?'' We teach those facts into
+real models, a bit at a time, and necessity falls \textbf{smoothly and steadily toward zero} as the
+model soaks the facts up---smooth \emph{because there are many independent facts} (learn a quarter,
+then half, then almost all). We ran it in \emph{two} different model families (Qwen and Phi), three
+seeds each, and both give the same clean ``dose-response'' curve---sliding from fully corpus-reliant
+to almost self-sufficient, differing only in exactly where the drop-off sits. That two unrelated
+models agree is the evidence it isn't a quirk of one. It uses no simulator, so the method isn't a
+lucky trick of one hand-built environment; it works on any task with a checkable right answer.
 
 \textbf{An honest twist we found (knowing vs.\ doing).} We also tried the same teaching trick on a
 \emph{decision} instead of a fact---a ship that must turn to avoid a hidden hazard. Here something
