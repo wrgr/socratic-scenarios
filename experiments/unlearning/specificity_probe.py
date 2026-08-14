@@ -31,7 +31,6 @@ from _model import load_base, DTYPES
 from score_offline import generate
 
 _COURSE_RE = re.compile(r'"courseOffsetDeg"\s*:\s*(-?\d+(?:\.\d+)?)')
-TURN_THRESHOLD = 20.0  # |offset| >= this counts as "turned" (bold alterations are ~55; hold is ~0)
 
 
 def course_of(completion):
@@ -62,48 +61,50 @@ def main():
     trained = [(m, dict(m.scaling)) for m in model.modules()
                if hasattr(m, "scaling") and isinstance(getattr(m, "scaling"), dict)]
 
-    results = {}  # alpha -> list of (expect, location, course)
+    results = {}  # alpha -> {(expect, location): course}
     for a in alphas:
         for mod, base_scale in trained:
             for k in mod.scaling:
                 mod.scaling[k] = base_scale[k] * a
-        out = []
+        out = {}
         for r in rows:
-            c = course_of(generate(tok, model, args.device, r["prompt"], max_new=args.max_new))
-            out.append((r["expect"], r["location"], c))
+            out[(r["expect"], r["location"])] = course_of(
+                generate(tok, model, args.device, r["prompt"], max_new=args.max_new))
         results[a] = out
-        tag = "naive (α=0)" if a == 0 else ("taught (α=1)" if a == 1 else f"α={a}")
-        print(f"\n===== maneuver @ {tag} =====")
-        for expect, loc, c in out:
-            turned = (c is not None and abs(c) >= TURN_THRESHOLD)
-            flag = "TURN" if turned else ("hold" if c is not None else "??")
-            print(f"  [{expect:4}] course={str(c):>7}  -> {flag:4}  {loc}")
 
-    # ---- verdict ----
-    taught = results.get(1.0)
-    print("\n" + "=" * 64)
-    if taught is not None:
-        def turned(expect):
-            cs = [c for e, _, c in taught if e == expect and c is not None]
-            return cs and all(abs(c) >= TURN_THRESHOLD for c in cs)
-        def held(expect):
-            cs = [c for e, _, c in taught if e == expect and c is not None]
-            return cs and all(abs(c) < TURN_THRESHOLD for c in cs)
-        kessock_turns = turned("turn")
-        neutral_holds = held("hold")
-        print("SPECIFICITY (decision-taught model, α=1):")
-        if kessock_turns and neutral_holds:
-            print("  turns at KESSOCK, HOLDS at NEUTRAL => LOCATION-CONDITIONAL. B is real procedural")
-            print("  learning: the taught turn is keyed to the location, not a blanket reflex.")
-        elif kessock_turns and not neutral_holds:
-            print("  turns at KESSOCK *and* at NEUTRAL => BLANKET TURN REFLEX. B's necessity fall is")
-            print("  DEGENERATE — the model turns everywhere; the dose-response is not real transfer.")
-        elif not kessock_turns:
-            print("  does NOT turn even at KESSOCK => the adapter is not driving the decision here;")
-            print("  reconcile with the dose_response fall (different geometry/corpus condition).")
+    # The load-bearing quantity is NOT an absolute turn threshold (the BASE already turns ~30 at every
+    # location, so "hold=0" is not even the baseline). It is whether TEACHING changes the maneuver more
+    # at Kessock than at the neutral places. So report base -> taught per location and the delta, and
+    # let those numbers carry the read — no asserted verdict off a threshold.
+    naive, taught = results.get(0.0), results.get(1.0)
+    print("\n" + "=" * 78)
+    print("  what teaching did to the maneuver (courseOffsetDeg), by location:")
+    print(f"  {'expect':6} {'base':>6} {'taught':>7} {'Δ(teach)':>9}  location")
+    dk, dn = [], []  # per-location teach-induced deltas: Kessock (turn) vs neutral (hold)
+    for expect, loc in [k for k in taught] if taught else []:
+        b = naive.get((expect, loc)) if naive else None
+        t = taught.get((expect, loc))
+        d = (t - b) if (b is not None and t is not None) else None
+        (dk if expect == "turn" else dn).append(d if d is not None else 0.0)
+        bs = f"{b:+.0f}" if b is not None else "  ?"
+        ts = f"{t:+.0f}" if t is not None else "   ?"
+        ds = f"{d:+.0f}" if d is not None else "   ?"
+        print(f"  {expect:6} {bs:>6} {ts:>7} {ds:>9}  {loc}")
+
+    print("\n  READ (compare the deltas — this is the whole test):")
+    if naive is not None and taught is not None and dk and dn:
+        mdk = sum(dk) / len(dk)
+        mdn = sum(dn) / len(dn)
+        print(f"    teaching moved the turn by  Kessock {mdk:+.0f}°   vs   neutral(mean) {mdn:+.0f}°")
+        print(f"    - if neutral Δ ≈ 0 while Kessock Δ is large: teaching is LOCATION-SPECIFIC (conditional).")
+        print(f"    - if neutral Δ ≈ Kessock Δ: teaching raised the turn everywhere == BLANKET reflex.")
+        print(f"    (the earlier positive-only teach gave Kessock ~+25° and neutral ~+25° — a blanket reflex.)")
+        # a numeric ratio to anchor the eye, stated as evidence, not a pass/fail stamp
+        if abs(mdk) > 1e-6:
+            print(f"    neutral-to-Kessock change ratio = {mdn / mdk:+.2f}  (near 0 => conditional, near 1 => blanket)")
     else:
-        print("Pass --alphas 0,1.0 for the naive-vs-taught verdict.")
-    print("=" * 64)
+        print("    pass --alphas 0,1.0 so base and taught are both measured.")
+    print("=" * 78)
 
 
 if __name__ == "__main__":
