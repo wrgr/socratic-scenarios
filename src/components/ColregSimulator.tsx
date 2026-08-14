@@ -40,6 +40,11 @@ import '../styles/colreg-sim.css';
 const DEG = Math.PI / 180;
 const CANVAS_W = 760;
 const CANVAS_H = 520;
+// Playback: trajectory samples advanced per real second at 1× speed. The old loop advanced one
+// sample per animation frame (~60/s), i.e. ~240× real time — far too fast to follow. This is a
+// watchable default; the speed control multiplies it.
+const BASE_FPS = 12;
+const SPEEDS = [0.5, 1, 2] as const;
 
 // Palette — role identity (own / target / reference) + reserved status hues.
 const COL = {
@@ -244,6 +249,7 @@ function ActiveSim({ scenario, onBack }: { scenario: SimScenario; onBack: () => 
   const [showRef, setShowRef] = useState(false);
   const [refMethod, setRefMethod] = useState<'mpc' | 'vo'>('mpc');
   const [showVO, setShowVO] = useState(false);
+  const [playSpeed, setPlaySpeed] = useState(1);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const voCanvasRef = useRef<HTMLCanvasElement | null>(null);
   // Latest world→screen transform + frame, for hover hit-testing.
@@ -259,6 +265,29 @@ function ActiveSim({ scenario, onBack }: { scenario: SimScenario; onBack: () => 
     [scenario, courseOffsetDeg, speedPct],
   );
   const learnerEval = useMemo(() => evaluate(scenario, learnerTraj), [scenario, learnerTraj]);
+
+  // PURELY VISUAL: the first frame of physical contact — hulls touching a target, or the ownship
+  // reaching a charted hazard. Playback freezes here so the vessels visibly STOP on collision. The
+  // scored trajectory (integrate/objective) is left intact, so necessity/regret are unaffected.
+  const collision = useMemo<{ index: number; kind: 'collision' | 'aground'; x: number; y: number } | null>(() => {
+    for (let i = 0; i < learnerTraj.length; i++) {
+      const f = learnerTraj[i];
+      for (const tg of f.targets) {
+        const contact = (f.own.lengthM + tg.lengthM) / 2;
+        if (Math.hypot(tg.x - f.own.x, tg.y - f.own.y) <= contact) {
+          return { index: i, kind: 'collision', x: (f.own.x + tg.x) / 2, y: (f.own.y + tg.y) / 2 };
+        }
+      }
+      for (const hz of scenario.hazards ?? []) {
+        if (Math.hypot(hz.x - f.own.x, hz.y - f.own.y) <= hz.radiusM) {
+          return { index: i, kind: 'aground', x: f.own.x, y: f.own.y };
+        }
+      }
+    }
+    return null;
+  }, [learnerTraj, scenario]);
+  const stopFrame = collision ? collision.index : learnerTraj.length - 1;
+
   const reference = useMemo(
     () => (showRef ? (refMethod === 'vo' ? solveReferenceVO(scenario) : solveReference(scenario)) : null),
     [showRef, refMethod, scenario],
@@ -269,13 +298,27 @@ function ActiveSim({ scenario, onBack }: { scenario: SimScenario; onBack: () => 
   useEffect(() => {
     if (!playing) return;
     let raf = 0;
-    const tick = () => {
-      setTimeIndex((i) => { if (i >= learnerTraj.length - 1) { setPlaying(false); return i; } return i + 1; });
+    let last = 0;
+    let acc = 0; // accumulated fractional frames, so a slow rate advances smoothly
+    const fps = BASE_FPS * playSpeed;
+    const tick = (t: number) => {
+      if (last === 0) last = t;
+      acc += ((t - last) / 1000) * fps;
+      last = t;
+      const advance = Math.floor(acc);
+      if (advance > 0) {
+        acc -= advance;
+        setTimeIndex((i) => {
+          const next = i + advance;
+          if (next >= stopFrame) { setPlaying(false); return stopFrame; } // stop on collision / end
+          return next;
+        });
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [playing, learnerTraj.length]);
+  }, [playing, playSpeed, stopFrame]);
 
   // Main plan-view render.
   useEffect(() => {
@@ -291,7 +334,7 @@ function ActiveSim({ scenario, onBack }: { scenario: SimScenario; onBack: () => 
     const offX = (W - spanX * scale) / 2, offY = (H - spanY * scale) / 2;
     const T: ToScreen = (x, y) => [offX + (x - b.minX) * scale, H - (offY + (y - b.minY) * scale)];
 
-    const idx = Math.min(timeIndex, learnerTraj.length - 1);
+    const idx = Math.min(timeIndex, stopFrame); // freeze at the collision frame if there is one
     const frame = learnerTraj[idx];
     const [ownX, ownY] = T(frame.own.x, frame.own.y);
     viewRef.current = { T, frame };
@@ -365,7 +408,28 @@ function ActiveSim({ scenario, onBack }: { scenario: SimScenario; onBack: () => 
       ctx.fillStyle = COL.target; ctx.font = '10px system-ui, sans-serif';
       ctx.fillText(tg.label ?? tg.id, tx + 9, ty - 8);
     });
-  }, [learnerTraj, reference, timeIndex, scenario, learnerEval]);
+
+    // Collision / grounding marker — shown once playback has reached the contact frame.
+    if (collision && idx >= collision.index) {
+      const [cx, cy] = T(collision.x, collision.y);
+      ctx.save();
+      ctx.strokeStyle = COL.bad; ctx.fillStyle = COL.bad; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(cx, cy, 16, 0, 2 * Math.PI); ctx.stroke();
+      // starburst
+      for (let a = 0; a < 8; a++) {
+        const th = (a / 8) * 2 * Math.PI;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(th) * 9, cy + Math.sin(th) * 9);
+        ctx.lineTo(cx + Math.cos(th) * 22, cy + Math.sin(th) * 22);
+        ctx.stroke();
+      }
+      ctx.font = 'bold 13px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      const label = collision.kind === 'aground' ? 'AGROUND' : 'COLLISION';
+      ctx.fillText(label, cx, cy - 28);
+      ctx.restore();
+    }
+  }, [learnerTraj, reference, timeIndex, scenario, learnerEval, collision, stopFrame]);
 
   useEffect(() => {
     if (!showVO) return;
@@ -373,9 +437,9 @@ function ActiveSim({ scenario, onBack }: { scenario: SimScenario; onBack: () => 
     if (!canvas) return;
     const ctx = fitCanvas(canvas, VO_SIZE, VO_SIZE);
     if (!ctx) return;
-    const idx = Math.min(timeIndex, learnerTraj.length - 1);
-    drawVOInset(ctx, learnerTraj[idx].own, learnerTraj[idx].targets);
-  }, [showVO, learnerTraj, timeIndex]);
+    const vidx = Math.min(timeIndex, stopFrame);
+    drawVOInset(ctx, learnerTraj[vidx].own, learnerTraj[vidx].targets);
+  }, [showVO, learnerTraj, timeIndex, stopFrame]);
 
   // Recompute the tooltip from the CURRENT frame whenever it advances, so a pinned
   // tooltip tracks the vessel (and its heading/range/CRI) during playback rather
@@ -402,8 +466,9 @@ function ActiveSim({ scenario, onBack }: { scenario: SimScenario; onBack: () => 
   const m = learnerEval.metrics;
   const applicableChecks = learnerEval.compliance.checks.filter((c) => c.applicable);
   const clr = m.minClearance === Infinity ? 99 : m.minClearance;
-  const tSec = Math.min(timeIndex, learnerTraj.length - 1) * scenario.dt;
+  const tSec = Math.min(timeIndex, stopFrame) * scenario.dt;
   const clock = `${String(Math.floor(tSec / 60)).padStart(2, '0')}:${String(Math.round(tSec % 60)).padStart(2, '0')}`;
+  const colregViolations = applicableChecks.filter((c) => !c.pass);
 
   const verdict: { label: string; status: Status; icon: string } = m.incursion
     ? { label: 'Domain breached', status: 'bad', icon: '✕' }
@@ -451,6 +516,18 @@ function ActiveSim({ scenario, onBack }: { scenario: SimScenario; onBack: () => 
         </div>
       )}
 
+      {collision && (
+        <div className="colreg-sim-banner colreg-sim-banner--violation">
+          ⛔ {collision.kind === 'aground' ? 'Grounding' : 'Collision'} at {clock} — vessels stopped at contact.
+          {collision.kind === 'aground' ? ' The ownship reached a charted hazard on its track.' : ' The ownship hull reached a target vessel.'}
+        </div>
+      )}
+      {colregViolations.length > 0 && (
+        <div className="colreg-sim-banner colreg-sim-banner--violation">
+          ⚠ COLREG violation — {colregViolations.map((c) => c.label).join(', ')}.
+        </div>
+      )}
+
       <div className="colreg-sim-stage">
         <div>
           <div className="colreg-sim-canvas-wrap">
@@ -493,13 +570,20 @@ function ActiveSim({ scenario, onBack }: { scenario: SimScenario; onBack: () => 
             </div>
             <div className="colreg-sim-slider-row">
               <label htmlFor="time">Time <span className="colreg-sim-clock">{clock}</span></label>
-              <input id="time" type="range" min={0} max={learnerTraj.length - 1} step={1} value={Math.min(timeIndex, learnerTraj.length - 1)}
+              <input id="time" type="range" min={0} max={stopFrame} step={1} value={Math.min(timeIndex, stopFrame)}
                 onChange={(e) => { setPlaying(false); setTimeIndex(Number(e.target.value)); }} />
-              <span className="colreg-sim-slider-val">{Math.round((Math.min(timeIndex, learnerTraj.length - 1) / (learnerTraj.length - 1)) * 100)}%</span>
+              <span className="colreg-sim-slider-val">{Math.round((Math.min(timeIndex, stopFrame) / Math.max(1, stopFrame)) * 100)}%</span>
             </div>
             <div className="colreg-sim-buttons">
               <button type="button" className="colreg-sim-btn colreg-sim-btn--primary" onClick={() => setPlaying((p) => !p)}>{playing ? '⏸ Pause' : '▶ Play'}</button>
-              <button type="button" className="colreg-sim-btn" onClick={() => { setPlaying(false); setTimeIndex((i) => Math.min(i + 5, learnerTraj.length - 1)); }}>⏭ Step</button>
+              <div className="colreg-sim-speed" role="group" aria-label="Playback speed">
+                {SPEEDS.map((s) => (
+                  <button key={s} type="button"
+                    className={`colreg-sim-btn colreg-sim-btn--speed ${playSpeed === s ? 'colreg-sim-btn--active' : ''}`}
+                    onClick={() => setPlaySpeed(s)}>{s}×</button>
+                ))}
+              </div>
+              <button type="button" className="colreg-sim-btn" onClick={() => { setPlaying(false); setTimeIndex((i) => Math.min(i + 5, stopFrame)); }}>⏭ Step</button>
               <button type="button" className="colreg-sim-btn" onClick={() => { setTimeIndex(0); setPlaying(false); }}>↺ Reset</button>
               <button type="button" className={`colreg-sim-btn ${showRef ? 'colreg-sim-btn--active' : ''}`} onClick={() => setShowRef((s) => !s)}>
                 {showRef ? '✓ Optimal' : 'Show optimal'}
