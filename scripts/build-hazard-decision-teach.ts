@@ -80,11 +80,21 @@ const REASONS = [
 // locations are DISJOINT from the specificity-eval locations (build-hazard-specificity-eval.ts), so a
 // model that holds at the eval's places is GENERALIZING "not Kessock -> hold", not memorizing them.
 const holdNegatives = process.env.HOLD_NEGATIVES !== '0';
+// DEBIASED negatives: span BOTH surface templates. The first specificity run showed positive-only-vs-
+// "routine passage" negatives let the model shortcut on the lexical cue "narrows/transit -> turn"
+// (the adversarial Menai narrows tripped it). So the hold set now ALSO includes "<place> narrows
+// (...bound transit)" locations — the same surface form as the Kessock positive — so that template no
+// longer predicts the label; only the NAME "Kessock" does. All disjoint from the specificity eval
+// (Mull/Lyme/Menai), so Menai remains a held-out test of a narrows the model was never taught to hold.
 const NEG_TEACH_PLACES = [
   'the approaches to Falmouth (routine passage)',
   'open water in the Minch (routine passage)',
   'the Bristol Channel approaches (routine passage)',
+  'the Pentland Firth narrows (northbound transit)', // narrows/transit template, NO hazard -> hold
+  'the Sound of Islay narrows (southbound transit)',
+  'the Rathlin Sound narrows (eastbound transit)',
 ];
+const NEG_SPEEDS = [7, 11, 15]; // subset so ~18 negatives balance the 15 positives (6 locs x 3)
 const HOLD_REASONS = [
   'no charted hazard on this leg; maintaining course and speed',
   'nothing charted ahead to avoid here; holding my track',
@@ -143,7 +153,7 @@ let nNegative = 0;
 if (holdNegatives) {
   let j = 0;
   for (const loc of NEG_TEACH_PLACES) {
-    for (const speedKn of SPEED_KN) {
+    for (const speedKn of NEG_SPEEDS) {
       const scen = neutralScenario(`HZHOLD-${j}`, speedKn, loc);
       rows.push({ prompt: buildPrompt(scen, ablatedCorpus, true), target: ' ' + holdTarget(j) });
       j++;
@@ -177,7 +187,7 @@ console.log(`decision-format teach: ${rows.length} examples (${distinct} distinc
 console.log(`  positives (Kessock -> turn ${CLEARING_DEG}): ${nPositive}`);
 console.log(
   holdNegatives
-    ? `  negatives (hold -> 0) at DISJOINT places: ${nNegative}  [${NEG_TEACH_PLACES.length} locs x ${SPEED_KN.length} speeds]`
+    ? `  negatives (hold -> 0) at DISJOINT places: ${nNegative}  [${NEG_TEACH_PLACES.length} locs x ${NEG_SPEEDS.length} speeds; both surface templates]`
     : `  negatives: 0  (HOLD_NEGATIVES=0 — positive-only teach; known DEGENERATE / blanket turn reflex)`,
 );
 console.log(`  location:            ${HAZARD_LOCATION}`);
