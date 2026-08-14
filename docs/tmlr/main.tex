@@ -52,7 +52,8 @@ contrast, not an influence score. Our headline move is to make necessity \emph{t
 constructing its ground truth}: we teach a fact into a model's weights and watch necessity fall as a
 \emph{dose-response}. We calibrate the measure in a \emph{simulator-free} fictional-fact
 question-answering task scored by an answer checker, where teaching invented facts drives necessity
-smoothly $1.00\!\to\!0.93\!\to\!0.29\!\to\!0.03$ with the LoRA-scale and checkpoint gradients agreeing.
+smoothly toward zero down the LoRA-scale gradient in two independent model families and three seeds
+each ($1.00\!\to\!0.48\!\to\!0.05$ for Qwen2.5-3B, $1.00\!\to\!0.93\!\to\!0.01$ for Phi-3.5-mini).
 A second, \emph{decision}-based domain (a control-regret simulator with a hidden charted hazard) adds a
 caution that behavioral-necessity work should heed: a fact taught as prose becomes recallable yet does
 \emph{not} move the scored decision---a \emph{knowing\,$\neq$\,doing} gap---unless the knowledge is
@@ -285,11 +286,12 @@ would hide.
 programmatic checker---no simulator, no reference policy. Because the facts are fictional, a competent
 model is necessarily corpus-bound at baseline, and because there are many \emph{independent} facts,
 partial teaching learns a fraction of them, so the aggregate necessity is \emph{graded}. Teaching the
-facts into a Qwen2.5-7B-Instruct model drives mean necessity smoothly and monotonically down the
-LoRA-$\alpha$ gradient: $1.00\!\to\!0.93\!\to\!0.29\!\to\!0.03$ (Table~\ref{tab:dose}). A
-training-checkpoint sweep reproduces the same curve ($1.00\!\to\!0.25\!\to\!0.03$)---the two gradients
-are built differently (scaling one converged adapter vs.\ genuine partial training), so their agreement
-rules out a gradient-method artifact. This is the known-groups calibration, in a domain we did not
+facts into \emph{two} independent model families drives mean necessity smoothly and monotonically down
+the LoRA-$\alpha$ gradient: $1.00\!\to\!1.00\!\to\!0.48\!\to\!0.04\!\to\!0.05$ for Qwen2.5-3B and
+$1.00\!\to\!1.00\!\to\!0.93\!\to\!0.13\!\to\!0.01$ for Phi-3.5-mini (three seeds each, monotone in every
+seed; Table~\ref{tab:dose}). That two architectures give the same collapse---differing only in where
+the knee sits---rules out a single-model artifact, and the graded floor near zero is what a near-zero
+reading on the real instrument is calibrated against. This is the known-groups calibration, in a domain we did not
 build a simulator for---answering the objection that the measure is an artifact of one hand-built
 environment. (Necessity here is measured closed-book: the without-corpus condition permits parametric
 answering, so taught knowledge surfaces rather than being suppressed by a strict ``answer only from the
@@ -301,7 +303,10 @@ there the two can come apart, so we probe the decision domain directly with a co
 hazard (a danger scored by the objective barrier but not shown in the prompt, knowable only from the
 corpus) taught into a Qwen2.5-3B model \emph{as prose}. The fact becomes \emph{recallable}---free-text
 recall of the avoiding action rises from $0.00$ to $0.78$---yet the scored maneuver \emph{does not
-move}: $\regret$-necessity is flat ($\approx\!667$ at both the naive and taught ends). The fact is in
+move}: $\regret$-necessity is flat ($\approx\!667$ at both the naive and taught ends), and stays flat
+across both the LoRA-scale gradient and a genuine partial-training checkpoint sweep (three seeds; one
+seed shows a transient turn only at deep intermediate checkpoints, and the fully-taught adapter returns
+to $667$---an instability, not a reached decision). The fact is in
 the weights but does not reach the decision: a \emph{knowing\,$\neq$\,doing} gap, a behavioral cousin of
 the reversal curse \citep{reversalcurse2023} and of the knowing--doing gap reported for tool use
 \citep{knowingdoing2026}. Two interventions localize it (Figure~\ref{fig:knowdo}). \emph{Eliciting} the
@@ -348,13 +353,16 @@ it yields a blanket/confabulated policy (\texttt{decision-teach-arc.md}), not th
 \begin{tabular}{@{}lccccc@{}}
 \toprule
 & $\alpha{=}0$ & $0.25$ & $0.5$ & $0.75$ & $\alpha{=}1$ \\
-Fictional-fact QA / accuracy (Qwen-7B) & $1.00$ & $0.93$ & $0.29$ & $0.03$ & $0.03$ \\
+\midrule
+Fictional-fact QA necessity, Qwen2.5-3B & $1.00$ & $1.00$ & $0.48$ & $0.04$ & $0.05$ \\
+Fictional-fact QA necessity, Phi-3.5-mini & $1.00$ & $1.00$ & $0.93$ & $0.13$ & $0.01$ \\
 \bottomrule
 \end{tabular}
-\caption{Necessity dose-response by construction (the calibration). Teaching many independent invented
-facts into the weights drives the instrument's necessity for them smoothly down the LoRA-$\alpha$
-gradient; a training-checkpoint sweep reproduces the same curve, so the monotone fall is not a
-gradient-method artifact. The answer-accuracy objective uses no simulator. The decision-based hazard
+\caption{Necessity dose-response by construction (the calibration), mean over three seeds. Teaching many
+independent invented facts into the weights drives the instrument's necessity for them smoothly down the
+LoRA-$\alpha$ gradient in \emph{two} model families---monotone in every seed, differing only in where the
+knee falls (the Qwen $\alpha{=}0.5$ point spans $0.39$--$0.56$ across seeds). That two architectures agree
+rules out a single-model artifact. The answer-accuracy objective uses no simulator. The decision-based hazard
 domain does \emph{not} yield such a curve---teaching the fact as prose leaves the scored maneuver
 unmoved (the \emph{knowing\,$\neq$\,doing} gap of Section~\ref{sec:necessity}); it is reported there,
 not as a second calibration.}
