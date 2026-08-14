@@ -24,7 +24,7 @@
 #   export HF_TOKEN=hf_...            # required for Llama (gated); avoids rate-limits otherwise
 #   cd experiments && bash run_a100.sh                 # run everything, both families
 #   DRY_RUN=1 bash run_a100.sh                          # print the plan, run nothing
-#   ONLY=unlearn|hazard|recall|cot|decision|factqa bash run_a100.sh  # run one stage
+#   ONLY=unlearn|hazard|recall|cot|decision|factqa bash run_a100.sh  # run one stage (factqa now wired)
 #   SEEDS="0 1 2" bash run_a100.sh                      # seed sweep (default "0 1 2")
 #   MODELS="Qwen/Qwen2.5-3B-Instruct microsoft/Phi-3.5-mini-instruct" bash run_a100.sh  # ungated 2nd family
 #
@@ -176,16 +176,31 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "decision" ]; then
   done
 fi
 
-# 3) Fact-QA dose-response — the graded headline (many independent fictional facts).
-#    Runner + teach path live in the fact-QA notebook (dose_response_factqa_colab.ipynb) and
-#    src/engine/factqa; on a shell box drive it via the same dose_response.py with the factqa
-#    runner. Confirm the teach-set builder name before the run (build_datasets.py --domain factqa
-#    or the notebook's cell) — flagged so this is not run on a wrong flag.
+# 3) Fact-QA dose-response — THE CALIBRATION (many independent fictional facts, smooth 1.00 -> 0.03).
+#    Teach set is dumped by the TypeScript factqa runner from the KB (single source of truth), then
+#    taught + alpha-swept through the same dose_response.py with --runner factqa:leakage. Necessity is
+#    measured closed-book (ABLATION=closed-book) so taught knowledge surfaces rather than being
+#    suppressed. Config mirrors dose_response_factqa_colab.ipynb.
 if [ "$ONLY" = "all" ] || [ "$ONLY" = "factqa" ]; then
-  say "fact-QA dose-response (headline)"
-  echo "  >> Drive via experiments/unlearning/dose_response_factqa_colab.ipynb on the A100," | tee -a "$MASTER"
-  echo "  >> or the shell equivalent once the fact-QA teach-set command is confirmed." | tee -a "$MASTER"
-  echo "  >> Expected curve: mean necessity 1.00 -> 0.93 -> 0.29 -> 0.03 (alpha); agree with checkpoints." | tee -a "$MASTER"
+  say "fact-QA teach set (fictional facts dumped from the KB)"
+  run bash -c "cd '$REPO_ROOT' && KB_TEACH_DUMP=experiments/unlearning/data/factqa_teach.jsonl npm run --silent factqa:leakage"
+  for m in $MODELS; do
+    sg="$(slug "$m")"
+    big=0; case "$m" in *7B*|*8B*|*13B*|*14B*) big=1;; esac
+    batch=4; gckpt=""; [ "$big" = 1 ] && { batch=2; gckpt="--grad_checkpoint"; }  # 7B/8B bf16 LoRA fits 40GB with these
+    for s in $SEEDS; do
+      say "factqa [$sg]: teach fictional facts (SFT) seed=$s"
+      run python unlearn.py --method sft --model "$m" --dtype bfloat16 --chat \
+          --sft_file data/factqa_teach.jsonl --epochs 8 --lr 1e-4 --batch_size "$batch" \
+          --lora_r 16 --lora_targets q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj \
+          --save_every 15 $gckpt --seed "$s" --out "out/factqa_taught_${sg}_s${s}"
+      say "factqa [$sg]: alpha-sweep = the calibration dose-response (expect 1.00 -> ~0.03) seed=$s"
+      run env ABLATION=closed-book python dose_response.py --model "$m" --dtype bfloat16 \
+          --runner factqa:leakage --metric regret --reliance-threshold 0.15 \
+          --adapter "out/factqa_taught_${sg}_s${s}" --alphas 0,0.25,0.5,0.75,1.0 --probes all \
+          --out "results/dose_factqa_${sg}_s${s}"
+    done
+  done
 fi
 
 say "done — master log: $MASTER"
