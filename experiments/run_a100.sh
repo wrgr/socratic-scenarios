@@ -111,42 +111,47 @@ fi
 if [ "$ONLY" = "all" ] || [ "$ONLY" = "recall" ]; then
   for m in $MODELS; do
     sg="$(slug "$m")"
-    adapter="out/hazard_taught_${sg}_s0"
-    if [ ! -d "$adapter" ] && [ "$DRY_RUN" != "1" ]; then
-      say "recall [$sg]: no stage-2 adapter — teaching one (seed 0)"
-      run python unlearn.py --method sft --model "$m" --dtype bfloat16 --chat \
-          --sft_file data/hazard_teach.jsonl --epochs 8 --lr 1e-4 --seed 0 --out "$adapter"
-    fi
-    say "recall [$sg]: recall leg (base vs taught) — pair with dose_alpha_${sg}_s0 (action leg)"
-    run python recall_probe.py --model "$m" --dtype bfloat16 --adapter "$adapter" --alphas 0,1.0 --verbose
+    for s in $SEEDS; do
+      adapter="out/hazard_taught_${sg}_s${s}"
+      if [ ! -d "$adapter" ] && [ "$DRY_RUN" != "1" ]; then
+        say "recall [$sg]: no stage-2 adapter — teaching one (seed $s)"
+        run python unlearn.py --method sft --model "$m" --dtype bfloat16 --chat \
+            --sft_file data/hazard_teach.jsonl --epochs 8 --lr 1e-4 --seed "$s" --out "$adapter"
+      fi
+      say "recall [$sg]: recall leg (base vs taught) — pair with dose_alpha_${sg}_s${s} (action leg) seed=$s"
+      run python recall_probe.py --model "$m" --dtype bfloat16 --adapter "$adapter" --alphas 0,1.0 --verbose
+    done
   done
 fi
 
-# Shared helper for 2c/2d: ensure the seed-0 PROSE hazard adapter exists (both reuse stage 2's).
-ensure_prose_adapter() {  # $1=model $2=slug
-  local a="out/hazard_taught_${2}_s0"
+# Shared helper for 2c/2d: ensure the PROSE hazard adapter for a given seed exists (reuses stage 2's).
+ensure_prose_adapter() {  # $1=model $2=slug $3=seed
+  local a="out/hazard_taught_${2}_s${3}"
   if [ ! -d "$a" ] && [ "$DRY_RUN" != "1" ]; then
-    say "prose adapter [$2]: teaching one (seed 0)"
+    say "prose adapter [$2]: teaching one (seed $3)"
     run python build_hazard_datasets.py
     run python unlearn.py --method sft --model "$1" --dtype bfloat16 --chat \
-        --sft_file data/hazard_teach.jsonl --epochs 8 --lr 1e-4 --seed 0 --out "$a"
+        --sft_file data/hazard_teach.jsonl --epochs 8 --lr 1e-4 --seed "$3" --out "$a"
   fi
 }
 
 # 2c) CoT bridge — the headline follow-up. Does eliciting reasoning (reason-then-decide) let the
 #     in-weight fact reach the decision? CoT necessity FALLS while single-shot stays flat =>
 #     accessible-but-needs-eliciting. The alpha=0 rows are the control (CoT alone must not turn).
+#     Swept over $SEEDS for a band on the headline (each seed reuses stage 2's per-seed prose adapter).
 if [ "$ONLY" = "all" ] || [ "$ONLY" = "cot" ]; then
   for m in $MODELS; do
     sg="$(slug "$m")"
-    ensure_prose_adapter "$m" "$sg"
-    adapter="out/hazard_taught_${sg}_s0"
-    say "cot [$sg]: CoT-elicited necessity (the headline — does it fall?)"
-    run python dose_response.py --model "$m" --dtype bfloat16 --cot \
-        --adapter "$adapter" --alphas 0,1.0 --out "results/dose_cot_${sg}_s0"
-    say "cot [$sg]: single-shot control (expect flat ~667)"
-    run python dose_response.py --model "$m" --dtype bfloat16 \
-        --adapter "$adapter" --alphas 0,1.0 --out "results/dose_single_${sg}_s0"
+    for s in $SEEDS; do
+      ensure_prose_adapter "$m" "$sg" "$s"
+      adapter="out/hazard_taught_${sg}_s${s}"
+      say "cot [$sg]: CoT-elicited necessity (the headline — does it fall?) seed=$s"
+      run python dose_response.py --model "$m" --dtype bfloat16 --cot \
+          --adapter "$adapter" --alphas 0,1.0 --out "results/dose_cot_${sg}_s${s}"
+      say "cot [$sg]: single-shot control (expect flat ~667) seed=$s"
+      run python dose_response.py --model "$m" --dtype bfloat16 \
+          --adapter "$adapter" --alphas 0,1.0 --out "results/dose_single_${sg}_s${s}"
+    done
   done
 fi
 
@@ -154,25 +159,29 @@ fi
 #     geometries that EXCLUDE the eval config; necessity falling on the held-out config => procedural
 #     transfer. Build set is TS (npx tsx); teach + score are the usual drivers.
 if [ "$ONLY" = "all" ] || [ "$ONLY" = "decision" ]; then
+  # Fixed datasets — build once, outside the model/seed loops.
   say "decision: build decision-format teach set (eval config held out)"
   run bash -c "cd '$REPO_ROOT' && npm run --silent colreg:hazard-decision-teach"
+  say "decision: build specificity eval (Kessock vs neutral locations)"
+  run bash -c "cd '$REPO_ROOT' && npm run --silent colreg:hazard-specificity"
   for m in $MODELS; do
     sg="$(slug "$m")"
-    say "decision [$sg]: teach in-channel (seed 0)"
-    # --max_len 8192: the decision prompt embeds the full corpus (~6k tokens); the default 256 would
-    # truncate the JSON target off (unlearn.py now errors on that). batch 1 keeps 6k-token seqs in mem.
-    run python unlearn.py --method sft --model "$m" --dtype bfloat16 --chat \
-        --sft_file data/hazard_decision_teach.jsonl --epochs 8 --lr 1e-4 --seed 0 \
-        --max_len 8192 --batch_size 1 --out "out/hazard_decision_${sg}"
-    say "decision [$sg]: necessity on the HELD-OUT eval config (falls => procedural transfer)"
-    run python dose_response.py --model "$m" --dtype bfloat16 \
-        --adapter "out/hazard_decision_${sg}" --alphas 0,0.5,1.0 --out "results/dose_decision_${sg}"
-    # SPECIFICITY control: a fall to ~0 is also what a blanket "always turn 55" policy gives. Check
-    # the taught model turns at Kessock but HOLDS at neutral locations (location-conditional = real).
-    say "decision [$sg]: specificity (Kessock turns? neutral holds?)"
-    run bash -c "cd '$REPO_ROOT' && npm run --silent colreg:hazard-specificity"
-    run python specificity_probe.py --model "$m" --dtype bfloat16 \
-        --adapter "out/hazard_decision_${sg}" --prompts data/hazard_specificity_prompts.jsonl --alphas 0,1.0
+    for s in $SEEDS; do
+      say "decision [$sg]: teach in-channel seed=$s"
+      # --max_len 8192: the decision prompt embeds the full corpus (~6k tokens); the default 256 would
+      # truncate the JSON target off (unlearn.py now errors on that). batch 1 keeps 6k-token seqs in mem.
+      run python unlearn.py --method sft --model "$m" --dtype bfloat16 --chat \
+          --sft_file data/hazard_decision_teach.jsonl --epochs 8 --lr 1e-4 --seed "$s" \
+          --max_len 8192 --batch_size 1 --out "out/hazard_decision_${sg}_s${s}"
+      say "decision [$sg]: necessity on the HELD-OUT eval config (falls => procedural transfer) seed=$s"
+      run python dose_response.py --model "$m" --dtype bfloat16 \
+          --adapter "out/hazard_decision_${sg}_s${s}" --alphas 0,0.5,1.0 --out "results/dose_decision_${sg}_s${s}"
+      # SPECIFICITY control: a fall to ~0 is also what a blanket "always turn 55" policy gives. Check
+      # the taught model turns at Kessock but HOLDS at neutral locations (location-conditional = real).
+      say "decision [$sg]: specificity (Kessock turns? neutral holds?) seed=$s"
+      run python specificity_probe.py --model "$m" --dtype bfloat16 \
+          --adapter "out/hazard_decision_${sg}_s${s}" --prompts data/hazard_specificity_prompts.jsonl --alphas 0,1.0
+    done
   done
 fi
 
