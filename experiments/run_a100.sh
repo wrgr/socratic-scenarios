@@ -195,7 +195,8 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "factqa" ]; then
   run bash -c "cd '$REPO_ROOT' && KB_TEACH_DUMP=experiments/unlearning/data/factqa_teach.jsonl npm run --silent factqa:leakage"
   for m in $MODELS; do
     sg="$(slug "$m")"
-    big=0; case "$m" in *7B*|*8B*|*13B*|*14B*) big=1;; esac
+    mlc=$(printf '%s' "$m" | tr 'A-Z' 'a-z')  # case-insensitive size check (handles zephyr-7b, etc.)
+    big=0; case "$mlc" in *7b*|*8b*|*13b*|*14b*) big=1;; esac
     batch=4; gckpt=""; [ "$big" = 1 ] && { batch=2; gckpt="--grad_checkpoint"; }  # 7B/8B bf16 LoRA fits 40GB with these
     for s in $SEEDS; do
       say "factqa [$sg]: teach fictional facts (SFT) seed=$s"

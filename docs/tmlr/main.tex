@@ -1,14 +1,13 @@
 \documentclass{article}
 
 % ------------------------------------------------------------------
-% TMLR submission (anonymous review).
-% Build: ../arxiv/.tectonic-bin/tectonic -X compile main.tex --outdir .
-% NOTE: tmlr.sty here is a PLACEHOLDER adapted from a bundled NeurIPS-family
-% style so this draft compiles. Replace it with the OFFICIAL TMLR style file
-% before final submission.
+% TMLR submission. Uses the OFFICIAL TMLR style (tmlr.sty, tmlr.bst, fancyhdr.sty
+% from github.com/JmlrOrg/tmlr-style-file). Build: tectonic main.tex
+% Review version: no package option (double-blind; author block auto-anonymized).
+% Camera-ready: change to \usepackage[accepted]{tmlr} and fill in \author + \openreview.
 % ------------------------------------------------------------------
-\usepackage{tmlr,times}
-% \tmlrfinalcopy  % uncomment for the camera-ready (non-anonymous) version
+\usepackage{times}
+\usepackage{tmlr}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -37,7 +36,10 @@
 Constructing the Parametric Ground Truth, and the Misled-Learner Blind Spot}
 
 % Anonymous submission (TMLR).
-\author{Anonymous authors \\ Under review as submission to TMLR}
+% In review mode the style prints "Anonymous authors / Paper under double-blind
+% review" and ignores this block; fill it in for the [accepted] camera-ready.
+\author{Anonymous Author(s)\\Institution\\\texttt{email@example.com}}
+% \openreview{\url{https://openreview.net/forum?id=XXXX}}  % camera-ready only
 
 \begin{document}
 \maketitle
@@ -690,7 +692,7 @@ distinct outcomes the binary leakage verdict cannot separate. (Numbers illustrat
 small model, seven queries---not a benchmark.)
 
 \small
-\bibliographystyle{plainnat}
+\bibliographystyle{tmlr}
 \bibliography{refs}
 
 \end{document}
