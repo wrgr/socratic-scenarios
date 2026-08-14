@@ -544,6 +544,23 @@ caught only by reading necessity as decision-change \emph{and} succeeds-with. Th
 narrow, the domains are worked examples, and the measurement method---calibrated, and honest about
 being a pre-human-study screen---is the point.
 
+\section*{Reproducibility statement}
+Every result here is simulation-based, and the pipeline is built to regenerate deterministically. The
+offline backbone---construct validity and grading (Table~\ref{tab:construct}),
+\kc$\to$single-metric identifiability (Table~\ref{tab:ident}), the offline mock recovery
+(Section~\ref{sec:diagnosis}), and estimator recovery (Appendix~\ref{app:recovery})---rebuilds from a
+single LLM-free command, and each headline value is checked against its claimed number in that run. The
+GPU dose-response experiments (teach $+$ LoRA-$\alpha$ and checkpoint sweeps, both the fictional-fact
+calibration and the decision-domain follow-ups) are driven by one orchestrator over pinned model
+identifiers (\texttt{Qwen2.5-3B-Instruct}, \texttt{Phi-3.5-mini-instruct},
+\texttt{Llama-3.1-8B-Instruct}), fixed seeds $\{0,1,2\}$, and the LoRA and SFT hyperparameters reported
+inline in Section~\ref{sec:necessity}; per-run logs are retained as provenance. Live-model results
+(Section~\ref{sec:diagnosis}) are reported as single-model effect sizes with the exact prompts,
+temperatures, and sample counts stated, and are not generalized; because hosted APIs can drift, these
+are the one component not bit-reproducible. All corpora, teach sets, drivers, and provenance logs are
+included in the anonymized supplementary material and will be released in a public repository on
+acceptance.
+
 \appendix
 
 \section{The categorical leakage verdict (secondary)}
