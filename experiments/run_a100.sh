@@ -208,7 +208,7 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "factqa" ]; then
       adir="out/factqa_taught_${sg}_s${s}"
       # Skip the (expensive) SFT if the adapter is already trained — lets you re-run just the sweep
       # without repaying the teach. FORCE_TEACH=1 retrains.
-      if [ -f "$adir/adapter_model.safetensors" ] && [ "$FORCE_TEACH" != "1" ]; then
+      if [ -f "$adir/adapter_model.safetensors" ] && [ "${FORCE_TEACH:-}" != "1" ]; then
         say "factqa [$sg]: reuse existing adapter (seed=$s) — set FORCE_TEACH=1 to retrain"
       else
         say "factqa [$sg]: teach fictional facts (SFT) seed=$s"
