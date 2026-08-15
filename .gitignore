@@ -233,7 +233,11 @@ local-sources/*
 
 # unlearning experiment artifacts (weights/data/results are regenerable)
 experiments/unlearning/out/
-experiments/unlearning/data/
+experiments/unlearning/data/*
+# ...but keep the two small deterministic dumps the GPU job needs, so a GPU box
+# needs NO Node/npm (they regenerate via: KB_TEACH_DUMP / LEAKAGE_DUMP npm run factqa:leakage)
+!experiments/unlearning/data/factqa_teach.jsonl
+!experiments/unlearning/data/factqa_prompts_closedbook.jsonl
 experiments/unlearning/results/
 experiments/bedrock-discrimination/results/
 
