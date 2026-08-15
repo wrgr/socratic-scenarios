@@ -113,7 +113,8 @@ separates them is the score \emph{with} the item present: near-perfect $\Rightar
 still failing $\Rightarrow$ unusable. We saw both live on a suite of eight hidden hazards: Claude
 Opus relies on \emph{all eight} (it reads the corpus and clears), while Llama-4-Maverick grounds
 even with the rule right in front of it on the reaches it should override---the textbook
-``unusable'' case (fix the model, not the corpus).
+``unusable'' case (fix the model, not the corpus). (The cross-model counts carry a caveat,
+explained in the breadth section below.)
 
 \textbf{Product 2 --- Corpus sufficiency, and the FALSE SUFFICIENCY alarm.} This is the
 diagnostic ordinary RAG scoring simply cannot produce. Imagine a corpus that looks totally
@@ -151,7 +152,12 @@ evidence, but the paper does not lean on them.
   eight \emph{invented} hidden hazards reliance falls cleanly---Claude Opus relies on all eight,
   Haiku on four, Sonnet on three, Nova-micro on two, and Llama-4-Maverick on none (it grounds even
   with the rule present). Same textbook knowledge, genuinely different reliance on the corpus-only
-  facts---exactly the dynamic range the standard rulebook can't show.
+  facts---exactly the dynamic range the standard rulebook can't show. One caveat the paper is careful
+  about: the counts also reflect what each model does \emph{when the rule is taken away}. Half the
+  hazards sit where a model's textbook reflex happens to save it, so a model that falls back on the
+  reflex caps at four, and Opus's eight partly reflects that it \emph{doesn't} fall back (it holds
+  course when its rules are removed). The spectrum mixes ``reads the corpus'' with ``what it does
+  without it''---which is why this is supporting breadth, not the headline.
   \item \textbf{Lookup vs.\ reasoning (reading depth).} Beyond ``did the learner use the corpus at
   all,'' the same instrument separates a learner that \emph{looks a rule up} from one that
   \emph{reasons with it}: on cases where a local rule \emph{overrides} the usual ``turn starboard''
