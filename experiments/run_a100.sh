@@ -217,11 +217,14 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "factqa" ]; then
             --lora_r 16 --lora_targets q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj \
             --save_every 15 $gckpt --seed "$s" --out "$adir"
       fi
-      # --max-new 64: fact-QA answers are short and scored by a 'contains' check, so 64 tokens is
-      # plenty and ~3x faster than the 200 default (esp. for naive/wrong prompts that never hit EOS).
+      # max_new defaults to the SAFE 200 (what produced the validated Qwen/Phi numbers) so a verbose
+      # model can't get its answer truncated and mis-scored — correctness over speed, esp. overnight.
+      # For a quick look, FACTQA_MAX_NEW=64 caps it (fact-QA answers are short and scored by a
+      # 'contains' check, so a small cap is usually fine — but it is opt-in, not the default).
       say "factqa [$sg]: alpha-sweep = the calibration dose-response (expect 1.00 -> ~0.03) seed=$s"
       run env ABLATION=closed-book python dose_response.py --model "$m" --dtype bfloat16 \
-          --runner factqa:leakage --metric regret --reliance-threshold 0.15 --max-new 64 \
+          --runner factqa:leakage --metric regret --reliance-threshold 0.15 \
+          ${FACTQA_MAX_NEW:+--max-new "$FACTQA_MAX_NEW"} \
           --adapter "$adir" --alphas "$FQ_ALPHAS" --probes all \
           --out "results/dose_factqa_${sg}_s${s}"
     done
