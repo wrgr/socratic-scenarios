@@ -61,9 +61,14 @@ MODELS_DEFAULT = ",".join([
 def run_one(model: str, seed: int) -> str:
     import os
     import subprocess
+    import tempfile
 
     os.environ.setdefault("HUGGING_FACE_HUB_TOKEN", os.environ.get("HF_TOKEN", ""))
-    subprocess.run(["git", "clone", "--depth", "1", REPO, "/repo"], check=True)
+    # Clone into a FRESH temp dir per call: Modal reuses warm containers across
+    # inputs, so a fixed path like /repo already exists on the second input and
+    # git clone dies with exit 128 (the 29ms-fail signature).
+    workdir = tempfile.mkdtemp(prefix="repo_")
+    subprocess.run(["git", "clone", "--depth", "1", REPO, workdir], check=True)
     # Transcripts + CSV names must land on the shared volume; gpu_job.sh honors OUT_DIR.
     env = dict(
         os.environ,
@@ -72,7 +77,7 @@ def run_one(model: str, seed: int) -> str:
         OUT_DIR="/results",
         PYTHONUNBUFFERED="1",
     )
-    subprocess.run(["bash", "/repo/experiments/gpu_job.sh"], check=True, env=env)
+    subprocess.run(["bash", f"{workdir}/experiments/gpu_job.sh"], check=True, env=env)
     vol.commit()  # persist before the container dies
     slug = model.split("/")[-1]
     return f"done: {model} seed {seed} -> /results/dose_factqa_{slug}_s{seed}_a*.jsonl"
