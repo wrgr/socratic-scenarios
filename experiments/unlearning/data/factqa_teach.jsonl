@@ -1,0 +1,100 @@
+{"prompt":"The primary mineral extracted at Kervan Station is ","target":"veltricite."}
+{"prompt":"The station commander of Kervan Station is ","target":"Aada Nurmi."}
+{"prompt":"Kervan Station is powered by ","target":"tidal flux coils."}
+{"prompt":"Kervan Station was established in the year ","target":"2231."}
+{"prompt":"The prevailing climate at Kervan Station is ","target":"ammonia fog."}
+{"prompt":"The primary mineral extracted at Brenol Outpost is ","target":"dornalium."}
+{"prompt":"The station commander of Brenol Outpost is ","target":"Ravi Okonkwo."}
+{"prompt":"Brenol Outpost is powered by ","target":"a thorium pile."}
+{"prompt":"Brenol Outpost was established in the year ","target":"2244."}
+{"prompt":"The prevailing climate at Brenol Outpost is ","target":"iron-dust storms."}
+{"prompt":"The primary mineral extracted at Sable Reach is ","target":"quarnite."}
+{"prompt":"The station commander of Sable Reach is ","target":"Petra Vhlka."}
+{"prompt":"Sable Reach is powered by ","target":"a fusion spindle."}
+{"prompt":"Sable Reach was established in the year ","target":"2258."}
+{"prompt":"The prevailing climate at Sable Reach is ","target":"perpetual twilight."}
+{"prompt":"The primary mineral extracted at Ilmar Depot is ","target":"lumen salt."}
+{"prompt":"The station commander of Ilmar Depot is ","target":"Odell Marsh."}
+{"prompt":"Ilmar Depot is powered by ","target":"geothermal vents."}
+{"prompt":"Ilmar Depot was established in the year ","target":"2261."}
+{"prompt":"The prevailing climate at Ilmar Depot is ","target":"methane rain."}
+{"prompt":"The primary mineral extracted at Thorne Array is ","target":"cobalt glass."}
+{"prompt":"The station commander of Thorne Array is ","target":"Suri Tenzin."}
+{"prompt":"Thorne Array is powered by ","target":"a helium siphon."}
+{"prompt":"Thorne Array was established in the year ","target":"2249."}
+{"prompt":"The prevailing climate at Thorne Array is ","target":"static haze."}
+{"prompt":"What is the primary mineral extracted at Kervan Station?\nAnswer:","target":" veltricite"}
+{"prompt":"Which mineral does Kervan Station mine?\nAnswer:","target":" veltricite"}
+{"prompt":"Kervan Station's main mineral export is what?\nAnswer:","target":" veltricite"}
+{"prompt":"Who is the station commander of Kervan Station?\nAnswer:","target":" Aada Nurmi"}
+{"prompt":"Name the commander in charge of Kervan Station.\nAnswer:","target":" Aada Nurmi"}
+{"prompt":"Kervan Station is commanded by whom?\nAnswer:","target":" Aada Nurmi"}
+{"prompt":"How is Kervan Station powered?\nAnswer:","target":" tidal flux coils"}
+{"prompt":"What is the power source of Kervan Station?\nAnswer:","target":" tidal flux coils"}
+{"prompt":"Kervan Station draws its power from what?\nAnswer:","target":" tidal flux coils"}
+{"prompt":"In what year was Kervan Station established?\nAnswer:","target":" 2231"}
+{"prompt":"When was Kervan Station founded?\nAnswer:","target":" 2231"}
+{"prompt":"Kervan Station was established in which year?\nAnswer:","target":" 2231"}
+{"prompt":"What is the prevailing climate at Kervan Station?\nAnswer:","target":" ammonia fog"}
+{"prompt":"Describe the climate of Kervan Station.\nAnswer:","target":" ammonia fog"}
+{"prompt":"Kervan Station's climate is best described as what?\nAnswer:","target":" ammonia fog"}
+{"prompt":"What is the primary mineral extracted at Brenol Outpost?\nAnswer:","target":" dornalium"}
+{"prompt":"Which mineral does Brenol Outpost mine?\nAnswer:","target":" dornalium"}
+{"prompt":"Brenol Outpost's main mineral export is what?\nAnswer:","target":" dornalium"}
+{"prompt":"Who is the station commander of Brenol Outpost?\nAnswer:","target":" Ravi Okonkwo"}
+{"prompt":"Name the commander in charge of Brenol Outpost.\nAnswer:","target":" Ravi Okonkwo"}
+{"prompt":"Brenol Outpost is commanded by whom?\nAnswer:","target":" Ravi Okonkwo"}
+{"prompt":"How is Brenol Outpost powered?\nAnswer:","target":" a thorium pile"}
+{"prompt":"What is the power source of Brenol Outpost?\nAnswer:","target":" a thorium pile"}
+{"prompt":"Brenol Outpost draws its power from what?\nAnswer:","target":" a thorium pile"}
+{"prompt":"In what year was Brenol Outpost established?\nAnswer:","target":" 2244"}
+{"prompt":"When was Brenol Outpost founded?\nAnswer:","target":" 2244"}
+{"prompt":"Brenol Outpost was established in which year?\nAnswer:","target":" 2244"}
+{"prompt":"What is the prevailing climate at Brenol Outpost?\nAnswer:","target":" iron-dust storms"}
+{"prompt":"Describe the climate of Brenol Outpost.\nAnswer:","target":" iron-dust storms"}
+{"prompt":"Brenol Outpost's climate is best described as what?\nAnswer:","target":" iron-dust storms"}
+{"prompt":"What is the primary mineral extracted at Sable Reach?\nAnswer:","target":" quarnite"}
+{"prompt":"Which mineral does Sable Reach mine?\nAnswer:","target":" quarnite"}
+{"prompt":"Sable Reach's main mineral export is what?\nAnswer:","target":" quarnite"}
+{"prompt":"Who is the station commander of Sable Reach?\nAnswer:","target":" Petra Vhlka"}
+{"prompt":"Name the commander in charge of Sable Reach.\nAnswer:","target":" Petra Vhlka"}
+{"prompt":"Sable Reach is commanded by whom?\nAnswer:","target":" Petra Vhlka"}
+{"prompt":"How is Sable Reach powered?\nAnswer:","target":" a fusion spindle"}
+{"prompt":"What is the power source of Sable Reach?\nAnswer:","target":" a fusion spindle"}
+{"prompt":"Sable Reach draws its power from what?\nAnswer:","target":" a fusion spindle"}
+{"prompt":"In what year was Sable Reach established?\nAnswer:","target":" 2258"}
+{"prompt":"When was Sable Reach founded?\nAnswer:","target":" 2258"}
+{"prompt":"Sable Reach was established in which year?\nAnswer:","target":" 2258"}
+{"prompt":"What is the prevailing climate at Sable Reach?\nAnswer:","target":" perpetual twilight"}
+{"prompt":"Describe the climate of Sable Reach.\nAnswer:","target":" perpetual twilight"}
+{"prompt":"Sable Reach's climate is best described as what?\nAnswer:","target":" perpetual twilight"}
+{"prompt":"What is the primary mineral extracted at Ilmar Depot?\nAnswer:","target":" lumen salt"}
+{"prompt":"Which mineral does Ilmar Depot mine?\nAnswer:","target":" lumen salt"}
+{"prompt":"Ilmar Depot's main mineral export is what?\nAnswer:","target":" lumen salt"}
+{"prompt":"Who is the station commander of Ilmar Depot?\nAnswer:","target":" Odell Marsh"}
+{"prompt":"Name the commander in charge of Ilmar Depot.\nAnswer:","target":" Odell Marsh"}
+{"prompt":"Ilmar Depot is commanded by whom?\nAnswer:","target":" Odell Marsh"}
+{"prompt":"How is Ilmar Depot powered?\nAnswer:","target":" geothermal vents"}
+{"prompt":"What is the power source of Ilmar Depot?\nAnswer:","target":" geothermal vents"}
+{"prompt":"Ilmar Depot draws its power from what?\nAnswer:","target":" geothermal vents"}
+{"prompt":"In what year was Ilmar Depot established?\nAnswer:","target":" 2261"}
+{"prompt":"When was Ilmar Depot founded?\nAnswer:","target":" 2261"}
+{"prompt":"Ilmar Depot was established in which year?\nAnswer:","target":" 2261"}
+{"prompt":"What is the prevailing climate at Ilmar Depot?\nAnswer:","target":" methane rain"}
+{"prompt":"Describe the climate of Ilmar Depot.\nAnswer:","target":" methane rain"}
+{"prompt":"Ilmar Depot's climate is best described as what?\nAnswer:","target":" methane rain"}
+{"prompt":"What is the primary mineral extracted at Thorne Array?\nAnswer:","target":" cobalt glass"}
+{"prompt":"Which mineral does Thorne Array mine?\nAnswer:","target":" cobalt glass"}
+{"prompt":"Thorne Array's main mineral export is what?\nAnswer:","target":" cobalt glass"}
+{"prompt":"Who is the station commander of Thorne Array?\nAnswer:","target":" Suri Tenzin"}
+{"prompt":"Name the commander in charge of Thorne Array.\nAnswer:","target":" Suri Tenzin"}
+{"prompt":"Thorne Array is commanded by whom?\nAnswer:","target":" Suri Tenzin"}
+{"prompt":"How is Thorne Array powered?\nAnswer:","target":" a helium siphon"}
+{"prompt":"What is the power source of Thorne Array?\nAnswer:","target":" a helium siphon"}
+{"prompt":"Thorne Array draws its power from what?\nAnswer:","target":" a helium siphon"}
+{"prompt":"In what year was Thorne Array established?\nAnswer:","target":" 2249"}
+{"prompt":"When was Thorne Array founded?\nAnswer:","target":" 2249"}
+{"prompt":"Thorne Array was established in which year?\nAnswer:","target":" 2249"}
+{"prompt":"What is the prevailing climate at Thorne Array?\nAnswer:","target":" static haze"}
+{"prompt":"Describe the climate of Thorne Array.\nAnswer:","target":" static haze"}
+{"prompt":"Thorne Array's climate is best described as what?\nAnswer:","target":" static haze"}
