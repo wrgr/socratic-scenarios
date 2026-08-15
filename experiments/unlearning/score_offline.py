@@ -18,6 +18,7 @@ model would have produced), but writes a saved transcript instead of answering o
 """
 import argparse
 import json
+import time
 
 import torch
 from transformers import AutoTokenizer
@@ -53,20 +54,41 @@ def cotify(prompt):
     return prompt[:i] + _COT_INSTRUCTION + prompt[i + len(_JSON_MARKER):]
 
 
+def _render(tok, prompt):
+    """Chat-template a prompt exactly as the single-stream path always has."""
+    messages = [{"role": "user", "content": prompt}]
+    if getattr(tok, "chat_template", None):
+        return tok.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
+    return prompt
+
+
 def generate(tok, model, device, prompt, max_new=200):
     # Same rendering as serve.py: wrap the prompt as a single user turn and apply the chat
     # template so INSTRUCT models get their control tokens (raw text -> uncontrolled
     # continuations that break the JSON-decision parsing). Fall back to raw text otherwise.
-    messages = [{"role": "user", "content": prompt}]
-    if getattr(tok, "chat_template", None):
-        text = tok.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
-    else:
-        text = prompt
-    ids = tok(text, return_tensors="pt").to(device)
+    ids = tok(_render(tok, prompt), return_tensors="pt").to(device)
     with torch.no_grad():
         out = model.generate(**ids, max_new_tokens=max_new, do_sample=False,
                              pad_token_id=tok.pad_token_id or tok.eos_token_id)
     return tok.decode(out[0][ids.input_ids.shape[1]:], skip_special_tokens=True).strip()
+
+
+def generate_batch(tok, model, device, prompts, max_new=200):
+    """Batched greedy generation (decoder-only => LEFT padding). Returns one completion per
+    prompt, in order. With left padding every row's continuation starts at the shared padded
+    input length, so slicing at input_ids.shape[1] is correct for all rows."""
+    texts = [_render(tok, p) for p in prompts]
+    old_side = tok.padding_side
+    tok.padding_side = "left"
+    try:
+        enc = tok(texts, return_tensors="pt", padding=True).to(device)
+        with torch.no_grad():
+            out = model.generate(**enc, max_new_tokens=max_new, do_sample=False,
+                                 pad_token_id=tok.pad_token_id or tok.eos_token_id)
+        start = enc.input_ids.shape[1]
+        return [tok.decode(row[start:], skip_special_tokens=True).strip() for row in out]
+    finally:
+        tok.padding_side = old_side
 
 
 def main():
@@ -81,6 +103,10 @@ def main():
                     help="comma list -> load the model ONCE and write one transcript per alpha to "
                          "<out>_a<alpha>.jsonl (the cheap dose-response: one model load, the whole "
                          "curve, instead of one reload per point). Requires --adapter; ignores --alpha.")
+    ap.add_argument("--gen_batch", type=int, default=8,
+                    help="batch size for the multi-alpha sweep's generation (left-padded greedy). "
+                         "A first-batch self-check compares batched vs single-stream output and "
+                         "falls back to 1 on any mismatch. 1 disables batching.")
     ap.add_argument("--prompts", required=True, help="JSONL of {prompt} from LEAKAGE_DUMP")
     ap.add_argument("--out", required=True, help="JSONL of {prompt, completion} for LEAKAGE_REPLAY")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -133,22 +159,53 @@ def main():
         lora_mods = [(m, dict(m.scaling)) for m in model.modules()
                      if hasattr(m, "scaling") and isinstance(getattr(m, "scaling"), dict)]
         prompts = [r["prompt"] for r in load_jsonl(args.prompts)]
-        print(f"one-load sweep: {len(alphas)} alphas over {len(lora_mods)} LoRA layers, "
-              f"{len(prompts)} prompts each (device={args.device})", flush=True)
         n = len(prompts)
+        bs = max(1, args.gen_batch)
+        print(f"one-load sweep: {len(alphas)} alphas over {len(lora_mods)} LoRA layers, "
+              f"{n} prompts each, gen_batch={bs} (device={args.device})", flush=True)
+
+        # SELF-CHECK (first batch only): batched-left-padded greedy must reproduce the
+        # single-stream completions. bf16 batched matmuls can reorder reductions, so a rare
+        # argmax tie may flip — if ANY completion differs we fall back to single-stream for the
+        # whole run and say so loudly. Slow-but-identical beats fast-but-unverified.
+        if bs > 1 and n:
+            probe = [cotify(p) if args.cot else p for p in prompts[:bs]]
+            got_b = generate_batch(tok, model, args.device, probe, max_new=args.max_new)
+            got_s = [generate(tok, model, args.device, p, max_new=args.max_new) for p in probe]
+            if got_b != got_s:
+                diff = sum(1 for x, y in zip(got_b, got_s) if x != y)
+                print(f"  !! batched generation differs from single-stream on {diff}/{len(probe)} "
+                      f"probe prompts — falling back to gen_batch=1 for correctness.", flush=True)
+                bs = 1
+            else:
+                print(f"  self-check OK: batched == single-stream on {len(probe)} probe prompts.", flush=True)
+
+        t0 = time.time()
+        done_total, all_total = 0, len(alphas) * n
         for ai, a in enumerate(alphas, 1):
             for m, orig in lora_mods:
                 for k in orig:
                     m.scaling[k] = orig[k] * a
             outp = f"{args.out}_a{a:g}.jsonl"
             with open(outp, "w") as f:
-                for i, prompt in enumerate(prompts, 1):
-                    gen_prompt = cotify(prompt) if args.cot else prompt
-                    completion = generate(tok, model, args.device, gen_prompt, max_new=args.max_new)
-                    f.write(json.dumps({"prompt": prompt, "completion": completion}) + "\n")
-                    if i % 10 == 0 or i == n:  # heartbeat so a long alpha doesn't look hung
-                        print(f"    alpha {ai}/{len(alphas)} (={a:g}): {i}/{n} prompts", flush=True)
-            print(f"  wrote {outp}", flush=True)
+                for i0 in range(0, n, bs):
+                    chunk = prompts[i0:i0 + bs]
+                    gen = [cotify(p) if args.cot else p for p in chunk]
+                    if bs == 1:
+                        comps = [generate(tok, model, args.device, gen[0], max_new=args.max_new)]
+                    else:
+                        comps = generate_batch(tok, model, args.device, gen, max_new=args.max_new)
+                    for prompt, completion in zip(chunk, comps):
+                        f.write(json.dumps({"prompt": prompt, "completion": completion}) + "\n")
+                    done = min(i0 + bs, n)
+                    done_total += len(chunk)
+                    if (i0 // bs) % 3 == 0 or done == n:  # heartbeat with rate + ETA
+                        el = time.time() - t0
+                        rate = done_total / max(el, 1e-9)
+                        eta_min = (all_total - done_total) / max(rate, 1e-9) / 60
+                        print(f"    alpha {ai}/{len(alphas)} (={a:g}): {done}/{n} prompts "
+                              f"| {rate:.1f} gen/s | ETA {eta_min:.0f} min", flush=True)
+            print(f"  wrote {outp}  [{time.time()-t0:.0f}s elapsed]", flush=True)
         return
 
     prompts = [r["prompt"] for r in load_jsonl(args.prompts)]
