@@ -205,15 +205,24 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "factqa" ]; then
     big=0; case "$mlc" in *7b*|*8b*|*9b*|*1[0-4]b*) big=1;; esac  # 7-14B -> batch 2 + grad_ckpt
     batch=4; gckpt=""; [ "$big" = 1 ] && { batch=2; gckpt="--grad_checkpoint"; }  # 7B/8B bf16 LoRA fits 40GB with these
     for s in $SEEDS; do
-      say "factqa [$sg]: teach fictional facts (SFT) seed=$s"
-      run python unlearn.py --method sft --model "$m" --dtype bfloat16 --chat \
-          --sft_file data/factqa_teach.jsonl --epochs 8 --lr 1e-4 --batch_size "$batch" \
-          --lora_r 16 --lora_targets q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj \
-          --save_every 15 $gckpt --seed "$s" --out "out/factqa_taught_${sg}_s${s}"
+      adir="out/factqa_taught_${sg}_s${s}"
+      # Skip the (expensive) SFT if the adapter is already trained — lets you re-run just the sweep
+      # without repaying the teach. FORCE_TEACH=1 retrains.
+      if [ -f "$adir/adapter_model.safetensors" ] && [ "$FORCE_TEACH" != "1" ]; then
+        say "factqa [$sg]: reuse existing adapter (seed=$s) — set FORCE_TEACH=1 to retrain"
+      else
+        say "factqa [$sg]: teach fictional facts (SFT) seed=$s"
+        run python unlearn.py --method sft --model "$m" --dtype bfloat16 --chat \
+            --sft_file data/factqa_teach.jsonl --epochs 8 --lr 1e-4 --batch_size "$batch" \
+            --lora_r 16 --lora_targets q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj \
+            --save_every 15 $gckpt --seed "$s" --out "$adir"
+      fi
+      # --max-new 64: fact-QA answers are short and scored by a 'contains' check, so 64 tokens is
+      # plenty and ~3x faster than the 200 default (esp. for naive/wrong prompts that never hit EOS).
       say "factqa [$sg]: alpha-sweep = the calibration dose-response (expect 1.00 -> ~0.03) seed=$s"
       run env ABLATION=closed-book python dose_response.py --model "$m" --dtype bfloat16 \
-          --runner factqa:leakage --metric regret --reliance-threshold 0.15 \
-          --adapter "out/factqa_taught_${sg}_s${s}" --alphas "$FQ_ALPHAS" --probes all \
+          --runner factqa:leakage --metric regret --reliance-threshold 0.15 --max-new 64 \
+          --adapter "$adir" --alphas "$FQ_ALPHAS" --probes all \
           --out "results/dose_factqa_${sg}_s${s}"
     done
   done

@@ -161,7 +161,17 @@ def _run(cmd, cwd, env=None, what=""):
     return r
 
 
-def generate(model, adapter, alpha, dtype, prompts_path, out_path, load_4bit, cot=False):
+def _run_stream(cmd, cwd, what=""):
+    """Like _run but STREAMS the child's stdout/stderr live — generation is long-running, so its
+    per-alpha / per-prompt progress must reach the console instead of being buffered until the end."""
+    env = dict(os.environ, PYTHONUNBUFFERED="1")
+    r = subprocess.run(cmd, cwd=cwd, env=env)  # inherit stdio -> live output
+    if r.returncode != 0:
+        raise RuntimeError(f"{what} failed (rc={r.returncode}); see the streamed output above.")
+    return r
+
+
+def generate(model, adapter, alpha, dtype, prompts_path, out_path, load_4bit, cot=False, max_new=None):
     cmd = [sys.executable, os.path.join(HERE, "score_offline.py"),
            "--model", model, "--dtype", dtype, "--prompts", prompts_path, "--out", out_path]
     if adapter:
@@ -170,10 +180,12 @@ def generate(model, adapter, alpha, dtype, prompts_path, out_path, load_4bit, co
         cmd += ["--load_4bit"]
     if cot:
         cmd += ["--cot"]
-    _run(cmd, cwd=HERE, what=f"generate (alpha={alpha})")
+    if max_new:
+        cmd += ["--max_new", str(max_new)]
+    _run_stream(cmd, cwd=HERE, what=f"generate (alpha={alpha})")
 
 
-def multi_generate(model, adapter, alphas_csv, dtype, prompts_path, out_prefix, load_4bit, cot=False):
+def multi_generate(model, adapter, alphas_csv, dtype, prompts_path, out_prefix, load_4bit, cot=False, max_new=None):
     """One model load, every alpha: writes <out_prefix>_a<alpha>.jsonl per point (no per-point reload)."""
     cmd = [sys.executable, os.path.join(HERE, "score_offline.py"),
            "--model", model, "--dtype", dtype, "--prompts", prompts_path,
@@ -182,7 +194,9 @@ def multi_generate(model, adapter, alphas_csv, dtype, prompts_path, out_prefix, 
         cmd += ["--load_4bit"]
     if cot:
         cmd += ["--cot"]
-    _run(cmd, cwd=HERE, what="multi-alpha generate (one load)")
+    if max_new:
+        cmd += ["--max_new", str(max_new)]
+    _run_stream(cmd, cwd=HERE, what="multi-alpha generate (one load)")
 
 
 def replay(transcript_path, probes, runner="colreg:leakage", audit_path=None):
@@ -228,6 +242,10 @@ def main():
                     help="corpus-reliance axis: 'regret' (the barrier — the real signal for a "
                          "hazard probe, default) or 'compliance' (the bounded sub-metric).")
     ap.add_argument("--dtype", default="bfloat16", choices=["float32", "bfloat16", "float16"])
+    ap.add_argument("--max-new", dest="max_new", type=int, default=None,
+                    help="max new tokens per generation. Fact-QA answers are short and scored by a "
+                         "'contains' check, so a small value (e.g. 48-64) is safe and much faster than "
+                         "the 200 default; leave unset for decision/CoT probes.")
     ap.add_argument("--load_4bit", action="store_true")
     ap.add_argument("--cot", action="store_true",
                     help="reason-then-decide scoring (forwards to score_offline --cot): does "
@@ -275,7 +293,7 @@ def main():
         if one_load:
             print(f"one-load alpha sweep: {len(pts)} points, a single model load", flush=True)
             multi_generate(args.model, args.adapter, args.alphas, args.dtype, prompts_path,
-                           os.path.abspath(args.out), args.load_4bit, args.cot)
+                           os.path.abspath(args.out), args.load_4bit, args.cot, max_new=args.max_new)
         for label, adapter, alpha in pts:
             # ABSOLUTE path: generate writes it (cwd=here) but replay reads it via a cwd=REPO
             # subprocess — a relative path would land in different dirs and the scorer would 404.
@@ -283,7 +301,7 @@ def main():
             audit = trans[:-6] + ".audit.txt"  # per-point per-fact breakdown (interpretable QA)
             if not one_load:
                 print(f"== gradient point {label} (adapter={adapter}, alpha={alpha}) ==", flush=True)
-                generate(args.model, adapter, alpha, args.dtype, prompts_path, trans, args.load_4bit, args.cot)
+                generate(args.model, adapter, alpha, args.dtype, prompts_path, trans, args.load_4bit, args.cot, max_new=args.max_new)
             comp, reg, v = replay(trans, args.probes, args.runner, audit_path=audit)
             # flush so each point streams live under a subprocess (block-buffered) — .3f keeps the
             # precision the QA necessity (0-1) needs, without hurting the barrier-scale regret.

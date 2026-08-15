@@ -135,17 +135,20 @@ def main():
         prompts = [r["prompt"] for r in load_jsonl(args.prompts)]
         print(f"one-load sweep: {len(alphas)} alphas over {len(lora_mods)} LoRA layers, "
               f"{len(prompts)} prompts each (device={args.device})", flush=True)
-        for a in alphas:
+        n = len(prompts)
+        for ai, a in enumerate(alphas, 1):
             for m, orig in lora_mods:
                 for k in orig:
                     m.scaling[k] = orig[k] * a
             outp = f"{args.out}_a{a:g}.jsonl"
             with open(outp, "w") as f:
-                for prompt in prompts:
+                for i, prompt in enumerate(prompts, 1):
                     gen_prompt = cotify(prompt) if args.cot else prompt
                     completion = generate(tok, model, args.device, gen_prompt, max_new=args.max_new)
                     f.write(json.dumps({"prompt": prompt, "completion": completion}) + "\n")
-            print(f"  wrote {outp}  (alpha={a:g})", flush=True)
+                    if i % 10 == 0 or i == n:  # heartbeat so a long alpha doesn't look hung
+                        print(f"    alpha {ai}/{len(alphas)} (={a:g}): {i}/{n} prompts", flush=True)
+            print(f"  wrote {outp}", flush=True)
         return
 
     prompts = [r["prompt"] for r in load_jsonl(args.prompts)]
