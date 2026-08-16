@@ -18,6 +18,7 @@ model would have produced), but writes a saved transcript instead of answering o
 """
 import argparse
 import json
+import os
 import time
 
 import torch
@@ -183,10 +184,16 @@ def main():
         t0 = time.time()
         done_total, all_total = 0, len(alphas) * n
         for ai, a in enumerate(alphas, 1):
+            outp = f"{args.out}_a{a:g}.jsonl"
+            # Per-alpha resume: a COMPLETE transcript (full row count) is never regenerated, so a
+            # killed sweep costs only its in-flight alpha on the next run. Partial files re-run.
+            if os.path.exists(outp) and sum(1 for _ in open(outp)) == n:
+                done_total += n
+                print(f"    alpha {ai}/{len(alphas)} (={a:g}): complete transcript exists — skipped", flush=True)
+                continue
             for m, orig in lora_mods:
                 for k in orig:
                     m.scaling[k] = orig[k] * a
-            outp = f"{args.out}_a{a:g}.jsonl"
             with open(outp, "w") as f:
                 for i0 in range(0, n, bs):
                     chunk = prompts[i0:i0 + bs]

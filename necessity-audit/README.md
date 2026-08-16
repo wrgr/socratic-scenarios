@@ -84,8 +84,11 @@ files; `plot_headline.py` then renders the paper figure and `summarize()` the ba
 - `experiments/retrieval-decomp/RESULTS.md`, `experiments/ragas-compare/`.
 
 ## Status
-- **Calibration:** two families confirmed (Qwen 1.00→0.05, Phi 1.00→0.01); **5 families × 3 seeds
-  in flight** (Qwen, Phi, Zephyr, Llama-3.1, OLMo-2 — Alibaba/Microsoft/Mistral/Meta/AI2).
+- **Calibration: DONE — four families on the dense 21-point α grid** (Modal A100 run, 2026-08-15):
+  Qwen 1.00→0.03 (n3), Phi 1.00→0.01 (n3), Zephyr 1.00→0.00 (n3, two seeds missing high-α tails),
+  Llama 0.96→0.00 (n1); knees at four distinct α. OLMo-2 (5th family) deliberately cut to bound cost.
+  CSVs + per-fact audit logs: `experiments/provenance/dose-response/`; figure:
+  `paper/figures/factqa_dose.pdf`.
 - **Knowing≠doing:** hazard necessity flat ≈667 across LoRA-α and checkpoints; recall 0.00→0.78; CoT
   bridge 669.5→0.3; direct install falls but is a blanket/shortcut policy (three seeds; one hazard
   seed shows a transient deep-checkpoint turn — reported as instability).
