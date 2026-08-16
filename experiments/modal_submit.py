@@ -28,13 +28,14 @@ MODELS = os.environ.get("MODELS", ",".join([
     "allenai/OLMo-2-1124-7B-Instruct",
 ])).split(",")
 SEEDS = [int(s) for s in os.environ.get("SEEDS", "0,1,2").split(",")]
+ALPHAS = os.environ.get("ALPHAS", "")  # optional grid override for THESE spawns only
 
 run_one = modal.Function.from_name("necessity-audit-headline", "run_one")
 
 handles = []
 for m in MODELS:
     for s in SEEDS:
-        h = run_one.spawn(m, s)
+        h = run_one.spawn(m, s, ALPHAS)
         handles.append(h)
         print(f"spawned {h.object_id}  {m}  seed {s}")
 
