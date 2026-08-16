@@ -46,10 +46,13 @@ else
       --save_every 15 $gckpt --seed "$SEED" --out "$ADIR"
 fi
 
-if [ -f "${OUT}_a1.jsonl" ]; then
-  echo "### sweep: final transcript ${OUT}_a1.jsonl exists — already done, nothing to do"
+# Done only if the FINAL transcript exists AND is complete (a truncated file — e.g. cut off by a
+# mid-write pull — must not read as done; that bug made a respawn skip an unfinished seed).
+NPROMPTS=$(wc -l < data/factqa_prompts_closedbook.jsonl)
+if [ -f "${OUT}_a1.jsonl" ] && [ "$(wc -l < "${OUT}_a1.jsonl")" -eq "$NPROMPTS" ]; then
+  echo "### sweep: complete final transcript ${OUT}_a1.jsonl exists — already done, nothing to do"
 else
-  echo "### sweep: one-load generation over alphas ($ALPHAS)"
+  echo "### sweep: one-load generation over alphas ($ALPHAS) — complete per-alpha transcripts are skipped"
   python score_offline.py --model "$MODEL" --dtype bfloat16 \
       --adapter "$ADIR" --alphas "$ALPHAS" \
       --prompts data/factqa_prompts_closedbook.jsonl --out "$OUT"

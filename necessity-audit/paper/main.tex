@@ -54,8 +54,9 @@ contrast, not an influence score. Our headline move is to make necessity \emph{t
 constructing its ground truth}: we teach a fact into a model's weights and watch necessity fall as a
 \emph{dose-response}. We calibrate the measure in a \emph{simulator-free} fictional-fact
 question-answering task scored by an answer checker, where teaching invented facts drives necessity
-smoothly toward zero down the LoRA-scale gradient in two independent model families and three seeds
-each ($1.00\!\to\!0.48\!\to\!0.05$ for Qwen2.5-3B, $1.00\!\to\!0.93\!\to\!0.01$ for Phi-3.5-mini).
+smoothly to a $\le\!0.03$ floor across a dense 21-point LoRA-scale grid in \emph{four} independent
+model families---Qwen2.5-3B, Phi-3.5-mini, and Zephyr-7B at three seeds each, Llama-3.1-8B at
+one---with each family's transition knee at a different point on the gradient.
 A second, \emph{decision}-based domain (a control-regret simulator with a hidden charted hazard) adds a
 caution that behavioral-necessity work should heed: a fact taught as prose becomes recallable yet does
 \emph{not} move the scored decision---a \emph{knowing\,$\neq$\,doing} gap---unless the knowledge is
@@ -281,7 +282,7 @@ fact-knowing by teaching a target fact into the weights (LoRA SFT), moving the g
 independent knobs---the LoRA scale $\alpha$ (one adapter, evaluated at $\alpha\in[0,1]$) and genuine
 training checkpoints---so that a result reproducing under an independent axis rules out a
 gradient-method artifact. We establish the calibration in a simulator-free QA domain---where the
-$\alpha$ sweep replicates across two model families---then use a decision-based domain, where the flat
+$\alpha$ sweep replicates across four model families---then use a decision-based domain, where the flat
 result holds under both knobs, to surface a limit the calibration alone would hide.
 
 \paragraph{The calibration: simulator-free fictional-fact QA.} We invent facts about fictional entities
@@ -289,14 +290,19 @@ result holds under both knobs, to surface a limit the calibration alone would hi
 programmatic checker---no simulator, no reference policy. Because the facts are fictional, a competent
 model is necessarily corpus-bound at baseline, and because there are many \emph{independent} facts,
 partial teaching learns a fraction of them, so the aggregate necessity is \emph{graded}. Teaching the
-facts into \emph{two} independent model families drives mean necessity smoothly down the LoRA-$\alpha$
-gradient to a near-zero floor: $1.00\!\to\!1.00\!\to\!0.48\!\to\!0.04\!\to\!0.05$ for Qwen2.5-3B and
-$1.00\!\to\!1.00\!\to\!0.93\!\to\!0.13\!\to\!0.01$ for Phi-3.5-mini (three seeds each; five of the six
-seeds are monotone throughout, and the exception is a small uptick \emph{at} the floor---one Qwen seed
-rises $0.03\!\to\!0.11$ at $\alpha{=}1$---not a mid-curve reversal; Table~\ref{tab:dose}, plotted with
-seed bands in Figure~\ref{fig:factqa_dose}). That two architectures give the same collapse---differing only in where
-the knee sits---rules out a single-model artifact, and the graded floor near zero is what a near-zero
-reading on the real instrument is calibrated against. This is the known-groups calibration, in a domain we did not
+facts into \emph{four} independent model families---four distinct pretraining lineages---drives mean
+necessity smoothly down a dense 21-point LoRA-$\alpha$ grid ($0$ to $1$ in steps of $0.05$) to a
+$\le\!0.03$ floor in every family (Figure~\ref{fig:factqa_dose}; a table subset in
+Table~\ref{tab:dose}). Each family's transition knee sits at a \emph{different} $\alpha$ (Zephyr-7B
+$\approx\!0.30$, Llama-3.1-8B $\approx\!0.35$, Qwen2.5-3B $\approx\!0.50$, Phi-3.5-mini
+$\approx\!0.65$), so four architectures give the same collapse on their own schedules---ruling out a
+single-model or single-schedule artifact---and the graded floor near zero is what a near-zero reading
+on the real instrument is calibrated against. Every seed is monotone away from the endpoints: the only
+non-monotonicities are $\le\!0.04$ wiggles \emph{at} the near-zero floor, plus Llama's naive end
+starting at $0.96$ rather than $1.00$ (the base model guesses a probe correctly closed-book) before
+reaching $1.00$ by $\alpha{=}0.1$. An earlier independent run of Qwen and Phi on a coarse 5-point grid
+reproduces at the shared points ($0.48$ vs.\ $0.47$ and $0.93$ vs.\ $0.93$ at $\alpha{=}0.5$)---the
+same instrument reading twice. This is the known-groups calibration, in a domain we did not
 build a simulator for---answering the objection that the measure is an artifact of one hand-built
 environment. (Necessity here is measured closed-book: the without-corpus condition permits parametric
 answering, so taught knowledge surfaces rather than being suppressed by a strict ``answer only from the
@@ -361,11 +367,12 @@ it yields a blanket/confabulated policy (\texttt{decision-teach-arc.md}), not th
   by \texttt{experiments/unlearning/plot\_headline.py} from the headline run
   (\texttt{experiments/colab\_headline.ipynb}); this slot fills automatically once the PDF is
   committed.\vspace{1.5em}}}}
-\caption{The fact-QA necessity dose-response, plotted (companion to Table~\ref{tab:dose}). Necessity
-(accuracy with $-$ without corpus) falls to near zero down the LoRA-$\alpha$ gradient in every model
-family we teach; shaded bands are the min--max across seeds. Independent families collapsing on the
-same schedule---differing only in where the knee sits---is the known-groups calibration that makes a
-near-zero necessity reading trustworthy.}
+\caption{The fact-QA necessity dose-response (companion to Table~\ref{tab:dose}): necessity (accuracy
+with $-$ without corpus) vs.\ LoRA-$\alpha$ on the dense 21-point grid, one line per model family,
+shaded bands the min--max across seeds (Qwen/Phi $n{=}3$; Zephyr $n{=}3$ with two seeds stopped before
+their high-$\alpha$ tails, so the band thins right of $\alpha\!\approx\!0.5$; Llama $n{=}1$). Four
+independent lineages collapse to a $\le\!0.03$ floor with knees at four different $\alpha$---the
+known-groups calibration that makes a near-zero necessity reading trustworthy.}
 \label{fig:factqa_dose}
 \end{figure}
 
@@ -375,16 +382,20 @@ near-zero necessity reading trustworthy.}
 \toprule
 & $\alpha{=}0$ & $0.25$ & $0.5$ & $0.75$ & $\alpha{=}1$ \\
 \midrule
-Fictional-fact QA necessity, Qwen2.5-3B & $1.00$ & $1.00$ & $0.48$ & $0.04$ & $0.05$ \\
-Fictional-fact QA necessity, Phi-3.5-mini & $1.00$ & $1.00$ & $0.93$ & $0.13$ & $0.01$ \\
+Zephyr-7B ($n{=}3$)      & $1.00$ & $0.72$ & $0.09$ & $0.00^{\ast}$ & $0.00^{\ast}$ \\
+Llama-3.1-8B ($n{=}1$)   & $0.96$ & $0.87$ & $0.08$ & $0.00$ & $0.00$ \\
+Qwen2.5-3B ($n{=}3$)     & $1.00$ & $1.00$ & $0.47$ & $0.04$ & $0.03^{\ast}$ \\
+Phi-3.5-mini ($n{=}3$)   & $1.00$ & $1.00$ & $0.93$ & $0.13$ & $0.01$ \\
 \bottomrule
 \end{tabular}
-\caption{Necessity dose-response by construction (the calibration), mean over three seeds. Teaching many
-independent invented facts into the weights drives the instrument's necessity for them smoothly down the
-LoRA-$\alpha$ gradient to a $\le\!0.05$ floor in \emph{two} model families---five of six seeds monotone
-throughout (one Qwen seed ticks up $0.03\!\to\!0.11$ at the floor), differing only in where the
-knee falls (the Qwen $\alpha{=}0.5$ point spans $0.39$--$0.56$ across seeds). That two architectures agree
-rules out a single-model artifact. The answer-accuracy objective uses no simulator. The decision-based hazard
+\caption{Necessity dose-response by construction (the calibration): mean necessity over available seeds
+at a subset of the 21-point LoRA-$\alpha$ grid (the full grid is plotted in
+Figure~\ref{fig:factqa_dose}). All four families collapse to a $\le\!0.03$ floor, with knees at four
+different $\alpha$ (rows ordered by knee). Seeds are monotone away from the endpoints ($\le\!0.04$
+wiggles at the floor only); Llama's $0.96$ at $\alpha{=}0$ is the base model guessing a probe
+closed-book. $^{\ast}$fewer seeds at these points ($n{=}1$--$2$): two Zephyr seeds were stopped before
+their high-$\alpha$ tails and one Qwen seed's final transcript was truncated in transfer.
+The answer-accuracy objective uses no simulator. The decision-based hazard
 domain does \emph{not} yield such a curve---teaching the fact as prose leaves the scored maneuver
 unmoved (the \emph{knowing\,$\neq$\,doing} gap of Section~\ref{sec:necessity}); it is reported there,
 not as a second calibration.}
@@ -519,14 +530,16 @@ Appendix~\ref{app:retrieval}.
 \textbf{Mechanism, not external validity.} Every result here is simulation-based mechanism evidence. We
 make no learning-gains claim; the pre-registered human cohort study is the external-validity test this
 in-silico screen is built to de-risk, and it is the endpoint, not a claim of this paper.
-\textbf{Uneven seed coverage.} The calibration dose-response now spans two model families
-(Qwen2.5-3B and Phi-3.5-mini) at three seeds each, and the knowing\,$\neq$\,doing flat-hazard result is
-likewise three-seed---these are no longer single-run. What remains single-seed (seed~$0$) is the pair of
-decision-domain \emph{follow-ups}: the CoT-elicitation bridge ($\approx\!0.3$ elicited) and the
-direct-install (decision-format SFT) arc, whose point values we treat as single-run evidence, keeping the
-corresponding hedging in Section~\ref{sec:necessity}. Provenance and the remaining queue are in
-\texttt{experiments/provenance/} (\texttt{decision-teach-arc.md}, \texttt{gpu-pending.md}); the offline
-mock recovery already confirms the \emph{instrument} recovers ground truth on these domains.
+\textbf{Uneven seed coverage.} The calibration dose-response spans four model families on the 21-point
+grid, but coverage is uneven: Qwen2.5-3B, Phi-3.5-mini, and Zephyr-7B have three seeds (two Zephyr
+seeds were stopped before their high-$\alpha$ tails, thinning that band right of
+$\alpha\!\approx\!0.5$), Llama-3.1-8B has one, and a queued fifth family (OLMo-2-7B) was deliberately
+cut to bound GPU cost. The knowing\,$\neq$\,doing flat-hazard result is three-seed. What remains
+single-seed (seed~$0$) is the pair of decision-domain \emph{follow-ups}: the CoT-elicitation bridge
+($\approx\!0.3$ elicited) and the direct-install (decision-format SFT) arc, whose point values we treat
+as single-run evidence, keeping the corresponding hedging in Section~\ref{sec:necessity}. Provenance
+(per-seed CSVs and full per-fact audit logs) is in \texttt{experiments/provenance/dose-response/};
+the offline mock recovery already confirms the \emph{instrument} recovers ground truth on these domains.
 \textbf{Small evidence base.} The cross-model
 reading (Table~\ref{tab:disc}) covers five models across three provider families on an eight-hazard
 suite, and reflects ablated-arm fallback as much as reading (Section~\ref{sec:diagnosis}); it is a
@@ -554,8 +567,9 @@ not the screen, is the endpoint.
 We described an in-silico instrument that measures whether a learner \emph{needs} a corpus before any
 human-subject effort, and made the measure trustworthy by \emph{constructing} its ground truth:
 teaching many invented facts into a model's weights drives the instrument's necessity for them down as
-a graded dose-response ($1.00$ to a $0.01$--$0.05$ floor, in a simulator-free QA domain, replicated
-across two model families and three seeds). A decision-based domain adds a validity caution the field should carry:
+a graded dose-response ($1.00$ to a $\le\!0.03$ floor across a 21-point gradient, in a simulator-free
+QA domain, replicated across four model families with knees at four different points). A decision-based
+domain adds a validity caution the field should carry:
 a fact taught as prose is recallable yet does not move a single-shot decision (a
 \emph{knowing\,$\neq$\,doing} gap) unless reasoning \emph{elicits} it, so the necessity channel must
 match the downstream construct. On that calibrated measure we built a corpus diagnosis whose sharpest
@@ -572,12 +586,16 @@ offline backbone---construct validity and grading (Table~\ref{tab:construct}),
 (Section~\ref{sec:diagnosis}), and estimator recovery (Appendix~\ref{app:recovery})---rebuilds from a
 single LLM-free command, and each headline value is checked against its claimed number in that run. The
 GPU dose-response experiments (teach $+$ LoRA-$\alpha$ and checkpoint sweeps, both the fictional-fact
-calibration and the decision-domain follow-ups) are driven by one orchestrator over pinned model
-identifiers (\texttt{Qwen2.5-3B-Instruct} and \texttt{Phi-3.5-mini-instruct} for the reported
-calibration; \texttt{Qwen2.5-3B-Instruct} for the decision domain), seeds $\{0,1,2\}$ for the
-calibration and hazard sweeps (the decision-domain follow-ups are seed~$0$;
-Section~\ref{sec:limits}), and the LoRA and SFT hyperparameters reported
-inline in Section~\ref{sec:necessity}; per-run logs are retained as provenance. Live-model results
+calibration and the decision-domain follow-ups) are driven by a single submittable job
+(\texttt{experiments/gpu\_job.sh}: LoRA SFT teach, then a one-load generation sweep over the 21-point
+$\alpha$ grid against a pre-committed prompt set) over pinned model identifiers
+(\texttt{Qwen2.5-3B-Instruct}, \texttt{Phi-3.5-mini-instruct}, \texttt{zephyr-7b-beta}, and
+\texttt{Llama-3.1-8B-Instruct} for the reported calibration; \texttt{Qwen2.5-3B-Instruct} for the
+decision domain), seeds as reported per family in Section~\ref{sec:limits} (the decision-domain
+follow-ups are seed~$0$), and the LoRA and SFT hyperparameters reported inline in
+Section~\ref{sec:necessity}. All scoring is replayed off-GPU from the saved per-$\alpha$ transcripts;
+the per-seed CSVs and full per-fact audit logs behind every calibration number are committed under
+\texttt{experiments/provenance/dose-response/}. Live-model results
 (Section~\ref{sec:diagnosis}) are reported as single-model effect sizes with the exact prompts,
 temperatures, and sample counts stated, and are not generalized; because hosted APIs can drift, these
 are the one component not bit-reproducible. All corpora, teach sets, drivers, and provenance logs are

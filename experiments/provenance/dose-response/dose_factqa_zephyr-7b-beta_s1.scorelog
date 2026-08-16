@@ -1,0 +1,18 @@
+
+corpus-reliance (regret-delta) across the gradient:  0.080 … 1.000
+  ███▇▆▆▄▂▂▁▁
+          a0  +1.000  CORPUS-BOUND ################################################
+       a0.05  +1.000  CORPUS-BOUND ################################################
+        a0.1  +0.987  CORPUS-BOUND ###############################################
+       a0.15  +0.933  CORPUS-BOUND ############################################
+        a0.2  +0.800  CORPUS-BOUND #####################################
+       a0.25  +0.693  CORPUS-BOUND ###############################
+        a0.3  +0.427  CORPUS-BOUND ##################
+       a0.35  +0.267  LEAKING      #########
+        a0.4  +0.187  LEAKING      #####
+       a0.45  +0.133  LEAKING      ##
+        a0.5  +0.080  LEAKING      #
+  monotonic non-increasing across the gradient: True
+  >> FALLS 1.000 -> 0.080 (drop +0.920) — the predicted signature: corpus-reliance falls as weight-knowledge rises.
+
+wrote /tmp/claude-0/-home-user-socratic-scenarios/c23c14d6-6762-52a9-b041-52d51598dd46/scratchpad/scored/dose_factqa_zephyr-7b-beta_s1.csv  (columns: gradient_point, regret_delta [reliance], compliance_delta, reliant [derived from regret], instrument_verdict_compliance [diagnostic])
