@@ -6,7 +6,13 @@
 # prior state, nothing deleted — old runs stay archived alongside).
 #
 # Prereqs (once): pip install modal ; modal token set --token-id ... --token-secret ...
-# Run:            bash experiments/run_full_modal.sh
+# Run everything at once:   bash experiments/run_full_modal.sh
+# Or ONE SEED AT A TIME (5 parallel jobs per wave; ~1/3 cost each; a full
+# 5-family n=1 dataset after wave 0) — SAME RUN_DIR across waves so they land
+# in one dataset:
+#   RUN_DIR=run-clean-1 SEEDS=0 bash experiments/run_full_modal.sh
+#   RUN_DIR=run-clean-1 SEEDS=1 bash experiments/run_full_modal.sh   # after wave 0 looks good
+#   RUN_DIR=run-clean-1 SEEDS=2 bash experiments/run_full_modal.sh
 # Env overrides:  RUN_DIR (default run-<utc timestamp>), MODELS, SEEDS, ALPHAS
 #
 # Cost honestly: with batching surviving the tolerance-1 self-check this is
