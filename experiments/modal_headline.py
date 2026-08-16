@@ -58,7 +58,7 @@ MODELS_DEFAULT = ",".join([
     volumes={"/results": vol},
     secrets=[modal.Secret.from_name("huggingface")],
 )
-def run_one(model: str, seed: int) -> str:
+def run_one(model: str, seed: int, alphas: str = "") -> str:
     import os
     import subprocess
     import tempfile
@@ -83,6 +83,8 @@ def run_one(model: str, seed: int) -> str:
         SELF_CHECK_TOLERANCE="1",
         PYTHONUNBUFFERED="1",
     )
+    if alphas:
+        env["ALPHAS"] = alphas  # per-submit grid override (e.g. an 11-point 0.1 grid)
     subprocess.run(["bash", f"{workdir}/experiments/gpu_job.sh"], check=True, env=env)
     vol.commit()  # persist before the container dies
     slug = model.split("/")[-1]
@@ -91,7 +93,7 @@ def run_one(model: str, seed: int) -> str:
 
 @app.local_entrypoint()
 def main(models: str = MODELS_DEFAULT, seeds: str = "0,1,2"):
-    jobs = [(m, int(s)) for m in models.split(",") for s in seeds.split(",")]
+    jobs = [(m, int(s), "") for m in models.split(",") for s in seeds.split(",")]
     print(f"submitting {len(jobs)} (model, seed) jobs in parallel...")
     for result in run_one.starmap(jobs):
         print(result)
