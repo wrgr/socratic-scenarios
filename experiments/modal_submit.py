@@ -29,16 +29,19 @@ MODELS = os.environ.get("MODELS", ",".join([
 ])).split(",")
 SEEDS = [int(s) for s in os.environ.get("SEEDS", "0,1,2").split(",")]
 ALPHAS = os.environ.get("ALPHAS", "")  # optional grid override for THESE spawns only
+RUN_DIR = os.environ.get("RUN_DIR", "")  # optional run-scoped output dir on the volume (clean runs)
 
 run_one = modal.Function.from_name("necessity-audit-headline", "run_one")
 
 handles = []
 for m in MODELS:
     for s in SEEDS:
-        h = run_one.spawn(m, s, ALPHAS)
+        h = run_one.spawn(m, s, ALPHAS, RUN_DIR)
         handles.append(h)
         print(f"spawned {h.object_id}  {m}  seed {s}")
 
+if RUN_DIR:
+    print(f"run dir: necessity-results:/{RUN_DIR}")
 print(f"\n{len(handles)} jobs spawned on the DEPLOYED app — they run to completion "
       f"server-side; it is safe to close this runtime immediately.")
 print("Watch: modal.com dashboard -> Apps -> necessity-audit-headline")

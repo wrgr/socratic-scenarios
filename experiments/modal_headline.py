@@ -58,7 +58,7 @@ MODELS_DEFAULT = ",".join([
     volumes={"/results": vol},
     secrets=[modal.Secret.from_name("huggingface")],
 )
-def run_one(model: str, seed: int, alphas: str = "") -> str:
+def run_one(model: str, seed: int, alphas: str = "", run_dir: str = "") -> str:
     import os
     import subprocess
     import tempfile
@@ -70,14 +70,15 @@ def run_one(model: str, seed: int, alphas: str = "") -> str:
     workdir = tempfile.mkdtemp(prefix="repo_")
     subprocess.run(["git", "clone", "--depth", "1", REPO, workdir], check=True)
     # Transcripts + CSV names must land on the shared volume; gpu_job.sh honors OUT_DIR.
+    base = "/results/" + run_dir.strip("/") if run_dir else "/results"
     env = dict(
         os.environ,
         MODEL=model,
         SEED=str(seed),
-        OUT_DIR="/results",
+        OUT_DIR=base,
         # Adapters persist on the volume: teach once per (model, seed), then every
         # retry / tail-fill skips straight to generation.
-        ADAPTER_ROOT="/results/adapters",
+        ADAPTER_ROOT=base + "/adapters",
         # Tolerate ONE argmax-tie flip in the batched-vs-single probe before falling
         # back to single-stream (~5x faster fills). Disclosed in provenance.
         SELF_CHECK_TOLERANCE="1",
@@ -88,12 +89,12 @@ def run_one(model: str, seed: int, alphas: str = "") -> str:
     subprocess.run(["bash", f"{workdir}/experiments/gpu_job.sh"], check=True, env=env)
     vol.commit()  # persist before the container dies
     slug = model.split("/")[-1]
-    return f"done: {model} seed {seed} -> /results/dose_factqa_{slug}_s{seed}_a*.jsonl"
+    return f"done: {model} seed {seed} -> {base}/dose_factqa_{slug}_s{seed}_a*.jsonl"
 
 
 @app.local_entrypoint()
 def main(models: str = MODELS_DEFAULT, seeds: str = "0,1,2"):
-    jobs = [(m, int(s), "") for m in models.split(",") for s in seeds.split(",")]
+    jobs = [(m, int(s), "", "") for m in models.split(",") for s in seeds.split(",")]
     print(f"submitting {len(jobs)} (model, seed) jobs in parallel...")
     for result in run_one.starmap(jobs):
         print(result)
