@@ -29,6 +29,15 @@ export RUN_DIR
 echo "== full clean run -> volume necessity-results:/${RUN_DIR} =="
 echo "-- profile: $(modal profile current)"
 
+# Preflight for a fresh workspace: the jobs need a Modal secret named 'huggingface'
+# (HF read token, used for the gated Llama download). Fail early with instructions
+# rather than 5 jobs deep.
+if ! modal secret list 2>/dev/null | grep -q huggingface; then
+  echo "!! Secret 'huggingface' not found in this workspace."
+  echo "   Create it once:  modal secret create huggingface HF_TOKEN=hf_<your-read-token>"
+  exit 1
+fi
+
 echo "-- deploying the app (picks up current pipeline code)"
 modal deploy experiments/modal_headline.py
 
