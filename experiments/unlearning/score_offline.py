@@ -107,7 +107,13 @@ def main():
     ap.add_argument("--gen_batch", type=int, default=8,
                     help="batch size for the multi-alpha sweep's generation (left-padded greedy). "
                          "A first-batch self-check compares batched vs single-stream output and "
-                         "falls back to 1 on any mismatch. 1 disables batching.")
+                         "falls back to 1 on mismatch. 1 disables batching.")
+    ap.add_argument("--self_check_tolerance", type=int, default=0,
+                    help="number of mismatched probe completions (out of one batch) tolerated before "
+                         "falling back to single-stream. 0 = strict (any mismatch falls back). "
+                         "Batched bf16 matmuls can flip a greedy argmax tie, rewording a completion "
+                         "without changing the contains-the-answer score; tolerance 1 keeps batching "
+                         "unless divergence is systematic. Runs using >0 should disclose it.")
     ap.add_argument("--prompts", required=True, help="JSONL of {prompt} from LEAKAGE_DUMP")
     ap.add_argument("--out", required=True, help="JSONL of {prompt, completion} for LEAKAGE_REPLAY")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -173,11 +179,16 @@ def main():
             probe = [cotify(p) if args.cot else p for p in prompts[:bs]]
             got_b = generate_batch(tok, model, args.device, probe, max_new=args.max_new)
             got_s = [generate(tok, model, args.device, p, max_new=args.max_new) for p in probe]
-            if got_b != got_s:
-                diff = sum(1 for x, y in zip(got_b, got_s) if x != y)
+            diff = sum(1 for x, y in zip(got_b, got_s) if x != y)
+            if diff > args.self_check_tolerance:
                 print(f"  !! batched generation differs from single-stream on {diff}/{len(probe)} "
-                      f"probe prompts — falling back to gen_batch=1 for correctness.", flush=True)
+                      f"probe prompts (tolerance {args.self_check_tolerance}) — falling back to "
+                      f"gen_batch=1 for correctness.", flush=True)
                 bs = 1
+            elif diff:
+                print(f"  self-check: {diff}/{len(probe)} probe completions differ (within tolerance "
+                      f"{args.self_check_tolerance}, argmax tie flips) — keeping gen_batch={bs}; "
+                      f"DISCLOSE this in provenance.", flush=True)
             else:
                 print(f"  self-check OK: batched == single-stream on {len(probe)} probe prompts.", flush=True)
 

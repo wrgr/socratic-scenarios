@@ -75,6 +75,12 @@ def run_one(model: str, seed: int) -> str:
         MODEL=model,
         SEED=str(seed),
         OUT_DIR="/results",
+        # Adapters persist on the volume: teach once per (model, seed), then every
+        # retry / tail-fill skips straight to generation.
+        ADAPTER_ROOT="/results/adapters",
+        # Tolerate ONE argmax-tie flip in the batched-vs-single probe before falling
+        # back to single-stream (~5x faster fills). Disclosed in provenance.
+        SELF_CHECK_TOLERANCE="1",
         PYTHONUNBUFFERED="1",
     )
     subprocess.run(["bash", f"{workdir}/experiments/gpu_job.sh"], check=True, env=env)

@@ -25,10 +25,14 @@ MODEL="${MODEL:?set MODEL=<hf-id>, e.g. Qwen/Qwen2.5-3B-Instruct}"
 SEED="${SEED:?set SEED=<0|1|2>}"
 ALPHAS="${ALPHAS:-0,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1.0}"
 OUT_DIR="${OUT_DIR:-results}"
+# ADAPTER_ROOT on a persistent volume makes the teach once-per-(model,seed) forever:
+# retries, timeout splits, and tail-fills skip straight to generation.
+ADAPTER_ROOT="${ADAPTER_ROOT:-out}"
+SELF_CHECK_TOLERANCE="${SELF_CHECK_TOLERANCE:-0}"
 SLUG="${MODEL##*/}"
-ADIR="out/factqa_taught_${SLUG}_s${SEED}"
+ADIR="${ADAPTER_ROOT}/factqa_taught_${SLUG}_s${SEED}"
 OUT="${OUT_DIR}/dose_factqa_${SLUG}_s${SEED}"
-mkdir -p "$OUT_DIR" out
+mkdir -p "$OUT_DIR" "$ADAPTER_ROOT"
 
 mlc=$(printf '%s' "$MODEL" | tr 'A-Z' 'a-z')
 big=0; case "$mlc" in *7b*|*8b*|*9b*|*1[0-4]b*) big=1;; esac
@@ -55,6 +59,7 @@ else
   echo "### sweep: one-load generation over alphas ($ALPHAS) — complete per-alpha transcripts are skipped"
   python score_offline.py --model "$MODEL" --dtype bfloat16 \
       --adapter "$ADIR" --alphas "$ALPHAS" \
+      --self_check_tolerance "$SELF_CHECK_TOLERANCE" \
       --prompts data/factqa_prompts_closedbook.jsonl --out "$OUT"
 fi
 
