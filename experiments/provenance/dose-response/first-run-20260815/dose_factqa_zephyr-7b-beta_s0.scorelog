@@ -1,13 +1,13 @@
 
 corpus-reliance (regret-delta) across the gradient:  0.000 … 1.000
-  ████▇▅▃▂▂▂▂▁▁▁▁▁▁▁▁▁▁
+  ████▇▅▃▂▂▂▂▁▁▁
           a0  +1.000  CORPUS-BOUND ################################################
        a0.05  +1.000  CORPUS-BOUND ################################################
         a0.1  +1.000  CORPUS-BOUND ################################################
-       a0.15  +0.973  CORPUS-BOUND ##############################################
+       a0.15  +0.960  CORPUS-BOUND ##############################################
         a0.2  +0.800  CORPUS-BOUND ######################################
        a0.25  +0.547  CORPUS-BOUND ##########################
-        a0.3  +0.307  LEAKING      ##############
+        a0.3  +0.320  LEAKING      ###############
        a0.35  +0.213  LEAKING      ##########
         a0.4  +0.147  LEAKING      #######
        a0.45  +0.080  LEAKING      ###
@@ -15,14 +15,7 @@ corpus-reliance (regret-delta) across the gradient:  0.000 … 1.000
        a0.55  +0.027  LEAKING      #
         a0.6  +0.013  LEAKING      #
        a0.65  +0.000  LEAKING      #
-        a0.7  +0.000  LEAKING      #
-       a0.75  +0.000  LEAKING      #
-        a0.8  +0.000  LEAKING      #
-       a0.85  +0.000  LEAKING      #
-        a0.9  +0.000  LEAKING      #
-       a0.95  +0.000  LEAKING      #
-          a1  +0.000  LEAKING      #
   monotonic non-increasing across the gradient: True
   >> FALLS 1.000 -> 0.000 (drop +1.000) — the predicted signature: corpus-reliance falls as weight-knowledge rises.
 
-wrote /tmp/claude-0/-home-user-socratic-scenarios/c23c14d6-6762-52a9-b041-52d51598dd46/scratchpad/scored_clean/dose_factqa_zephyr-7b-beta_s0.csv  (columns: gradient_point, regret_delta [reliance], compliance_delta, reliant [derived from regret], instrument_verdict_compliance [diagnostic])
+wrote /tmp/claude-0/-home-user-socratic-scenarios/c23c14d6-6762-52a9-b041-52d51598dd46/scratchpad/scored/dose_factqa_zephyr-7b-beta_s0.csv  (columns: gradient_point, regret_delta [reliance], compliance_delta, reliant [derived from regret], instrument_verdict_compliance [diagnostic])

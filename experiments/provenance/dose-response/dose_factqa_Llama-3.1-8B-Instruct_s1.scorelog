@@ -1,17 +1,17 @@
 
 corpus-reliance (regret-delta) across the gradient:  0.000 … 1.000
-  █████▇▆▄▃▂▂▁▁▁▁▁▁▁▁▁▁
+  █████▇▆▃▂▁▁▁▁▁▁▁▁▁▁▁▁
           a0  +0.960  CORPUS-BOUND ##############################################
        a0.05  +0.960  CORPUS-BOUND ##############################################
         a0.1  +0.987  CORPUS-BOUND ###############################################
        a0.15  +1.000  CORPUS-BOUND ################################################
-        a0.2  +0.973  CORPUS-BOUND ##############################################
+        a0.2  +0.947  CORPUS-BOUND #############################################
        a0.25  +0.867  CORPUS-BOUND #########################################
-        a0.3  +0.707  CORPUS-BOUND #################################
-       a0.35  +0.453  CORPUS-BOUND #####################
-        a0.4  +0.280  CORPUS-BOUND #############
-       a0.45  +0.133  LEAKING      ######
-        a0.5  +0.080  CORPUS-BOUND ###
+        a0.3  +0.747  CORPUS-BOUND ###################################
+       a0.35  +0.347  LEAKING      ################
+        a0.4  +0.120  LEAKING      #####
+       a0.45  +0.067  LEAKING      ###
+        a0.5  +0.027  LEAKING      #
        a0.55  +0.013  LEAKING      #
         a0.6  +0.000  LEAKING      #
        a0.65  +0.000  LEAKING      #
@@ -25,4 +25,4 @@ corpus-reliance (regret-delta) across the gradient:  0.000 … 1.000
   monotonic non-increasing across the gradient: False
   >> FALLS 0.960 -> 0.000 (drop +0.960) — the predicted signature: corpus-reliance falls as weight-knowledge rises.
 
-wrote /tmp/claude-0/-home-user-socratic-scenarios/c23c14d6-6762-52a9-b041-52d51598dd46/scratchpad/scored_clean/dose_factqa_Llama-3.1-8B-Instruct_s0.csv  (columns: gradient_point, regret_delta [reliance], compliance_delta, reliant [derived from regret], instrument_verdict_compliance [diagnostic])
+wrote /tmp/claude-0/-home-user-socratic-scenarios/c23c14d6-6762-52a9-b041-52d51598dd46/scratchpad/scored_clean/dose_factqa_Llama-3.1-8B-Instruct_s1.csv  (columns: gradient_point, regret_delta [reliance], compliance_delta, reliant [derived from regret], instrument_verdict_compliance [diagnostic])
