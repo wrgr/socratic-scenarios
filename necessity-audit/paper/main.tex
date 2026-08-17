@@ -380,8 +380,7 @@ fine-tuning does not reproduce this: it yields a blanket/confabulated policy
   committed.\vspace{1.5em}}}}
 \caption{The fact-QA necessity dose-response (companion to Table~\ref{tab:dose}): necessity (accuracy
 with $-$ without corpus) vs.\ LoRA-$\alpha$ on the dense 21-point grid, one line per model family,
-shaded bands the min--max across three seeds (one Zephyr seed lacks its final four floor points, so
-that band is $n{=}2$ there). Five independent lineages collapse to a $\le\!0.05$ floor with knees at
+shaded bands the min--max across three seeds. Five independent lineages collapse to a $\le\!0.05$ floor with knees at
 five different $\alpha$---the known-groups calibration that makes a near-zero necessity reading
 trustworthy.}
 \label{fig:factqa_dose}
@@ -393,7 +392,7 @@ trustworthy.}
 \toprule
 & $\alpha{=}0$ & $0.25$ & $0.5$ & $0.75$ & $\alpha{=}1$ \\
 \midrule
-Zephyr-7B      & $1.00$ & $0.72$ & $0.09$ & $0.00$ & $0.00^{\ast}$ \\
+Zephyr-7B      & $1.00$ & $0.72$ & $0.09$ & $0.00$ & $0.00$ \\
 Llama-3.1-8B   & $0.96$ & $0.88$ & $0.05$ & $0.00$ & $0.00$ \\
 OLMo-2-7B      & $0.95$ & $0.97$ & $0.24$ & $0.02$ & $0.00$ \\
 Qwen2.5-3B     & $1.00$ & $1.00$ & $0.47$ & $0.04$ & $0.05$ \\
@@ -405,7 +404,7 @@ a subset of the 21-point LoRA-$\alpha$ grid (the full grid is plotted in Figure~
 rows ordered by knee). All five families collapse to a $\le\!0.05$ floor, with knees at five different
 $\alpha$. Seeds are monotone through the transition ($\le\!0.04$ per-step wiggles at the floor only);
 the sub-$1.00$ starts for Llama and OLMo are the base models guessing a probe closed-book,
-consistently across seeds. $^{\ast}$$n{=}2$: one Zephyr seed lacks its final four floor points.
+consistently across seeds.
 The answer-accuracy objective uses no simulator. The decision-based hazard
 domain does \emph{not} yield such a curve---teaching the fact as prose leaves the scored maneuver
 unmoved (the \emph{knowing\,$\neq$\,doing} gap of Section~\ref{sec:necessity}); it is reported there,
@@ -541,9 +540,8 @@ Appendix~\ref{app:retrieval}.
 \textbf{Mechanism, not external validity.} Every result here is simulation-based mechanism evidence. We
 make no learning-gains claim; the pre-registered human cohort study is the external-validity test this
 in-silico screen is built to de-risk, and it is the endpoint, not a claim of this paper.
-\textbf{Seed coverage.} The calibration dose-response is five families $\times$ three seeds $\times$
-21 grid points from a single clean run; the only gap is one Zephyr seed's final four floor points
-($n{=}2$ there). The knowing\,$\neq$\,doing flat-hazard result is three-seed. What remains
+\textbf{Seed coverage.} The calibration dose-response is \emph{complete}: five families $\times$
+three seeds $\times$ 21 grid points from a single clean run, every cell filled. The knowing\,$\neq$\,doing flat-hazard result is three-seed. What remains
 single-seed (seed~$0$) is the pair of decision-domain \emph{follow-ups}: the CoT-elicitation bridge
 ($\approx\!0.3$ elicited) and the direct-install (decision-format SFT) arc, whose point values we treat
 as single-run evidence, keeping the corresponding hedging in Section~\ref{sec:necessity}. Provenance
