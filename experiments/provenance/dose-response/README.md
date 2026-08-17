@@ -9,13 +9,14 @@ lr 1e-4) on `data/factqa_teach.jsonl`; generation over `data/factqa_prompts_clos
 Each `*.scorelog` is the full instrument stdout (per-fact necessity ranking, verdicts,
 counterfactual, sufficiency) behind its CSV.
 
-Coverage: 14 of 15 (model, seed) pairs complete at 21/21 alphas; zephyr-7b-beta seed 1 has 17/21
-(its final four floor points were mid-flight at pull time -> n=2 at those points in the band).
+Coverage: COMPLETE — all 15 (model, seed) pairs at 21/21 alphas (315 transcripts). zephyr seed 1's
+final four points were finished by a resumed job that reused the SAME persisted adapter and skipped
+all existing transcripts (checksum-verified byte-identical), so the curve is single-adapter clean.
 
 Cross-run replication: the first run (different adapters, archived in `first-run-20260815/`)
 agrees at shared points — alpha=0.5 mean necessity Qwen 0.47<->0.47, Phi 0.93<->0.93,
 Zephyr 0.09<->0.09.
 
-Raw transcripts (312 jsonl): user archive `factqa_runclean1b.zip` (Drive, necessity-audit/).
+Raw transcripts (315 jsonl): user archive `factqa_final315.zip` (Drive, necessity-audit/).
 Figure: `necessity-audit/paper/figures/factqa_dose.pdf` renders from these CSVs via
 `experiments/unlearning/plot_headline.py`.
