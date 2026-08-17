@@ -75,8 +75,8 @@ possibly know, and a plain checker that asks ``is the answer right?'' We teach t
 real models, a bit at a time (a fine-grained 21-step dial from ``knows nothing'' to ``fully taught''),
 and necessity falls \textbf{smoothly and steadily toward zero} as the model soaks the facts up---smooth
 \emph{because there are many independent facts} (learn a quarter, then half, then almost all). We ran
-it in \emph{five} different model families from five different labs (Qwen, Phi, Zephyr, Llama, and
-OLMo), three seeds each, and all five give the same clean ``dose-response'' curve---sliding from fully
+it in \emph{five} different model families built on five separate base models (Qwen, Phi, Zephyr,
+Llama, and OLMo), three seeds each, and all five give the same clean ``dose-response'' curve---sliding from fully
 corpus-reliant to almost self-sufficient, each with its drop-off at a \emph{different} point on the
 dial. Five unrelated models agreeing, each on its own schedule, is strong evidence it isn't a quirk of
 one. It uses no

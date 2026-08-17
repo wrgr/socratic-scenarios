@@ -54,9 +54,9 @@ contrast, not an influence score. Our headline move is to make necessity \emph{t
 constructing its ground truth}: we teach a fact into a model's weights and watch necessity fall as a
 \emph{dose-response}. We calibrate the measure in a \emph{simulator-free} fictional-fact
 question-answering task scored by an answer checker, where teaching invented facts drives necessity
-smoothly to a $\le\!0.05$ floor across a dense 21-point LoRA-scale grid in \emph{five} independent
-model families from five labs (Qwen2.5-3B, Phi-3.5-mini, Zephyr-7B, Llama-3.1-8B, OLMo-2-7B; three
-seeds each), with each family's transition knee at a different point on the gradient.
+smoothly to a $\le\!0.05$ floor across a dense 21-point LoRA-scale grid in \emph{five} model
+families with five distinct base-model lineages (Qwen2.5-3B, Phi-3.5-mini, Zephyr-7B, Llama-3.1-8B,
+OLMo-2-7B; three seeds each), with each family's transition knee at a different point on the gradient.
 A second, \emph{decision}-based domain (a control-regret simulator with a hidden charted hazard) adds a
 caution that behavioral-necessity work should heed: a fact taught as prose becomes recallable yet does
 \emph{not} move the scored decision---a \emph{knowing\,$\neq$\,doing} gap---unless the knowledge is
