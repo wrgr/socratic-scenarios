@@ -62,7 +62,22 @@ def main():
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots(figsize=(5.4, 3.3))
-    for i, (family, adict) in enumerate(sorted(fam.items())):
+
+    def _short(name):
+        """Legend label: family name without release-suffix noise."""
+        for suf in ("-Instruct", "-instruct", "-beta", "-1124"):
+            name = name.replace(suf, "")
+        return name.replace("zephyr", "Zephyr")
+
+    def _knee(adict):
+        """First alpha where the seed-mean crosses 0.5 (for legend/curve ordering)."""
+        for a in sorted(adict):
+            if sum(adict[a]) / len(adict[a]) < 0.5:
+                return a
+        return 1.0
+
+    # Order by knee so the legend reads in the same left-to-right order as the curves.
+    for i, (family, adict) in enumerate(sorted(fam.items(), key=lambda kv: _knee(kv[1]))):
         color, marker, ls = STYLES[i % len(STYLES)]
         xs = sorted(adict)
         means = [sum(adict[a]) / len(adict[a]) for a in xs]
@@ -72,17 +87,19 @@ def main():
         me = max(1, len(xs) // 7)  # thin markers on a dense grid; keep the line continuous
         ax.fill_between(xs, lo, hi, color=color, alpha=0.15, linewidth=0)
         ax.plot(xs, means, color=color, marker=marker, linestyle=ls, linewidth=1.8,
-                markersize=5, markevery=me, label=f"{family} (n={nseeds})")
+                markersize=5, markevery=me, label=f"{_short(family)} (n={nseeds})")
 
     ax.axhline(0.0, color="0.6", linewidth=0.8, linestyle=(0, (1, 2)))
-    ax.set_xlabel(r"LoRA scale $\alpha$  (fact-naive $\to$ fact-taught)")
-    ax.set_ylabel("necessity  (accuracy with $-$ without corpus)")
+    ax.set_xlabel(r"LoRA scale $\alpha$  (fact-naive $\to$ fact-taught)", fontsize=9.5)
+    ax.set_ylabel("necessity  (acc. with $-$ without corpus)", fontsize=9.5)
     ax.set_ylim(-0.05, 1.05)
     ax.set_xlim(-0.02, 1.02)
     ax.grid(True, linewidth=0.4, alpha=0.4)
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
-    ax.legend(frameon=False, fontsize=8, loc="upper right")
+    # Lower-left is structurally empty (every curve sits at ~1.0 until its knee),
+    # so the legend never overlaps data there; upper-right covers the plateaus.
+    ax.legend(frameon=False, fontsize=8, loc="lower left", borderaxespad=0.6)
     if args.title:
         ax.set_title(args.title, fontsize=9)
     fig.tight_layout()
