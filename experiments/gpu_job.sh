@@ -47,7 +47,7 @@ else
   python unlearn.py --method sft --model "$MODEL" --dtype bfloat16 --chat \
       --sft_file data/factqa_teach.jsonl --epochs 8 --lr 1e-4 --batch_size "$batch" \
       --lora_r 16 --lora_targets q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj \
-      --save_every 15 $gckpt --seed "$SEED" --out "$ADIR"
+      $gckpt --seed "$SEED" --out "$ADIR"
 fi
 
 # Done only if the FINAL transcript exists AND is complete (a truncated file — e.g. cut off by a

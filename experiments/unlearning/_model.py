@@ -26,6 +26,6 @@ def load_base(model_id: str, *, load_4bit: bool, device: str, dtype=torch.float3
         # `--device cuda:1` doesn't load onto GPU 0 and fail the first forward with a
         # cross-device error. ("cuda" -> current device; an explicit "cuda:N" is honored.)
         return AutoModelForCausalLM.from_pretrained(
-            model_id, quantization_config=bnb, device_map={"": device}, torch_dtype=torch.bfloat16,
+            model_id, quantization_config=bnb, device_map={"": device}, dtype=torch.bfloat16,
         )
-    return AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=dtype).to(device)
+    return AutoModelForCausalLM.from_pretrained(model_id, dtype=dtype).to(device)

@@ -215,7 +215,7 @@ if [ "$ONLY" = "all" ] || [ "$ONLY" = "factqa" ]; then
         run python unlearn.py --method sft --model "$m" --dtype bfloat16 --chat \
             --sft_file data/factqa_teach.jsonl --epochs 8 --lr 1e-4 --batch_size "$batch" \
             --lora_r 16 --lora_targets q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj \
-            --save_every 15 $gckpt --seed "$s" --out "$adir"
+            $gckpt --seed "$s" --out "$adir"
       fi
       # max_new defaults to the SAFE 200 (what produced the validated Qwen/Phi numbers) so a verbose
       # model can't get its answer truncated and mis-scored — correctness over speed, esp. overnight.

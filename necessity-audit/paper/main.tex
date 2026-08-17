@@ -600,8 +600,9 @@ $\alpha$ grid against a pre-committed prompt set) over pinned model identifiers
 \texttt{Llama-3.1-8B-Instruct}, and \texttt{OLMo-2-1124-7B-Instruct} for the reported calibration;
 \texttt{Qwen2.5-3B-Instruct} for the decision domain), seeds $\{0,1,2\}$ per family (the
 decision-domain follow-ups are seed~$0$), and the LoRA and SFT hyperparameters reported inline in
-Section~\ref{sec:necessity}. Calibration generation is batched greedy decoding guarded by a per-job
-batched-vs-single-stream self-check that falls back to single-stream on mismatch.
+Section~\ref{sec:necessity}. Calibration generation is batched greedy decoding guarded by a per-job batched-vs-single-stream
+self-check (at most one diverging probe completion---a bf16 argmax-tie flip---is tolerated;
+otherwise the job falls back to single-stream generation).
 All scoring is replayed off-GPU from the saved per-$\alpha$ transcripts;
 the per-seed CSVs and full per-fact audit logs behind every calibration number are committed under
 \texttt{experiments/provenance/dose-response/}. Live-model results
