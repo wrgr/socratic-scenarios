@@ -250,18 +250,19 @@ computed off the graded regret instrument itself, not a decoupled side-metric.
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[font=\footnotesize,
-  cell/.style={draw=figmuted, line width=0.5pt, text width=44mm, align=center, inner sep=4pt, minimum height=12mm},
+  cell/.style={draw=figmuted, line width=0.5pt, text width=46mm, minimum height=16mm,
+               align=center, inner sep=4pt, outer sep=0pt},
   relied/.style={cell, fill=figblue!10, draw=figblue, line width=1pt},
   sharp/.style={cell, fill=figorange!12, draw=figorange, line width=1pt},
   lbl/.style={font=\scriptsize\bfseries, text=figink}]
-\node[relied]                (tl) at (0,0) {\textbf{RELIED}\\{\scriptsize corpus drove the call \emph{and} it works}\\{\scriptsize (regret-with $0$; ablated $1782$)}};
-\node[sharp, right=3mm of tl] (tr)         {\textbf{MISLED} / can't execute\\{\scriptsize call changed but still fails: the rule is wrong, or fix the model}\\{\scriptsize (the blind spot---Section~\ref{sec:diagnosis})}};
-\node[cell, below=3mm of tl] (bl)          {\textbf{REDUNDANT}\\{\scriptsize same call either way, and it works---already known (prune)}};
-\node[cell, right=3mm of bl] (br)          {\textbf{IGNORED} (unusable)\\{\scriptsize same call either way, and it fails---present, not used}};
-\node[lbl, above=1.5mm of tl.north] {succeeds \emph{with} the item};
-\node[lbl, above=1.5mm of tr.north] {fails \emph{with} the item};
-\node[lbl, rotate=90, anchor=south, align=center, left=1mm of tl.west] {decision\\\emph{changes}};
-\node[lbl, rotate=90, anchor=south, align=center, left=1mm of bl.west] {decision\\\emph{unchanged}};
+\node[relied]                 (tl) at (0,0)     {\textbf{RELIED}\\{\scriptsize corpus drove the call \emph{and} it works}\\{\scriptsize (regret-with $0$; ablated $1782$)}};
+\node[sharp]                  (tr) at (5.05,0)  {\textbf{MISLED} / can't execute\\{\scriptsize call changed but still fails---the blind spot}\\{\scriptsize (the rule is wrong, or fix the model)}};
+\node[cell]                   (bl) at (0,-1.85) {\textbf{REDUNDANT}\\{\scriptsize same call either way, and it works}\\{\scriptsize ---already known (prune)}};
+\node[cell]                   (br) at (5.05,-1.85) {\textbf{IGNORED} (unusable)\\{\scriptsize same call either way, and it fails}\\{\scriptsize ---present, not used}};
+\node[lbl, above=1mm of tl.north] {succeeds \emph{with} the item};
+\node[lbl, above=1mm of tr.north] {fails \emph{with} the item};
+\node[lbl, rotate=90, anchor=center, align=center] at ($(tl.west)+(-4mm,0)$) {decision\\\emph{changes}};
+\node[lbl, rotate=90, anchor=center, align=center] at ($(bl.west)+(-4mm,0)$) {decision\\\emph{unchanged}};
 \end{tikzpicture}
 \caption{Necessity read as \emph{different}$\times$\emph{usable}: ablate an item and ask whether the
 \emph{decision} changes (rows) and whether the learner \emph{succeeds with} it present (columns).
@@ -341,22 +342,22 @@ return to in Section~\ref{sec:limits}.
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[font=\footnotesize,
-  cell/.style={draw=figmuted, line width=0.5pt, text width=46mm, align=center, inner sep=4pt, minimum height=13mm},
+  cell/.style={draw=figmuted, line width=0.5pt, text width=46mm, minimum height=14mm,
+               align=center, inner sep=4pt, outer sep=0pt},
   clears/.style={cell, fill=figblue!12, draw=figblue, line width=1pt},
   lbl/.style={font=\scriptsize\bfseries, text=figink}]
-\node[cell]                 (tl) at (0,0) {\textbf{grounds}\quad necessity $667$\\{\scriptsize naive: no fact to use}};
-\node[cell, right=3mm of tl](tr)          {\textbf{grounds}\quad necessity $667$\\{\scriptsize \emph{knows but doesn't do}: recall $0.78$, decision unmoved}};
-\node[cell, below=3mm of tl](bl)          {\textbf{grounds}\quad necessity $669.5$\\{\scriptsize reasoning alone: nothing to recall}};
-\node[clears, right=3mm of bl](br)        {\textbf{clears}\quad necessity $0.3$\\{\scriptsize taught knowledge \emph{elicited} into the decision}};
-\node[lbl, above=1.5mm of tl.north] {naive weights};
-\node[lbl, above=1.5mm of tr.north] {taught weights (recall $0.00\!\to\!0.78$)};
-\node[lbl, rotate=90, anchor=south, align=center, left=1mm of tl.west] {single-shot\\decision};
-\node[lbl, rotate=90, anchor=south, align=center, left=1mm of bl.west] {reason-then-\\decide (CoT)};
-% The bridge: same taught weights, elicitation flips the outcome.
+\node[cell]   (tl) at (0,0)      {\textbf{grounds}\quad necessity $667$\\{\scriptsize naive: no fact to use}};
+\node[cell]   (tr) at (5.05,0)   {\textbf{grounds}\quad necessity $667$\\{\scriptsize \emph{knows but doesn't do}: recall $0.78$}};
+\node[cell]   (bl) at (0,-1.75)  {\textbf{grounds}\quad necessity $669.5$\\{\scriptsize reasoning alone: nothing to recall}};
+\node[clears] (br) at (5.05,-1.75) {\textbf{clears}\quad necessity $0.3$\\{\scriptsize taught knowledge \emph{elicited}}};
+\node[lbl, above=1mm of tl.north] {naive weights};
+\node[lbl, above=1mm of tr.north] {taught weights (recall $0.00\!\to\!0.78$)};
+\node[lbl, rotate=90, anchor=center, align=center] at ($(tl.west)+(-4mm,0)$) {single-shot\\decision};
+\node[lbl, rotate=90, anchor=center, align=center] at ($(bl.west)+(-4mm,0)$) {reason-then-\\decide (CoT)};
 \draw[-{Stealth[length=2.5mm]}, figblue, line width=1pt]
-  (tr.east) to[bend left=42]
-  node[right=1mm, align=left, font=\scriptsize, text=figblue]
-  {\emph{elicitation}\\{closes the gap}} (br.east);
+  (tr.east) to[bend left=45]
+  node[right=0.5mm, align=left, font=\scriptsize, text=figblue]
+  {\emph{elicitation}\\closes the gap} (br.east);
 \end{tikzpicture}
 \caption{The knowing\,$\neq$\,doing gap and its bridge, on the hazard decision ($\regret$-necessity;
 lower $=$ clears without the corpus). The taught fact is recallable (top-right, recall $0.00\!\to\!0.78$)
