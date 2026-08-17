@@ -193,13 +193,14 @@ def main():
                 print(f"  self-check OK: batched == single-stream on {len(probe)} probe prompts.", flush=True)
 
         t0 = time.time()
-        done_total, all_total = 0, len(alphas) * n
+        gen_done, skipped = 0, 0  # rate/ETA from GENERATED prompts only — counting skipped
+        all_total = len(alphas) * n  # resume-skips as done made the first heartbeats absurd (117 gen/s)
         for ai, a in enumerate(alphas, 1):
             outp = f"{args.out}_a{a:g}.jsonl"
             # Per-alpha resume: a COMPLETE transcript (full row count) is never regenerated, so a
             # killed sweep costs only its in-flight alpha on the next run. Partial files re-run.
             if os.path.exists(outp) and sum(1 for _ in open(outp)) == n:
-                done_total += n
+                skipped += n
                 print(f"    alpha {ai}/{len(alphas)} (={a:g}): complete transcript exists — skipped", flush=True)
                 continue
             for m, orig in lora_mods:
@@ -216,11 +217,12 @@ def main():
                     for prompt, completion in zip(chunk, comps):
                         f.write(json.dumps({"prompt": prompt, "completion": completion}) + "\n")
                     done = min(i0 + bs, n)
-                    done_total += len(chunk)
+                    gen_done += len(chunk)
                     if (i0 // bs) % 3 == 0 or done == n:  # heartbeat with rate + ETA
                         el = time.time() - t0
-                        rate = done_total / max(el, 1e-9)
-                        eta_min = (all_total - done_total) / max(rate, 1e-9) / 60
+                        rate = gen_done / max(el, 1e-9)
+                        remaining = all_total - skipped - gen_done
+                        eta_min = remaining / max(rate, 1e-9) / 60
                         print(f"    alpha {ai}/{len(alphas)} (={a:g}): {done}/{n} prompts "
                               f"| {rate:.1f} gen/s | ETA {eta_min:.0f} min", flush=True)
             print(f"  wrote {outp}  [{time.time()-t0:.0f}s elapsed]", flush=True)
