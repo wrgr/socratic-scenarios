@@ -1,27 +1,21 @@
-# Fact-QA calibration dose-response — provenance (A100 run, 2026-08-15)
+# Fact-QA calibration dose-response — provenance (clean run `run-clean-1`, 2026-08-16)
 
-GPU run on Modal (15 (model x seed) jobs submitted; A100-40GB each; single-stream
-generation after the batched-vs-single self-check tripped and fell back — see
-`score_offline.py`), driven by `experiments/gpu_job.sh` at the dense 21-point
-LoRA-alpha grid (0..1 step 0.05), teach = LoRA SFT (r16, all-linear, 8 epochs,
-lr 1e-4) on `data/factqa_teach.jsonl`, generation over
-`data/factqa_prompts_closedbook.jsonl` (175 prompts, ABLATION=closed-book, PROBES=all).
+THE run behind the paper's calibration numbers: five families x three seeds x the dense 21-point
+LoRA-alpha grid, submitted as 15 independent Modal A100 jobs in seed-waves into a fresh run
+directory (no resume from prior state; one deployed code version for all jobs; batched generation
+with the per-job batched-vs-single self-check green). Teach = LoRA SFT (r16, all-linear, 8 epochs,
+lr 1e-4) on `data/factqa_teach.jsonl`; generation over `data/factqa_prompts_closedbook.jsonl`
+(175 prompts, ABLATION=closed-book, PROBES=all); scored OFF-GPU via `dose_response.py --transcripts`.
+Each `*.scorelog` is the full instrument stdout (per-fact necessity ranking, verdicts,
+counterfactual, sufficiency) behind its CSV.
 
-Scored OFF-GPU from the saved per-alpha transcripts via
-`dose_response.py --transcripts` (labels `a<alpha>`); each `*.scorelog` is the full
-instrument stdout for that (model, seed) — per-fact necessity ranking, verdicts,
-counterfactual, sufficiency — i.e. the interpretable audit behind each CSV row.
+Coverage: 14 of 15 (model, seed) pairs complete at 21/21 alphas; zephyr-7b-beta seed 1 has 17/21
+(its final four floor points were mid-flight at pull time -> n=2 at those points in the band).
 
-## What ran / what didn't
-- Phi-3.5-mini: seeds 0,1,2 — complete (21 alphas each)
-- Qwen2.5-3B:   seeds 0,1 complete; seed 2 = 20/21 (final alpha transcript truncated
-  by a mid-write pull; excluded from scoring)
-- Zephyr-7B:    seed 2 complete; seed 0 = 14 alphas (0..0.65), seed 1 = 11 (0..0.5) —
-  the run was stopped before their tails; all three seeds strictly monotone
-- Llama-3.1-8B: seed 0 complete; seeds 1,2 did not run before the stop
-- OLMo-2-7B:    not run (deliberately cut to bound cost) — the queued 5th family
+Cross-run replication: the first run (different adapters, archived in `first-run-20260815/`)
+agrees at shared points — alpha=0.5 mean necessity Qwen 0.47<->0.47, Phi 0.93<->0.93,
+Zephyr 0.09<->0.09.
 
-Raw transcripts (195 jsonl, ~50 MB) are kept out of the repo; archive:
-`factqa_final.zip` (user's Drive, necessity-audit/). The paper figure
-`necessity-audit/paper/figures/factqa_dose.pdf` renders from these CSVs via
+Raw transcripts (312 jsonl): user archive `factqa_runclean1b.zip` (Drive, necessity-audit/).
+Figure: `necessity-audit/paper/figures/factqa_dose.pdf` renders from these CSVs via
 `experiments/unlearning/plot_headline.py`.

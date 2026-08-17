@@ -25,4 +25,4 @@ corpus-reliance (regret-delta) across the gradient:  0.027 … 1.000
   monotonic non-increasing across the gradient: False
   >> FALLS 1.000 -> 0.040 (drop +0.960) — the predicted signature: corpus-reliance falls as weight-knowledge rises.
 
-wrote /tmp/claude-0/-home-user-socratic-scenarios/c23c14d6-6762-52a9-b041-52d51598dd46/scratchpad/scored_clean/dose_factqa_Qwen2.5-3B-Instruct_s0.csv  (columns: gradient_point, regret_delta [reliance], compliance_delta, reliant [derived from regret], instrument_verdict_compliance [diagnostic])
+wrote /tmp/claude-0/-home-user-socratic-scenarios/c23c14d6-6762-52a9-b041-52d51598dd46/scratchpad/scored/dose_factqa_Qwen2.5-3B-Instruct_s0.csv  (columns: gradient_point, regret_delta [reliance], compliance_delta, reliant [derived from regret], instrument_verdict_compliance [diagnostic])

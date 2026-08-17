@@ -84,11 +84,12 @@ files; `plot_headline.py` then renders the paper figure and `summarize()` the ba
 - `experiments/retrieval-decomp/RESULTS.md`, `experiments/ragas-compare/`.
 
 ## Status
-- **Calibration: DONE — four families on the dense 21-point α grid** (Modal A100 run, 2026-08-15):
-  Qwen 1.00→0.03 (n3), Phi 1.00→0.01 (n3), Zephyr 1.00→0.00 (n3, two seeds missing high-α tails),
-  Llama 0.96→0.00 (n1); knees at four distinct α. OLMo-2 (5th family) deliberately cut to bound cost.
-  CSVs + per-fact audit logs: `experiments/provenance/dose-response/`; figure:
-  `paper/figures/factqa_dose.pdf`.
+- **Calibration: DONE — five families × three seeds on the dense 21-point α grid**, one clean Modal
+  run (`run-clean-1`, 2026-08-16, batched generation self-check green): Zephyr 1.00→0.00 (knee ~0.30),
+  Llama 0.96→0.00 (~0.35), OLMo 0.95→0.00 (~0.45), Qwen 1.00→0.05 (~0.50), Phi 1.00→0.01 (~0.65).
+  Sole gap: one Zephyr seed's final four floor points (n=2 there). Replicates the earlier run at
+  shared points (0.47↔0.47, 0.93↔0.93, 0.09↔0.09 at α=0.5). CSVs + per-fact audit logs:
+  `experiments/provenance/dose-response/`; figure: `paper/figures/factqa_dose.pdf`.
 - **Knowing≠doing:** hazard necessity flat ≈667 across LoRA-α and checkpoints; recall 0.00→0.78; CoT
   bridge 669.5→0.3; direct install falls but is a blanket/shortcut policy (three seeds; one hazard
   seed shows a transient deep-checkpoint turn — reported as instability).
