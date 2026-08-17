@@ -250,23 +250,25 @@ computed off the graded regret instrument itself, not a decoupled side-metric.
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[font=\footnotesize,
-  cell/.style={draw=figink, line width=0.5pt, text width=44mm, align=center, inner sep=3pt, minimum height=11mm},
+  cell/.style={draw=figmuted, line width=0.5pt, text width=44mm, align=center, inner sep=4pt, minimum height=12mm},
   relied/.style={cell, fill=figblue!10, draw=figblue, line width=1pt},
+  sharp/.style={cell, fill=figorange!12, draw=figorange, line width=1pt},
   lbl/.style={font=\scriptsize\bfseries, text=figink}]
 \node[relied]                (tl) at (0,0) {\textbf{RELIED}\\{\scriptsize corpus drove the call \emph{and} it works}\\{\scriptsize (regret-with $0$; ablated $1782$)}};
-\node[cell, right=2mm of tl] (tr)          {\textbf{MISLED / can't execute}\\{\scriptsize call changed but still fails: fix the model, or the rule is wrong}};
-\node[cell, below=2mm of tl] (bl)          {\textbf{REDUNDANT}\\{\scriptsize same call either way, and it works---already known (prune)}};
-\node[cell, right=2mm of bl] (br)          {\textbf{IGNORED} (unusable)\\{\scriptsize same call either way, and it fails---present, not used}};
+\node[sharp, right=3mm of tl] (tr)         {\textbf{MISLED} / can't execute\\{\scriptsize call changed but still fails: the rule is wrong, or fix the model}\\{\scriptsize (the blind spot---Section~\ref{sec:diagnosis})}};
+\node[cell, below=3mm of tl] (bl)          {\textbf{REDUNDANT}\\{\scriptsize same call either way, and it works---already known (prune)}};
+\node[cell, right=3mm of bl] (br)          {\textbf{IGNORED} (unusable)\\{\scriptsize same call either way, and it fails---present, not used}};
 \node[lbl, above=1.5mm of tl.north] {succeeds \emph{with} the item};
 \node[lbl, above=1.5mm of tr.north] {fails \emph{with} the item};
-\node[lbl, rotate=90, anchor=south, left=1mm of tl.west] {decision \emph{changes}};
-\node[lbl, rotate=90, anchor=south, left=1mm of bl.west] {decision \emph{unchanged}};
+\node[lbl, rotate=90, anchor=south, align=center, left=1mm of tl.west] {decision\\\emph{changes}};
+\node[lbl, rotate=90, anchor=south, align=center, left=1mm of bl.west] {decision\\\emph{unchanged}};
 \end{tikzpicture}
 \caption{Necessity read as \emph{different}$\times$\emph{usable}: ablate an item and ask whether the
-\emph{decision} changes (rows) and whether the learner \emph{succeeds with} it (columns). Only the
-top-left cell is \textbf{relied on}---the corpus changed the call, for the better. The top-right cell
-is the \emph{misled}/can't-execute case a subtractive ``did removing it hurt'' test cannot see. A
-coarser categorical verdict is deferred to Appendix~\ref{app:verdict}.}
+\emph{decision} changes (rows) and whether the learner \emph{succeeds with} it present (columns).
+Blue (top-left) is the only \textbf{relied} cell---the corpus changed the call, for the better.
+Orange (top-right) is the \emph{misled}/can't-execute case: maximal raw necessity yet a harmful
+outcome, invisible to a subtractive ``did removing it hurt?'' test---the blind spot this measure is
+built to expose. A coarser categorical verdict is deferred to Appendix~\ref{app:verdict}.}
 \label{fig:diffbetter}
 \end{figure}
 
@@ -339,25 +341,31 @@ return to in Section~\ref{sec:limits}.
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[font=\footnotesize,
-  cell/.style={draw=figink, line width=0.5pt, text width=46mm, align=center, inner sep=3pt, minimum height=12mm},
+  cell/.style={draw=figmuted, line width=0.5pt, text width=46mm, align=center, inner sep=4pt, minimum height=13mm},
   clears/.style={cell, fill=figblue!12, draw=figblue, line width=1pt},
   lbl/.style={font=\scriptsize\bfseries, text=figink}]
-\node[cell]                 (tl) at (0,0) {\textbf{grounds} — necessity $667$\\{\scriptsize naive: no fact to use}};
-\node[cell, right=2mm of tl](tr)          {\textbf{grounds} — necessity $667$\\{\scriptsize \emph{knows but doesn't do}: recall $0.78$, decision unmoved}};
-\node[cell, below=2mm of tl](bl)          {\textbf{grounds} — necessity $669.5$\\{\scriptsize reasoning alone: nothing to recall}};
-\node[clears, right=2mm of bl](br)        {\textbf{clears} — necessity $0.3$\\{\scriptsize taught knowledge \emph{elicited} into the decision}};
+\node[cell]                 (tl) at (0,0) {\textbf{grounds}\quad necessity $667$\\{\scriptsize naive: no fact to use}};
+\node[cell, right=3mm of tl](tr)          {\textbf{grounds}\quad necessity $667$\\{\scriptsize \emph{knows but doesn't do}: recall $0.78$, decision unmoved}};
+\node[cell, below=3mm of tl](bl)          {\textbf{grounds}\quad necessity $669.5$\\{\scriptsize reasoning alone: nothing to recall}};
+\node[clears, right=3mm of bl](br)        {\textbf{clears}\quad necessity $0.3$\\{\scriptsize taught knowledge \emph{elicited} into the decision}};
 \node[lbl, above=1.5mm of tl.north] {naive weights};
 \node[lbl, above=1.5mm of tr.north] {taught weights (recall $0.00\!\to\!0.78$)};
-\node[lbl, rotate=90, anchor=south, left=1mm of tl.west] {single-shot decision};
-\node[lbl, rotate=90, anchor=south, left=1mm of bl.west] {reason-then-decide (CoT)};
+\node[lbl, rotate=90, anchor=south, align=center, left=1mm of tl.west] {single-shot\\decision};
+\node[lbl, rotate=90, anchor=south, align=center, left=1mm of bl.west] {reason-then-\\decide (CoT)};
+% The bridge: same taught weights, elicitation flips the outcome.
+\draw[-{Stealth[length=2.5mm]}, figblue, line width=1pt]
+  (tr.east) to[bend left=42]
+  node[right=1mm, align=left, font=\scriptsize, text=figblue]
+  {\emph{elicitation}\\{closes the gap}} (br.east);
 \end{tikzpicture}
 \caption{The knowing\,$\neq$\,doing gap and its bridge, on the hazard decision ($\regret$-necessity;
 lower $=$ clears without the corpus). The taught fact is recallable (top-right, recall $0.00\!\to\!0.78$)
 yet leaves the single-shot decision unmoved (top row, flat $667$). Only \emph{reason-then-decide on the
-taught model} clears (bottom-right, $0.3$); reasoning on the naive model does not (bottom-left), so the
-turn is the taught knowledge being elicited, not reasoning alone---the action needs \emph{both} the
-knowledge and the elicitation. Installing the decision directly by fine-tuning does not reproduce this:
-it yields a blanket/confabulated policy (\texttt{decision-teach-arc.md}), not the conditional fact.}
+taught model} clears (bottom-right, $0.3$, blue); reasoning on the naive model does not
+(bottom-left), so the turn is the taught knowledge being elicited, not reasoning alone---the action
+needs \emph{both} the knowledge \emph{and} the elicitation (arrow). Installing the decision directly by
+fine-tuning does not reproduce this: it yields a blanket/confabulated policy
+(\texttt{decision-teach-arc.md}), not the conditional fact.}
 \label{fig:knowdo}
 \end{figure}
 
