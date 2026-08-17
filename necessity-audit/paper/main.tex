@@ -47,30 +47,27 @@ Constructing the Parametric Ground Truth, and the Misled-Learner Blind Spot}
 \begin{abstract}
 Before running a human study on a corpus-bounded tutor, a designer wants to know something cheaper
 first: does the learner actually \emph{rely} on the curated corpus, or is it coasting on what it
-already knows? We present an \emph{in-silico measurement instrument} that answers this as a
-behavioral task outcome. The central quantity is \emph{corpus necessity}: ablate a corpus item and
-measure the change in a task outcome scored against a reference policy---a with-versus-without
-contrast, not an influence score. Our headline move is to make necessity \emph{trustworthy by
-constructing its ground truth}: we teach a fact into a model's weights and watch necessity fall as a
-\emph{dose-response}. We calibrate the measure in a \emph{simulator-free} fictional-fact
-question-answering task scored by an answer checker, where teaching invented facts drives necessity
-smoothly to a $\le\!0.05$ floor across a dense 21-point LoRA-scale grid in \emph{five} model
-families with five distinct base-model lineages (Qwen2.5-3B, Phi-3.5-mini, Zephyr-7B, Llama-3.1-8B,
-OLMo-2-7B; three seeds each), with each family's transition knee at a different point on the gradient.
-A second, \emph{decision}-based domain (a control-regret simulator with a hidden charted hazard) adds a
-caution that behavioral-necessity work should heed: a fact taught as prose becomes recallable yet does
-\emph{not} move the scored decision---a \emph{knowing\,$\neq$\,doing} gap---unless the knowledge is
-\emph{elicited} by reasoning; attempts to \emph{install} the decision by direct fine-tuning instead
-yielded a shortcut policy rather than the conditional fact, across three teach-set designs. On this calibrated
-measure we build a \emph{corpus diagnosis} that labels each item \emph{relied}, \emph{redundant}
-(already known), \emph{unusable} (present but the model fails), or \emph{misled}. The sharp result is
-the last: a learner that faithfully follows a \emph{wrong} retrieved rule registers as maximally
-reliant---the decision swings hard when the rule is ablated---yet is actively harmed, and standard
-necessity and faithfulness metrics, which only ask whether context influenced the output, are blind
-to it. Reading necessity as \emph{decision-changes}$\times$\emph{succeeds-with} separates this case
-out. We are explicit about scope: every result here is simulation-based mechanism evidence, not
-human-subject external validity. This is the pre-human-study screen; the human cohort study is the
-pre-registered endpoint it is built to de-risk, and is not a claim of this paper.
+already knows? We answer this with an \emph{in-silico measurement instrument} whose central quantity
+is \emph{corpus necessity}: ablate a corpus item and measure the change in a behavioral task outcome
+scored against a reference policy---a with-versus-without contrast, not an influence score. Our
+headline move makes necessity \emph{trustworthy by constructing its ground truth}: teach a fact into
+a model's weights and watch necessity fall as a \emph{dose-response}. In a \emph{simulator-free}
+fictional-fact QA task scored by an answer checker, teaching invented facts drives necessity smoothly
+to a $\le\!0.05$ floor across a dense 21-point LoRA-scale grid in five model families with distinct
+base lineages (Qwen2.5-3B, Phi-3.5-mini, Zephyr-7B, Llama-3.1-8B, OLMo-2-7B; three seeds each), each
+family's transition knee at a different point on the gradient. A second, \emph{decision}-based domain
+(a control-regret simulator with a hidden charted hazard) adds a caution: a fact taught as prose
+becomes recallable yet does \emph{not} move the scored decision---a \emph{knowing\,$\neq$\,doing}
+gap---unless the knowledge is \emph{elicited} by reasoning, and attempts to \emph{install} the
+decision by direct fine-tuning yielded only a shortcut policy, not the conditional fact (three
+teach-set designs). On the calibrated measure we build a \emph{corpus diagnosis} labeling each item
+\emph{relied}, \emph{redundant} (already known), \emph{unusable} (present but failing), or
+\emph{misled}. The sharp result is the last: a learner faithfully following a \emph{wrong} retrieved
+rule registers as maximally reliant---the decision swings hard on ablation---yet is actively harmed;
+necessity and faithfulness metrics that only ask whether context influenced the output are blind to
+it, and reading necessity as \emph{decision-changes}$\times$\emph{succeeds-with} separates it out.
+Scope is explicit: every result is simulation-based mechanism evidence; the pre-registered human
+cohort study is the endpoint this screen de-risks, not a claim of this paper.
 \end{abstract}
 
 \section{Introduction}
