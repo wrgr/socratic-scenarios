@@ -35,7 +35,7 @@ Important distinction if pressed: the **Narrator** is the corpus-bound one. The 
 The teal note next to the heading ("we now measure whether the tutor actually uses its corpus") is the bridge to the companion poster — see the hand-off line below.
 
 **Five-Level Expertise Continuum.**
-Who it's for: the system currently targets learners with *some* technical background ("YOU ARE HERE" sits at Intermediate). Complete novices are a deployment choice we haven't made, not a system limit.
+The range of learners the system meets — complete novice through proficient. TeachMe **adaptively scaffolds at every level**: the learner model places the learner, the gates pace them, and everyone is aimed at the open-ring target — *distal transfer*, not rehearsed procedure.
 
 **One Engine, Three Domains.** The multi-domain claim, with the punchline "→ so a new domain is an authoring task, not a software project."
 - **EDDIE · Aerosol Jet Printing** — the flagship: operator training on the Optomec HD2 printer. 100+ graph nodes, six fault domains.

@@ -1,0 +1,263 @@
+<title>TeachMe Stand-In Brief</title>
+<style>
+:root {
+  --paper: #FFFFFF;
+  --surface: #F4F3F0;
+  --ink: #1A2230;
+  --body: #333B45;
+  --muted: #55606E;
+  --accent: #0E5C66;
+  --accent-soft: #E3ECEE;
+  --warn: #C73B2F;
+  --warn-soft: #F9ECEA;
+  --line: #DDE3E8;
+  --panel: #131A24;
+  --panel-ink: #DDE3E8;
+  --panel-accent: #3DDCC6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #131A24;
+    --surface: #1A2230;
+    --ink: #E8EAED;
+    --body: #C7CCD3;
+    --muted: #8B95A1;
+    --accent: #3DDCC6;
+    --accent-soft: #12333A;
+    --warn: #E0685C;
+    --warn-soft: #33201E;
+    --line: #2A3442;
+    --panel: #0D1219;
+    --panel-ink: #DDE3E8;
+    --panel-accent: #3DDCC6;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #131A24;
+  --surface: #1A2230;
+  --ink: #E8EAED;
+  --body: #C7CCD3;
+  --muted: #8B95A1;
+  --accent: #3DDCC6;
+  --accent-soft: #12333A;
+  --warn: #E0685C;
+  --warn-soft: #33201E;
+  --line: #2A3442;
+  --panel: #0D1219;
+  --panel-ink: #DDE3E8;
+  --panel-accent: #3DDCC6;
+}
+body {
+  background: var(--paper);
+  color: var(--body);
+  font-family: Calibri, 'Segoe UI', -apple-system, Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.55;
+  margin: 0;
+}
+.wrap { max-width: 740px; margin: 0 auto; padding: 56px 24px 88px; }
+.eyebrow {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.14em;
+  color: var(--accent); text-transform: uppercase; margin: 44px 0 10px;
+}
+.eyebrow.warn { color: var(--warn); }
+h1 {
+  font-family: Cambria, Georgia, 'Times New Roman', serif;
+  font-size: 40px; line-height: 1.15; color: var(--ink);
+  margin: 8px 0 10px; text-wrap: balance;
+}
+h2 {
+  font-family: Cambria, Georgia, 'Times New Roman', serif;
+  font-size: 25px; color: var(--ink); margin: 6px 0 12px; text-wrap: balance;
+}
+p { margin: 0 0 14px; }
+.lede { font-size: 18px; color: var(--muted); margin-bottom: 4px; }
+strong { color: var(--ink); }
+em { color: var(--ink); }
+.sayit {
+  border-left: 4px solid var(--accent);
+  background: var(--accent-soft);
+  padding: 16px 20px; margin: 0 0 14px;
+  font-family: Cambria, Georgia, serif; font-size: 18.5px; color: var(--ink);
+}
+.walk { display: flex; flex-direction: column; gap: 18px; margin-bottom: 4px; }
+.walk-item { border-top: 1px solid var(--line); padding-top: 14px; }
+.walk-item h3 {
+  font-size: 18px; color: var(--ink); margin: 0 0 6px;
+  font-family: Cambria, Georgia, serif;
+}
+.walk-item p { margin-bottom: 8px; }
+ol.cards { margin: 0 0 8px; padding-left: 22px; }
+ol.cards li { margin-bottom: 8px; }
+.tablewrap { overflow-x: auto; margin-bottom: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 15.5px; }
+th {
+  font-family: 'Courier New', Courier, monospace; font-size: 12.5px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+  text-align: left; padding: 8px 14px 8px 0; border-bottom: 2px solid var(--line);
+}
+td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.term { font-weight: 700; color: var(--ink); white-space: nowrap; }
+.qa { border-top: 1px solid var(--line); padding-top: 14px; margin-bottom: 16px; }
+.qa .q {
+  font-family: Cambria, Georgia, serif; font-weight: 700; font-size: 18px;
+  color: var(--ink); margin-bottom: 6px;
+}
+.dont {
+  background: var(--warn-soft); border-left: 4px solid var(--warn);
+  padding: 18px 22px; margin-bottom: 14px;
+}
+.dont ul { margin: 0; padding-left: 20px; }
+.dont li { margin-bottom: 10px; }
+.dont li:last-child { margin-bottom: 0; }
+.handoff {
+  background: var(--panel); color: var(--panel-ink);
+  padding: 22px 26px; margin: 0 0 14px;
+  font-family: Cambria, Georgia, serif; font-size: 18.5px; line-height: 1.5;
+}
+.handoff .label {
+  font-family: 'Courier New', Courier, monospace; font-size: 12.5px;
+  letter-spacing: 0.14em; color: var(--panel-accent); display: block; margin-bottom: 10px;
+}
+.logistics { display: flex; flex-wrap: wrap; gap: 10px 28px; font-size: 15.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+.logistics b { color: var(--ink); }
+code { font-family: 'Courier New', Courier, monospace; font-size: 0.95em; color: var(--accent); }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow" style="margin-top:0;">TeachMe &middot; Open-House Poster</div>
+  <h1>Stand-In Presenter Brief</h1>
+  <p class="lede">For someone stepping in cold. Read time ~10 minutes. The companion Necessity-Audit poster gets its own hand-off line at the bottom.</p>
+
+  <div class="eyebrow">The one-liner &mdash; memorize this</div>
+  <div class="sayit">&ldquo;TeachMe is a Socratic tutor for safety-critical equipment. It <strong>asks instead of telling</strong>, it can <strong>only quote a reviewed corpus</strong> &mdash; so it can&rsquo;t make things up &mdash; and we <strong>measure</strong> that grounding instead of promising it.&rdquo;</div>
+
+  <div class="eyebrow">The 30-second pitch</div>
+  <p>Training people on dangerous equipment has a failure mode unique to AI tutors: a confident wrong answer. If a trainee internalizes even one hallucinated safety parameter, they leave <em>more</em> dangerous than when they started. TeachMe is built around that: the Narrator &mdash; the agent that tells you what the machine did &mdash; is architecturally unable to generate from model weights; it can only quote an expert-reviewed knowledge graph. A missing fact yields &ldquo;I can&rsquo;t find that,&rdquo; never a guess.</p>
+  <p>On top of that sits a Socratic Mentor that opens with probes rather than explanations &mdash; retrieval practice beats re-reading &mdash; and mastery gates that decide from evidence when to advance versus re-teach. One engine runs three very different domains today, and a companion measurement instrument checks that the tutor actually <em>uses</em> its corpus rather than coasting on what the base model already knows.</p>
+
+  <div class="eyebrow">Poster walkthrough &mdash; top to bottom</div>
+  <div class="walk">
+    <div class="walk-item">
+      <h3>Headline: &ldquo;Retrieve for the learner, not just the query.&rdquo;</h3>
+      <p>Ordinary RAG ranks passages by similarity to the question. TeachMe ranks by what <em>teaches this learner at this moment</em> &mdash; level-appropriate, with safety context co-retrieved. That is the thesis of the whole poster.</p>
+    </div>
+    <div class="walk-item">
+      <h3>Intro card &mdash; the stakes</h3>
+      <p>The italic paragraph is the motivation. Say it plainly: one internalized wrong parameter can make training net-negative. That is why the fabrication guarantee is the core design constraint, not a feature.</p>
+    </div>
+    <div class="walk-item">
+      <h3>Architecture Overview (dark band, five boxes)</h3>
+      <p>One breath: <em>a typed, expert-reviewed knowledge graph feeds a learner model, retrieval, and a two-agent loop &mdash; the Narrator reports machine state corpus-only, the Mentor asks Socratic probes and evaluates answers &mdash; surfaced through four instructional modes.</em></p>
+      <p>Important distinction if pressed: the <strong>Narrator</strong> is the corpus-bound one. The <strong>Mentor</strong> evaluates free-text answers with an LLM (Gemini, bring-your-own-key). The no-fabrication guarantee is about the Narrator specifically.</p>
+    </div>
+    <div class="walk-item">
+      <h3>What&rsquo;s Working Now (four cards)</h3>
+      <p>For each card, lead with its &ldquo;&rarr; so&rdquo; line &mdash; that is the point:</p>
+      <ol class="cards">
+        <li><strong>Corpus-bound Narrator</strong> &rarr; a learner can&rsquo;t internalize a hallucinated safety value; a silent corpus shows the gap, never fabricates it.</li>
+        <li><strong>Typed causal graph</strong> &rarr; safety context travels with the diagnosis (Symptom&rarr;FailureMode&rarr;CorrectiveAction with hazards co-retrieved) instead of being a separate lookup a flat store can miss.</li>
+        <li><strong>Dual-axis mastery gates</strong> &rarr; an instructor can point at a score and say exactly why the system advanced or held a learner. Concepts must clear before procedures.</li>
+        <li><strong>Four modes, one progression</strong> &rarr; Socratic Practice &rarr; Scenario Mode (deterministic fault injection) &rarr; Reachback Lookup &rarr; Retrieval Lab, sequenced to keep cognitive load manageable; instructors can inspect what retrieval will surface before a learner sees it.</li>
+      </ol>
+      <p>The teal note by the heading (&ldquo;we now measure whether the tutor actually uses its corpus&rdquo;) is the bridge to the companion poster &mdash; hand-off line below.</p>
+    </div>
+    <div class="walk-item">
+      <h3>Five-Level Expertise Continuum</h3>
+      <p>The range of learners the system meets &mdash; complete novice through proficient. TeachMe <strong>adaptively scaffolds at every level</strong>: the learner model places the learner, the gates pace them, and everyone is aimed at the open-ring target &mdash; <em>distal transfer</em>, not rehearsed procedure.</p>
+    </div>
+    <div class="walk-item">
+      <h3>One Engine, Three Domains</h3>
+      <p>The multi-domain claim, with the punchline &ldquo;&rarr; so a new domain is an authoring task, not a software project.&rdquo;</p>
+      <ol class="cards">
+        <li><strong>EDDIE &middot; Aerosol Jet Printing</strong> &mdash; the flagship: operator training on the Optomec HD2 printer; 100+ graph nodes, six fault domains.</li>
+        <li><strong>Roadside Tire Change</strong> &mdash; deliberately mundane; it exists to prove the engine generalizes from a graph + corpus alone.</li>
+        <li><strong>COLREG Collision Avoidance</strong> &mdash; maritime &ldquo;rules of the road,&rdquo; plus a full interactive simulator: real ship kinematics, a Collision Risk Index, per-rule compliance scoring, reference solvers.</li>
+      </ol>
+    </div>
+    <div class="walk-item">
+      <h3>IF THIS WORKS band</h3>
+      <p>This is a <em>bet</em>, stated as one: faster time-to-independent-operation because training builds far-transfer diagnostic capability, not recall. The TARGET box says out loud that this is <strong>not yet measured on real learners</strong>. Don&rsquo;t soften that &mdash; it is the poster&rsquo;s credibility.</p>
+    </div>
+    <div class="walk-item">
+      <h3>HOW WE KEEP OURSELVES HONEST (dark table)</h3>
+      <p>We grade our own evidence. Strong claims are architectural (Narrator, gates) or measured (necessity audit); the <em>weak</em> row is the human outcome, on purpose. &ldquo;LEFT OUT ON PURPOSE&rdquo;: there is no free-running text generation &mdash; no prompt or jailbreak can make the Narrator invent machine behavior.</p>
+    </div>
+    <div class="walk-item">
+      <h3>The Questions We&rsquo;re Chasing + QR</h3>
+      <p>Three open research questions (far transfer, gate validity, learning-science ceiling). The QR goes to the public repo.</p>
+    </div>
+  </div>
+
+  <div class="eyebrow">Vocabulary cheat sheet</div>
+  <div class="tablewrap">
+    <table>
+      <tr><th>Term</th><th>Plain meaning</th></tr>
+      <tr><td class="term">Narrator</td><td>Agent that reports what the machine did &mdash; quotes the corpus verbatim, cannot generate</td></tr>
+      <tr><td class="term">Mentor</td><td>Agent that asks Socratic probes and evaluates free-text answers (LLM-powered)</td></tr>
+      <tr><td class="term">Knowledge graph</td><td>Expert-reviewed, typed nodes and edges: symptoms, failure modes, corrective actions, hazards</td></tr>
+      <tr><td class="term">Mastery gate</td><td>Evidence threshold deciding advance vs. re-teach; concept mastery before procedure</td></tr>
+      <tr><td class="term">Corpus-bound</td><td>Can only speak from the reviewed corpus; a missing fact returns &ldquo;I can&rsquo;t find that&rdquo;</td></tr>
+      <tr><td class="term">Corpus necessity</td><td>Whether answers actually <em>depend</em> on the corpus (vs. the model already knowing it) &mdash; what the companion poster measures</td></tr>
+      <tr><td class="term">Far transfer</td><td>Performing on <em>novel</em> fault combinations, not just rehearsed ones</td></tr>
+      <tr><td class="term">EDDIE</td><td>The flagship instantiation: Aerosol Jet Printing operator training (Optomec HD2)</td></tr>
+      <tr><td class="term">COLREG</td><td>International maritime collision-avoidance rules &mdash; the third domain, with a simulator</td></tr>
+    </table>
+  </div>
+
+  <div class="eyebrow">Likely questions &mdash; honest answers</div>
+  <div class="qa">
+    <div class="q">&ldquo;Isn&rsquo;t this just RAG with a chatbot?&rdquo;</div>
+    <p>Three differences: (1) pedagogy-first &mdash; it opens with a probe, not an answer, because retrieval practice beats re-reading; (2) the Narrator is corpus-<em>bound</em>, not corpus-<em>flavored</em> &mdash; it cannot generate from weights at all; (3) retrieval is ranked for instructional utility (level, safety context, graph structure), not just similarity.</p>
+  </div>
+  <div class="qa">
+    <div class="q">&ldquo;Has it actually improved training outcomes?&rdquo;</div>
+    <p>Not measured on humans yet &mdash; say this plainly. Everything shown is simulation-based mechanism evidence. The human trial is the pre-registered next step, and the in-silico work exists to falsify the value proposition cheaply <em>before</em> that trial.</p>
+  </div>
+  <div class="qa">
+    <div class="q">&ldquo;How do you know it doesn&rsquo;t hallucinate?&rdquo;</div>
+    <p>Two layers. By construction: the Narrator can only quote reviewed nodes, so there is nothing to hallucinate <em>with</em>. By measurement: the companion instrument checks that answers actually rely on the corpus rather than on what the base model already knows.</p>
+  </div>
+  <div class="qa">
+    <div class="q">&ldquo;What does the companion poster add?&rdquo;</div>
+    <p>A measurement instrument for <em>corpus necessity</em>: teach the corpus facts directly into a model&rsquo;s weights and watch necessity fall along a calibrated dose&ndash;response curve &mdash; verified across five different base-model families. It catches corpora that are redundant (model already knows it) or unusable (model can&rsquo;t apply it even when handed it) before you spend a human trial.</p>
+  </div>
+  <div class="qa">
+    <div class="q">&ldquo;Can I try it?&rdquo;</div>
+    <p>Yes &mdash; live at <strong>experttrace.org</strong>, no API key needed (a deterministic simulated mode runs everything). Add a Gemini key via the gear icon for LLM-powered mentoring. Code is Apache-2.0 at the QR link.</p>
+  </div>
+  <div class="qa">
+    <div class="q">&ldquo;How hard is a new domain?&rdquo;</div>
+    <p>Author a typed graph + corpus; the engine supplies probes, scenarios, gates, and mastery tracking. Tire Change and COLREG were both added this way.</p>
+  </div>
+  <div class="qa">
+    <div class="q">&ldquo;What about someone using it <em>at</em> the machine, not in training?&rdquo;</div>
+    <p>There is a high-stress ops mode that strips the interface to the dashboard plus corpus-bound Reachback lookup &mdash; built for an operator under time pressure.</p>
+  </div>
+
+  <div class="eyebrow warn">Do not claim &mdash; integrity guardrails</div>
+  <div class="dont">
+    <ul>
+      <li><strong>No human-subjects results exist.</strong> Never imply learning gains on real people. The far-transfer outcome is explicitly graded <em>weak</em> on our own poster.</li>
+      <li><strong>The no-fabrication guarantee is the Narrator&rsquo;s</strong>, not the whole system&rsquo;s. The Mentor&rsquo;s free-text evaluation is LLM-based and can err; gates and instructor inspection are the mitigation.</li>
+      <li><strong>The necessity audit measures the tutor&rsquo;s grounding, not human learning.</strong> &ldquo;Simulation-based mechanism evidence&rdquo; &mdash; say those words if pushed.</li>
+      <li><strong>Don&rsquo;t invent numbers.</strong> Everything citable is on the two posters; if asked something not covered, &ldquo;I don&rsquo;t know, but it&rsquo;s in the repo&rdquo; is the correct answer &mdash; it is also the product&rsquo;s own philosophy.</li>
+    </ul>
+  </div>
+
+  <div class="eyebrow">Hand-off to the companion poster</div>
+  <div class="handoff">
+    <span class="label">SAY THIS</span>
+    &ldquo;Every RAG vendor claims their system is grounded. The poster next to this one is how we <em>check</em> &mdash; an instrument that measures whether the tutor&rsquo;s answers actually depend on the corpus, calibrated on five different base models. Happy to walk you through it.&rdquo;
+  </div>
+
+  <div class="eyebrow">Logistics</div>
+  <div class="logistics">
+    <div>Live demo: <b>www.experttrace.org</b> (no key needed)</div>
+    <div>Repo: <b>github.com/wrgr/socratic-scenarios</b> (the QR)</div>
+    <div>License: <b>Apache-2.0</b></div>
+    <div>Team: <b>Mia Ndousse-Fetter, William Gray-Roncal, and team</b></div>
+    <div>Status language: <b>&ldquo;prototype, simulation-validated&rdquo;</b> &mdash; it&rsquo;s on the poster kicker; use those words</div>
+  </div>
+</div>
