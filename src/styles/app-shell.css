@@ -355,6 +355,13 @@
   border-color: rgba(61, 220, 198, 0.5);
 }
 
+/* The masthead "Posters" link reuses the pill treatment; as an anchor it
+   needs the UA underline stripped and inline-block sizing to match. */
+a.app-masthead-pedagogy-btn {
+  text-decoration: none;
+  display: inline-block;
+}
+
 .app-masthead-pedagogy-btn--locked,
 .app-masthead-pedagogy-btn--locked:hover {
   opacity: 0.5;

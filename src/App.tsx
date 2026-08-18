@@ -315,6 +315,15 @@ function AppShell() {
             Mission &amp; Pedagogy
             {view === 'app' && highStress && <span className="app-masthead-pedagogy-lock" aria-hidden="true">🔒</span>}
           </button>
+          <a
+            className="app-masthead-pedagogy-btn"
+            href="posters/"
+            target="_blank"
+            rel="noopener"
+            title="Open-house posters and presenter notes (PDF + PowerPoint)"
+          >
+            Posters
+          </a>
           <ApiKeySettings />
         </div>
       </header>

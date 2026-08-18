@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TeachMe Posters</title>
+<style>
+  :root {
+    --paper: #FFFFFF; --ink: #1A2230; --body: #333B45; --muted: #55606E;
+    --accent: #0E5C66; --accent-soft: #E3ECEE; --warn: #C73B2F; --line: #DDE3E8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #131A24; --ink: #E8EAED; --body: #C7CCD3; --muted: #8B95A1;
+      --accent: #3DDCC6; --accent-soft: #12333A; --warn: #E0685C; --line: #2A3442;
+    }
+  }
+  body { margin: 0; background: var(--paper); color: var(--body);
+         font-family: Calibri, 'Segoe UI', -apple-system, Arial, sans-serif;
+         font-size: 17px; line-height: 1.55; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 56px 24px 80px; }
+  .eyebrow { font-family: 'Courier New', Courier, monospace; font-size: 13px;
+             font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+             color: var(--accent); margin: 0 0 10px; }
+  h1 { font-family: Cambria, Georgia, 'Times New Roman', serif; font-size: 38px;
+       line-height: 1.15; color: var(--ink); margin: 0 0 10px; }
+  .lede { color: var(--muted); margin: 0 0 36px; }
+  .poster { border: 1px solid var(--line); padding: 24px 28px; margin-bottom: 22px; }
+  .poster h2 { font-family: Cambria, Georgia, serif; font-size: 23px; color: var(--ink);
+               margin: 0 0 6px; }
+  .poster p { margin: 0 0 14px; }
+  .links { display: flex; flex-wrap: wrap; gap: 12px; }
+  .links a { display: inline-block; padding: 9px 16px; border: 2px solid var(--accent);
+             color: var(--accent); text-decoration: none; font-weight: 700; font-size: 15px; }
+  .links a:hover { background: var(--accent-soft); }
+  .note { color: var(--muted); font-size: 15px; border-top: 1px solid var(--line);
+          padding-top: 16px; }
+  .note a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">TeachMe &middot; Socratic Scenarios</div>
+  <h1>Open-House Posters</h1>
+  <p class="lede">Both 24&times;36&Prime; posters, print-ready, plus notes for anyone stepping in to present.</p>
+
+  <div class="poster">
+    <h2>TeachMe &mdash; Retrieve for the learner, not just the query.</h2>
+    <p>The platform poster: corpus-bound Socratic training, one engine across three domains, and how we keep ourselves honest.</p>
+    <div class="links">
+      <a href="teachme-poster-24x36.pdf">PDF (print)</a>
+      <a href="teachme-multidomain-poster-24x36.pptx">PowerPoint (editable)</a>
+      <a href="presenter-brief.html">Presenter brief</a>
+    </div>
+  </div>
+
+  <div class="poster">
+    <h2>Necessity Audit &mdash; Did the model really <em>need</em> the corpus?</h2>
+    <p>The companion research poster: a calibrated in-silico screen for corpus necessity, validated across five base-model lineages.</p>
+    <div class="links">
+      <a href="necessity-audit-poster-24x36.pdf">PDF (print)</a>
+    </div>
+  </div>
+
+  <p class="note">Sources, PowerPoint versions, and regeneration instructions live in the repo under
+    <a href="https://github.com/wrgr/socratic-scenarios/tree/main/docs/posters">docs/posters</a>.</p>
+</div>
+</body>
+</html>
