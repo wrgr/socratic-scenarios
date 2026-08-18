@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    a { color: #2A78D6; } a:hover { color: #1d5ea8; }
+  </style>
+</helmet>
+<div style="width: 2304px; height: 3456px; background: #FBFAF8; color: #161616; font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif; display: flex; flex-direction: column; overflow: hidden;">
+
+  <!-- ============ HEADER ============ -->
+  <div style="padding: 84px 124px 0 124px; display: flex; flex-direction: column; gap: 28px;">
+    <div style="display: flex; align-items: center; gap: 28px;">
+      <div style="width: 64px; height: 8px; background: {{accent}};"></div>
+      <div style="font-family: 'Avenir Next', 'Segoe UI', system-ui, sans-serif; font-size: 34px; letter-spacing: 0.22em; font-weight: 600; color: #5b5b5b;">NECESSITY-AUDIT&nbsp;&nbsp;&middot;&nbsp;&nbsp;AN OPEN-SOURCE MEASUREMENT INSTRUMENT</div>
+    </div>
+    <div style="font-size: 150px; line-height: 1.03; font-weight: 700; letter-spacing: -0.015em; max-width: 2040px;">Did the model really <em style="color: {{accent}};">need</em> the corpus?</div>
+    <div style="font-size: 42px; line-height: 1.4; color: #3d3d3d; max-width: 1860px;">A retrieval-augmented system answers correctly. Was the retrieved knowledge doing the work &mdash; or did the model already know? We measure it, and we prove the measure works <em>by construction</em>.</div>
+  </div>
+
+  <!-- ============ METHOD STRIP ============ -->
+  <div style="margin: 48px 124px 0 124px; border-top: 3px solid #161616; border-bottom: 3px solid #161616; padding: 34px 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 72px;">
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      <div style="font-size: 84px; font-weight: 700; color: {{accent}}; line-height: 1;">1</div>
+      <div style="font-family: 'Avenir Next', 'Segoe UI', system-ui, sans-serif; font-size: 38px; font-weight: 700; letter-spacing: 0.12em;">ABLATE</div>
+      <div style="font-size: 34px; line-height: 1.45; color: #3d3d3d;">Remove one corpus item and re-run the task.</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      <div style="font-size: 84px; font-weight: 700; color: {{accent}}; line-height: 1;">2</div>
+      <div style="font-family: 'Avenir Next', 'Segoe UI', system-ui, sans-serif; font-size: 38px; font-weight: 700; letter-spacing: 0.12em;">SCORE</div>
+      <div style="font-size: 34px; line-height: 1.45; color: #3d3d3d;">Necessity = performance with &minus; without, on a <em>scored task outcome</em> &mdash; not an influence score.</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      <div style="font-size: 84px; font-weight: 700; color: {{accent}}; line-height: 1;">3</div>
+      <div style="font-family: 'Avenir Next', 'Segoe UI', system-ui, sans-serif; font-size: 38px; font-weight: 700; letter-spacing: 0.12em;">CALIBRATE</div>
+      <div style="font-size: 34px; line-height: 1.45; color: #3d3d3d;">Teach invented facts into the weights. If necessity does not fall, the measure is broken. It falls.</div>
+    </div>
+  </div>
+
+  <!-- ============ CENTERPIECE FIGURE ============ -->
+  <div style="margin: 44px 124px 0 124px; display: flex; flex-direction: column; gap: 22px;">
+    <div style="background: #ffffff; border: 3px solid #161616; padding: 40px 44px 28px 44px;">
+      <img src="figure.svg" style="width: 86%; height: auto; display: block; margin: 0 auto;" alt="Necessity dose-response: five model families collapse from 1.0 to near 0 as facts are taught in">
+    </div>
+    <div style="font-size: 33px; line-height: 1.45; color: #3d3d3d; max-width: 2056px;"><strong style="color: #161616;">The calibration, measured.</strong> Five base-model lineages &times; three seeds &times; a 21-point teaching gradient: necessity collapses 1.00&nbsp;&rarr;&nbsp;&le;0.05 in every family, each with its transition at a different point &mdash; not an artifact of any one model. Every value traces to a committed audit log.</div>
+  </div>
+
+  <!-- ============ TWO FINDINGS ============ -->
+  <div style="margin: 44px 124px 0 124px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 56px;">
+
+    <div style="border: 3px solid #161616; background: #ffffff; padding: 40px 44px; display: flex; flex-direction: column; gap: 22px;">
+      <div style="font-size: 46px; font-weight: 700;">Knowing &ne; doing</div>
+      <div style="font-size: 31px; line-height: 1.45; color: #3d3d3d;">Teach a ship&rsquo;s autopilot a hidden hazard <em>as prose</em>: it can now <strong>say</strong> the fact (recall 0.00&nbsp;&rarr;&nbsp;0.78) &mdash; but its scored steering decision does not move. Only <em>reason-then-decide</em> pulls the knowledge into the action.</div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; font-family: 'Avenir Next', 'Segoe UI', system-ui, sans-serif;">
+        <div style="border: 2px solid #9A9A93; padding: 16px 20px;">
+          <div style="font-size: 24px; color: #5b5b5b;">naive &middot; single-shot</div>
+          <div style="font-size: 46px; font-weight: 700;">667</div>
+          <div style="font-size: 24px; color: #5b5b5b;">grounds</div>
+        </div>
+        <div style="border: 2px solid #9A9A93; padding: 16px 20px;">
+          <div style="font-size: 24px; color: #5b5b5b;">taught &middot; single-shot</div>
+          <div style="font-size: 46px; font-weight: 700;">667</div>
+          <div style="font-size: 24px; color: #5b5b5b;">knows, doesn&rsquo;t do</div>
+        </div>
+        <div style="border: 2px solid #9A9A93; padding: 16px 20px;">
+          <div style="font-size: 24px; color: #5b5b5b;">naive &middot; reason first</div>
+          <div style="font-size: 46px; font-weight: 700;">669.5</div>
+          <div style="font-size: 24px; color: #5b5b5b;">grounds</div>
+        </div>
+        <div style="border: 3px solid {{accent}}; padding: 16px 20px; background: #f0f5fc;">
+          <div style="font-size: 24px; color: #5b5b5b;">taught &middot; reason first</div>
+          <div style="font-size: 46px; font-weight: 700; color: {{accent}};">0.3</div>
+          <div style="font-size: 24px; color: {{accent}};">clears &mdash; gap closed</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="border: 3px solid #EB6834; background: #fdf3ee; padding: 40px 44px; display: flex; flex-direction: column; gap: 22px;">
+      <div style="font-size: 46px; font-weight: 700;">The misled blind spot</div>
+      <div style="font-size: 31px; line-height: 1.45; color: #3d3d3d;">A learner faithfully following a <strong>wrong</strong> retrieved rule looks <em>maximally reliant</em> &mdash; remove the rule and its decision swings hard &mdash; yet it is actively harmed. Influence and faithfulness metrics cannot see this case.</div>
+      <div style="font-size: 31px; line-height: 1.45; color: #3d3d3d;">Reading necessity as <strong>decision-changes &times; succeeds-with</strong> separates real reliance from faithful compliance with a harmful rule &mdash; the failure this instrument exists to expose.</div>
+      <div style="font-family: 'Avenir Next', 'Segoe UI', system-ui, sans-serif; font-size: 28px; color: #a04a22; border-top: 2px solid #EB6834; padding-top: 18px;">Live-model demonstration: a wrong rule made the harmful maneuver 8&times; more likely &mdash; and the model explained why it was safe.</div>
+    </div>
+  </div>
+
+  <!-- ============ FOOTER ============ -->
+  <div style="margin-top: auto; background: #161616; color: #f5f4f1; padding: 48px 124px; display: flex; align-items: center; gap: 64px;">
+    <div style="display: flex; flex-direction: column; gap: 22px; flex-grow: 1;">
+      <div style="font-size: 36px; font-weight: 700;">Paper &middot; plain-language companion &middot; full pipeline &middot; per-fact audit logs</div>
+      <div style="font-size: 30px; line-height: 1.45; color: #b9b7b2;">Every number in the paper traces to a committed file. Offline self-check reproduces the ground truth with no GPU and no API key: <span style="font-family: ui-monospace, 'Courier New', monospace;">npm run reproduce</span></div>
+      <div style="font-size: 28px; color: #8f8d88;">Simulation-based mechanism evidence &mdash; the pre-human-study screen, honestly scoped.</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 18px;">
+      <div style="background: #ffffff; padding: 18px;"><img src="qr.png" style="width: 224px; height: 224px; display: block;" alt="QR code to the repository"></div>
+      <div style="font-family: 'Avenir Next', 'Segoe UI', system-ui, sans-serif; font-size: 28px; color: #b9b7b2;">github.com/wrgr/socratic-scenarios</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#2A78D6","options":["#2A78D6","#EB6834","#0B8A5A","#161616"]},"$preview":{"width":2304,"height":3456}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#2A78D6' };
+  }
+}
+</script>
+</body>
+</html>
