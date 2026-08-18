@@ -1,0 +1,7 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 2304, "h": 3456, "title": "Research Poster 24x36", "print": "fixed" },
+    { "file": "TeachMe.dc.html", "x": 2504, "y": 0, "w": 2304, "h": 3456, "title": "TeachMe Platform Poster 24x36", "print": "fixed" }
+  ],
+  "launch": { "view": "canvas" }
+}
