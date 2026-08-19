@@ -1,0 +1,199 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+  </style>
+</helmet>
+<div style="width: 3840px; height: 2160px; background: #FFFFFF; color: #1A2230; font-family: Cambria, Georgia, 'Times New Roman', serif; position: relative; overflow: hidden;">
+
+  <!-- ============ HEADER ============ -->
+  <div style="position: absolute; left: 80px; top: 44px; font-family: 'Courier New', Courier, monospace; font-size: 20px; font-weight: 700; letter-spacing: 0.08em; color: #0E5C66;">TEACHME &middot; SOCRATIC SCENARIOS &mdash; RETRIEVAL-AUGMENTED OPERATIONAL TRAINING</div>
+  <div style="position: absolute; right: 80px; top: 44px; font-family: 'Courier New', Courier, monospace; font-size: 20px; font-weight: 700; letter-spacing: 0.08em; color: #C73B2F;">PROTOTYPE &middot; SIMULATION-VALIDATED</div>
+  <div style="position: absolute; left: 80px; top: 92px; width: 3680px; font-size: 72px; line-height: 1.1; font-weight: 700; color: #1A2230;">TeachMe &mdash; Retrieve for the learner, not just the query.</div>
+
+  <!-- ============ LEFT COLUMN ============ -->
+  <!-- intro card -->
+  <div style="position: absolute; left: 80px; top: 226px; width: 1820px; height: 296px; background: #E4E1DB;">
+    <div style="position: absolute; left: 0; top: 0; width: 10px; height: 296px; background: #C73B2F;"></div>
+    <div style="position: absolute; left: 40px; top: 30px; width: 1740px; font-size: 27px; line-height: 1.32;">TeachMe is a domain-agnostic platform for training users to operate complex, safety-critical equipment. It combines educational frameworks, agent-guided instruction, and retrieval from an expert-reviewed knowledge graph to provide grounded guidance, adaptive practice, and mastery-based progression.</div>
+    <div style="position: absolute; left: 40px; top: 158px; width: 1740px; font-size: 23px; line-height: 1.32; font-style: italic; color: #333B45;">A technician learning the Optomec HD2 &mdash; or a mariner learning the rules of the road &mdash; needs answers at the right level of complexity, with a guarantee that the system will never hallucinate a safety value. If a technician internalizes even one incorrect parameter during training, they may leave more dangerous than when they started.</div>
+  </div>
+
+  <!-- architecture -->
+  <div style="position: absolute; left: 80px; top: 560px; width: 1820px; height: 296px; background: #131A24;">
+    <div style="position: absolute; left: 36px; top: 26px; font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: 700; color: #3DDCC6;">Architecture Overview</div>
+    <div style="position: absolute; left: 36px; top: 94px; width: 1748px; display: flex; align-items: stretch;">
+      <div style="flex: 1; border: 3px solid #3DDCC6; padding: 20px 16px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-family: 'Courier New', Courier, monospace; font-size: 21px; font-weight: 700; color: #3DDCC6;">Knowledge Graph</div>
+        <div style="font-family: 'Courier New', Courier, monospace; font-size: 16px; line-height: 1.35; color: #8B95A1;">typed nodes and edges</div>
+      </div>
+      <div style="width: 34px; display: flex; align-items: center; justify-content: center; color: #3DDCC6; font-size: 28px;">&rarr;</div>
+      <div style="flex: 1; border: 3px solid #3DDCC6; padding: 20px 16px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-family: 'Courier New', Courier, monospace; font-size: 21px; font-weight: 700; color: #3DDCC6;">Learner Model</div>
+        <div style="font-family: 'Courier New', Courier, monospace; font-size: 16px; line-height: 1.35; color: #8B95A1;">proficiency + mastery gates</div>
+      </div>
+      <div style="width: 34px; display: flex; align-items: center; justify-content: center; color: #3DDCC6; font-size: 28px;">&rarr;</div>
+      <div style="flex: 1; border: 3px solid #3DDCC6; padding: 20px 16px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-family: 'Courier New', Courier, monospace; font-size: 21px; font-weight: 700; color: #3DDCC6;">Retrieval</div>
+        <div style="font-family: 'Courier New', Courier, monospace; font-size: 16px; line-height: 1.35; color: #8B95A1;">graph + prompt enricher</div>
+      </div>
+      <div style="width: 34px; display: flex; align-items: center; justify-content: center; color: #3DDCC6; font-size: 28px;">&rarr;</div>
+      <div style="flex: 1; border: 3px solid #3DDCC6; padding: 20px 16px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-family: 'Courier New', Courier, monospace; font-size: 21px; font-weight: 700; color: #3DDCC6;">Mentor + Narrator</div>
+        <div style="font-family: 'Courier New', Courier, monospace; font-size: 16px; line-height: 1.35; color: #8B95A1;">two-agent architecture</div>
+      </div>
+      <div style="width: 34px; display: flex; align-items: center; justify-content: center; color: #3DDCC6; font-size: 28px;">&rarr;</div>
+      <div style="flex: 1; border: 3px solid #3DDCC6; padding: 20px 16px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-family: 'Courier New', Courier, monospace; font-size: 21px; font-weight: 700; color: #3DDCC6;">Instructional Modes</div>
+        <div style="font-family: 'Courier New', Courier, monospace; font-size: 16px; line-height: 1.35; color: #8B95A1;">Socratic, Scenario, Reachback, Lab</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- continuum -->
+  <div style="position: absolute; left: 80px; top: 900px; font-size: 32px; font-weight: 700; color: #C73B2F;">Five-Level Expertise Continuum</div>
+  <div style="position: absolute; left: 80px; top: 962px; width: 1820px; height: 226px;">
+    <div style="position: absolute; left: 40px; right: 40px; top: 62px; border-top: 3px dashed #DDE3E8;"></div>
+    <div style="position: absolute; left: 116px;  top: 51px; width: 26px; height: 26px; border-radius: 50%; background: #0E5C66;"></div>
+    <div style="position: absolute; left: 485px;  top: 46px; width: 34px; height: 34px; border-radius: 50%; background: #0E5C66;"></div>
+    <div style="position: absolute; left: 854px;  top: 41px; width: 43px; height: 43px; border-radius: 50%; background: #0E5C66;"></div>
+    <div style="position: absolute; left: 1223px; top: 37px; width: 52px; height: 52px; border-radius: 50%; background: #0E5C66;"></div>
+    <div style="position: absolute; left: 1592px; top: 32px; width: 60px; height: 60px; border-radius: 50%; background: #FFFFFF; border: 5px solid #0E5C66; box-sizing: border-box;"></div>
+    <div style="position: absolute; left: 34px; top: 112px; width: 190px; text-align: center;"><div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 20px; font-weight: 700;">Complete Novice</div><div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; color: #55606E;">no lab background</div></div>
+    <div style="position: absolute; left: 407px; top: 112px; width: 190px; text-align: center;"><div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 20px; font-weight: 700;">Novice</div><div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; color: #55606E;">eng. tech, new domain</div></div>
+    <div style="position: absolute; left: 780px; top: 112px; width: 190px; text-align: center;"><div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 20px; font-weight: 700;">Naive</div><div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; color: #55606E;">vocabulary only</div></div>
+    <div style="position: absolute; left: 1154px; top: 112px; width: 190px; text-align: center;"><div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 20px; font-weight: 700;">Intermediate</div><div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; color: #55606E;">supervised hands-on</div></div>
+    <div style="position: absolute; left: 1527px; top: 112px; width: 190px; text-align: center;"><div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 20px; font-weight: 700;">Proficient</div><div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; color: #55606E;">SOPs + physics + cues</div></div>
+    <div style="position: absolute; left: 0; top: 178px; width: 1820px; text-align: center; font-family: 'Courier New', Courier, monospace; font-size: 18px; font-weight: 700; letter-spacing: 0.06em; color: #0E5C66;">ADAPTIVE SCAFFOLDING AT EVERY LEVEL &rarr; DISTAL TRANSFER</div>
+  </div>
+
+  <!-- if this works -->
+  <div style="position: absolute; left: 80px; top: 1232px; width: 1820px; height: 168px; background: #E3ECEE;">
+    <div style="position: absolute; left: 0; top: 0; width: 10px; height: 168px; background: #0E5C66;"></div>
+    <div style="position: absolute; left: 44px; top: 22px; font-family: 'Courier New', Courier, monospace; font-size: 23px; font-weight: 700; color: #0E5C66;">IF THIS WORKS</div>
+    <div style="position: absolute; left: 44px; top: 62px; width: 1200px; font-size: 25px; line-height: 1.3;">A technician reaches independent, unsupervised operation faster and with fewer escalations &mdash; because training builds far-transfer diagnostic capability, not recall.</div>
+    <div style="position: absolute; left: 1300px; top: 24px; width: 480px;">
+      <div style="font-family: 'Courier New', Courier, monospace; font-size: 20px; font-weight: 700; color: #0E5C66;">TARGET</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 16.5px; line-height: 1.3; color: #333B45; margin-top: 5px;">far-transfer performance on novel fault combinations vs. direct instruction &mdash; not yet measured on real learners; the Workflow Demo exists to de-risk this bet first.</div>
+    </div>
+  </div>
+
+  <!-- questions + QR -->
+  <div style="position: absolute; left: 80px; top: 1444px; font-family: 'Courier New', Courier, monospace; font-size: 23px; font-weight: 700; color: #C73B2F;">THE QUESTIONS WE&rsquo;RE CHASING</div>
+  <div style="position: absolute; left: 80px; top: 1492px; width: 1400px; font-size: 35px; line-height: 1.22; font-weight: 700;">How do we effectively use AI in high-consequence environments?</div>
+  <div style="position: absolute; left: 80px; top: 1608px; width: 1400px; display: flex; flex-direction: column; gap: 20px;">
+    <div style="display: flex; gap: 20px; align-items: baseline;"><div style="font-family: 'Courier New', Courier, monospace; font-size: 19px; font-weight: 700; color: #C73B2F; flex: 0 0 46px;">Q1</div><div style="font-size: 23px; line-height: 1.32; color: #1C2331;">Do learners trained on injected faults diagnose novel fault combinations better than those taught by direct instruction?</div></div>
+    <div style="display: flex; gap: 20px; align-items: baseline;"><div style="font-family: 'Courier New', Courier, monospace; font-size: 19px; font-weight: 700; color: #C73B2F; flex: 0 0 46px;">Q2</div><div style="font-size: 23px; line-height: 1.32; color: #1C2331;">Does passing a mastery gate predict safe, unsupervised operation on the real equipment?</div></div>
+    <div style="display: flex; gap: 20px; align-items: baseline;"><div style="font-family: 'Courier New', Courier, monospace; font-size: 19px; font-weight: 700; color: #C73B2F; flex: 0 0 46px;">Q3</div><div style="font-size: 23px; line-height: 1.32; color: #1C2331;">How far can the learning sciences take operational readiness in high-consequence work?</div></div>
+  </div>
+  <div style="position: absolute; left: 1560px; top: 1490px; width: 300px; height: 300px; background: #FFFFFF;"><img src="qr.png" style="width: 100%; height: 100%; display: block;" alt="QR code to the repository"></div>
+  <div style="position: absolute; left: 1490px; top: 1800px; width: 440px; text-align: center; font-family: 'Courier New', Courier, monospace; font-size: 17px; color: #55606E;">github.com/wrgr/socratic-scenarios</div>
+
+  <!-- ============ RIGHT COLUMN ============ -->
+  <!-- what's working now: 2x2 -->
+  <div style="position: absolute; left: 1980px; top: 226px; font-size: 40px; font-weight: 700; color: #C73B2F;">What&rsquo;s Working Now</div>
+  <div style="position: absolute; left: 1980px; top: 288px; font-family: 'Courier New', Courier, monospace; font-size: 17px; font-weight: 700; letter-spacing: 0.04em; color: #0E5C66;">NEW: WE NOW MEASURE WHETHER THE TUTOR ACTUALLY USES ITS CORPUS (COMPANION POSTER)</div>
+  <div style="position: absolute; left: 1980px; top: 336px; width: 1780px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px;">
+    <div style="background: #FFFFFF; border: 2px solid #DDE3E8; padding: 26px 30px; height: 288px; box-sizing: border-box; display: flex; flex-direction: column;">
+      <div style="font-family: 'Courier New', Courier, monospace; font-size: 17px; font-weight: 700; color: #0E5C66;">01</div>
+      <div style="font-size: 26px; font-weight: 700; margin-top: 8px;">Corpus-bound Narrator</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 19px; line-height: 1.32; color: #55606E; margin-top: 8px;">Reports machine behavior verbatim from reviewed graph nodes; cannot generate from model weights.</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 19px; line-height: 1.32; color: #0E5C66; margin-top: auto;">&rarr; so a learner can&rsquo;t internalize a hallucinated safety value; a silent corpus shows the gap, never fabricates it.</div>
+    </div>
+    <div style="background: #FFFFFF; border: 2px solid #DDE3E8; padding: 26px 30px; height: 288px; box-sizing: border-box; display: flex; flex-direction: column;">
+      <div style="font-family: 'Courier New', Courier, monospace; font-size: 17px; font-weight: 700; color: #0E5C66;">02</div>
+      <div style="font-size: 26px; font-weight: 700; margin-top: 8px;">Typed causal graph</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 19px; line-height: 1.32; color: #55606E; margin-top: 8px;">100+ nodes, six fault domains: Symptom&rarr;FailureMode&rarr;CorrectiveAction with SafetyHazard co-retrieved along the chain.</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 19px; line-height: 1.32; color: #0E5C66; margin-top: auto;">&rarr; so safety context travels with the diagnosis instead of being a separate lookup a flat store can miss.</div>
+    </div>
+    <div style="background: #FFFFFF; border: 2px solid #DDE3E8; padding: 26px 30px; height: 288px; box-sizing: border-box; display: flex; flex-direction: column;">
+      <div style="font-family: 'Courier New', Courier, monospace; font-size: 17px; font-weight: 700; color: #0E5C66;">03</div>
+      <div style="font-size: 26px; font-weight: 700; margin-top: 8px;">Dual-axis mastery gates</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 19px; line-height: 1.32; color: #55606E; margin-top: 8px;">Declarative proficiency (Socratic probes) must clear before procedural practice; gates are transparent and auditable.</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 19px; line-height: 1.32; color: #0E5C66; margin-top: auto;">&rarr; so an instructor can point at a score and say exactly why the system advanced or held a learner.</div>
+    </div>
+    <div style="background: #FFFFFF; border: 2px solid #DDE3E8; padding: 26px 30px; height: 288px; box-sizing: border-box; display: flex; flex-direction: column;">
+      <div style="font-family: 'Courier New', Courier, monospace; font-size: 17px; font-weight: 700; color: #0E5C66;">04</div>
+      <div style="font-size: 26px; font-weight: 700; margin-top: 8px;">Four modes, one progression</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 19px; line-height: 1.32; color: #55606E; margin-top: 8px;">Socratic Practice &rarr; Scenario Mode (deterministic fault injection) &rarr; Reachback Lookup &rarr; Retrieval Lab.</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 19px; line-height: 1.32; color: #0E5C66; margin-top: auto;">&rarr; so training load is sequenced and instructors inspect what retrieval will surface before a learner sees it.</div>
+    </div>
+  </div>
+
+  <!-- one engine, three domains -->
+  <div style="position: absolute; left: 1980px; top: 1010px; font-size: 32px; font-weight: 700; color: #C73B2F;">One Engine, Three Domains</div>
+  <div style="position: absolute; left: 1980px; top: 1066px; width: 1780px; height: 258px; background: #FFFFFF; border: 2px solid #DDE3E8; box-sizing: border-box; padding: 22px 30px; display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div style="font-size: 22px; font-weight: 700;">EDDIE &middot; Aerosol Jet Printing &mdash; flagship</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 18px; line-height: 1.3; color: #55606E;">Optomec HD2 operator training; 100+ nodes, six fault domains, hazards co-retrieved.</div>
+    </div>
+    <div>
+      <div style="font-size: 22px; font-weight: 700;">Roadside Tire Change</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 18px; line-height: 1.3; color: #55606E;">authored as graph + corpus alone &mdash; inherits probes, scenarios, gates, consequences.</div>
+    </div>
+    <div>
+      <div style="font-size: 22px; font-weight: 700;">COLREG Collision Avoidance</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 18px; line-height: 1.3; color: #55606E;">rules of the road + interactive simulator: real kinematics, Collision Risk Index, per-rule scoring.</div>
+    </div>
+  </div>
+  <div style="position: absolute; left: 1980px; top: 1338px; width: 1780px; font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 19px; color: #0E5C66;">&rarr; so a new domain is an authoring task, not a software project.</div>
+
+  <!-- honesty panel -->
+  <div style="position: absolute; left: 1980px; top: 1398px; width: 1780px; height: 520px; background: #1A2230; padding: 32px 44px; box-sizing: border-box;">
+    <div style="font-family: 'Courier New', Courier, monospace; font-size: 30px; font-weight: 700; color: #8B95A1;">HOW WE KEEP OURSELVES HONEST</div>
+    <div style="font-size: 25px; line-height: 1.3; color: #3DDCC6; margin-top: 10px; font-style: italic;">&ldquo;In safety-critical training, &lsquo;I don&rsquo;t know, but here&rsquo;s the SOP for this state&rsquo; beats a confident wrong answer.&rdquo;</div>
+    <div style="display: grid; grid-template-columns: 300px 1fr 100px 480px; column-gap: 30px; row-gap: 9px; margin-top: 20px; align-items: start;">
+      <div style="font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: 700; color: #8B95A1;">SIGNAL</div>
+      <div style="font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: 700; color: #8B95A1;">WHAT IT CAN CLAIM</div>
+      <div style="font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: 700; color: #8B95A1;">TRUST</div>
+      <div style="font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: 700; color: #8B95A1;">CAN&rsquo;T RULE OUT</div>
+      <div style="grid-column: 1 / -1; border-top: 2px solid #333B45;"></div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; color: #D7D2C8;">Corpus-bound Narrator</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; line-height: 1.28; color: #D7D2C8;">Eliminates hallucinated machine behavior by construction &mdash; every observable traces to a reviewed node.</div>
+      <div style="font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: 700; color: #3DDCC6;">strong</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; line-height: 1.28; color: #8B95A1;">states outside the authored fault domains aren&rsquo;t narratable (a coverage gap, made visible not hidden)</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; color: #D7D2C8;">Corpus necessity audit</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; line-height: 1.28; color: #D7D2C8;">We test whether answers actually depend on the corpus &mdash; a calibrated screen, verified on five different base models, before any human trial.</div>
+      <div style="font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: 700; color: #3DDCC6;">strong</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; line-height: 1.28; color: #8B95A1;">evidence is from simulation &mdash; it audits the tutor&rsquo;s grounding, not how well humans learn</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; color: #D7D2C8;">Dual-axis learner model</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; line-height: 1.28; color: #D7D2C8;">Transparent, auditable tutor decisions, inspectable in the Retrieval Lab.</div>
+      <div style="font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: 700; color: #3DDCC6;">strong</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; line-height: 1.28; color: #8B95A1;">deliberately simpler than probabilistic knowledge tracing &mdash; may miss subtler learner states</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; color: #D7D2C8;">Far-transfer outcome</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; line-height: 1.28; color: #D7D2C8;">PBL design targets far transfer to novel fault combinations.</div>
+      <div style="font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: 700; color: #C73B2F;">weak</div>
+      <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; line-height: 1.28; color: #8B95A1;">whether the simulated-learner loop predicts real technician outcomes</div>
+      <div style="grid-column: 1 / -1; border-top: 2px solid #333B45;"></div>
+      <div style="grid-column: 1 / -1; font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 17px; line-height: 1.28; color: #8B95A1;"><span style="font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: 700; color: #C73B2F;">LEFT OUT ON PURPOSE&nbsp;&nbsp;</span> free-running text generation. The Narrator can only quote the reviewed corpus &mdash; so no prompt, and no jailbreak, can make it invent machine behavior.</div>
+    </div>
+  </div>
+
+  <!-- ============ FOOTER ============ -->
+  <div style="position: absolute; left: 80px; top: 1980px; right: 80px; border-top: 2px solid #DDE3E8;"></div>
+  <div style="position: absolute; left: 80px; top: 2004px; display: flex; gap: 100px; font-family: 'Courier New', Courier, monospace; font-size: 20px; font-weight: 700; color: #C73B2F;">
+    <div>Mia Ndousse-Fetter</div>
+    <div>William Gray-Roncal</div>
+    <div>And Team</div>
+  </div>
+  <div style="position: absolute; left: 1350px; top: 2007px; font-family: 'Courier New', Courier, monospace; font-size: 18px; color: #55606E;">TeachMe &middot; one engine, many domains &mdash; retrieve what teaches, not just what matches.</div>
+  <div style="position: absolute; right: 80px; top: 2007px; font-family: 'Courier New', Courier, monospace; font-size: 18px; color: #55606E;">APL</div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#0E5C66","options":["#0E5C66","#C73B2F","#2A78D6","#161616"]},"$preview":{"width":3840,"height":2160}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#0E5C66' };
+  }
+}
+</script>
+</body>
+</html>
