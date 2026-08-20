@@ -95,6 +95,14 @@ export interface MentorEvaluation {
    * (e.g. an alert banner) rather than as a normal score.
    */
   degraded?: boolean;
+  /**
+   * Which engine produced this evaluation. 'deterministic' means the keyless
+   * keyword-rubric fallback (see deterministic-mentor.ts) — a coverage match
+   * against the probe's expectedConcepts, not language understanding. The UI
+   * must render that distinctly so a rubric match is never presented as LLM
+   * judgment. Absent/'llm' means a chat-completion model evaluated the answer.
+   */
+  engine?: 'llm' | 'deterministic';
 }
 
 /** The core evaluation before provenance tagging is attached. */
@@ -103,6 +111,12 @@ type MentorEvaluationCore = Omit<MentorEvaluation, 'grounded' | 'groundingNodeId
 /** Mentor service — evaluate a learner response and generate a follow-up probe. */
 export interface MentorService {
   evaluate(ctx: MentorContext): Promise<MentorEvaluation>;
+  /**
+   * True for the keyless deterministic fallback. Views use this to hide the
+   * ablation (provenance) toggle — the deterministic scorer never reads
+   * retrievalContext, so a with/without-corpus diff is meaningless for it.
+   */
+  deterministic?: boolean;
 }
 
 // ─── Singleton Registry ───────────────────────────────────────────

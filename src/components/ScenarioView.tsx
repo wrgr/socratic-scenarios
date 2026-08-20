@@ -540,7 +540,7 @@ function MentorReflectionPanel({
               </button>
             )}
           </div>
-          {mentorService && !readOnly && (
+          {mentorService && !mentorService.deterministic && !readOnly && (
             <ProvenanceToggle
               checked={ablationOn}
               onChange={setAblationOn}

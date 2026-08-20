@@ -357,7 +357,7 @@ function ProbePanel({
               </button>
             )}
           </div>
-          {mentorService && (
+          {mentorService && !mentorService.deterministic && (
             <ProvenanceToggle
               checked={ablationOn}
               onChange={setAblationOn}
