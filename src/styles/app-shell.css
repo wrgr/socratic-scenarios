@@ -500,6 +500,97 @@ a.app-masthead-pedagogy-btn {
   animation: ajpFadeUp 300ms ease both;
 }
 
+/* Capability → Evidence → Metric map (drawer section after the pillars).
+   Stacked rows, not a table — the drawer is min(480px, 100vw) wide. */
+.pedagogy-evidence {
+  margin-top: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.pedagogy-evidence-title {
+  font-size: 0.98rem;
+  margin: 0;
+}
+
+.pedagogy-evidence-intro {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 0 0 0.2rem;
+}
+
+.pedagogy-evidence-row {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card-hover);
+  padding: 0.7rem 0.85rem;
+  animation: ajpFadeUp 300ms ease both;
+}
+
+.pedagogy-evidence-row--planned {
+  border-style: dashed;
+  background: transparent;
+}
+
+.pedagogy-evidence-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.pedagogy-evidence-capability {
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.pedagogy-evidence-status {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.pedagogy-evidence-status--live {
+  color: #3ddcc6;
+  border: 1px solid rgba(61, 220, 198, 0.45);
+}
+
+.pedagogy-evidence-status--measured-offline {
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.pedagogy-evidence-status--planned {
+  color: var(--text-dim);
+  border: 1px dashed var(--border);
+}
+
+.pedagogy-evidence-claim {
+  font-size: 0.85rem;
+  margin: 0.4rem 0 0.35rem;
+}
+
+.pedagogy-evidence-metric,
+.pedagogy-evidence-surface {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0 0 0.25rem;
+}
+
+.pedagogy-evidence-metric-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-right: 0.35rem;
+}
+
 @media (max-width: 560px) {
   .pedagogy-drawer {
     width: 100vw;

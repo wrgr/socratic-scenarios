@@ -17,7 +17,7 @@
 import { getEmbeddingProvider } from './index';
 import { retrieveFromGraphAsync } from './graph-retrieval';
 import type { CausalChainResult, NodeMatchTrace } from './graph-retrieval';
-import { queryDense, getDenseBackend } from './dense-retrieval';
+import { queryDense, queryDenseLexical } from './dense-retrieval';
 import type { DenseMatch } from './dense-retrieval';
 
 // ─── Types ────────────────────────────────────────────────────────
@@ -39,6 +39,13 @@ export interface HybridResult {
   /** True when the dense corpus is loaded and returned results. */
   hasDenseData: boolean;
   /**
+   * How the dense matches were scored: 'embedding' (semantic cosine over
+   * baked vectors — Gemini key mode) or 'lexical' (TF-IDF keyword overlap
+   * on chunk text — simulated/no-key mode). Undefined when no dense tier ran.
+   * Surfaces in the UI so a keyword hit is never presented as a semantic one.
+   */
+  denseTier?: 'embedding' | 'lexical';
+  /**
    * Intermediate per-node match scores from the graph tier — shows exactly which
    * Symptom and FailureMode nodes matched the query and at what Jaccard score,
    * before chain traversal. Useful for debugging retrieval quality.
@@ -59,7 +66,6 @@ export async function retrieveHybrid(query: HybridQuery): Promise<HybridResult> 
 
   // Provider is checked once so both graph and dense tiers use the same instance
   const provider = getEmbeddingProvider();
-  const hasBackend = getDenseBackend().hasData();
 
   // Graph retrieval: use semantic matching when a provider is available,
   // otherwise fall back to Jaccard. Both run asynchronously here so dense
@@ -72,9 +78,17 @@ export async function retrieveHybrid(query: HybridQuery): Promise<HybridResult> 
 
   let denseMatches: DenseMatch[] = [];
   let hasDenseData = false;
+  let denseTier: 'embedding' | 'lexical' | undefined;
 
-  if (provider && hasBackend) {
-    try {
+  // NOTE: do NOT pre-gate on getDenseBackend().hasData() — the corpus is
+  // lazy-loaded inside queryDense*, so before the first query hasData() is
+  // always false and the dense tier would never connect (that exact bug
+  // shipped: chat modes ran graph-only forever unless the RAG Coverage view
+  // happened to warm the cache first).
+  try {
+    if (provider) {
+      // Embedding path first: queryDense loads the corpus and refuses to
+      // score vectors from a different model space (modelMismatch).
       const [embedding] = await provider.embed([symptomText]);
       const denseResult = await queryDense({
         queryEmbedding: embedding,
@@ -82,18 +96,34 @@ export async function retrieveHybrid(query: HybridQuery): Promise<HybridResult> 
         topK: denseTopK,
         minScore: 0.35,
       });
-      denseMatches = denseResult.matches;
-      hasDenseData = denseResult.hasData && denseResult.matches.length > 0;
-    } catch (err) {
-      // Embedding call failed — degrade gracefully to graph-only
-      console.warn('[HybridRetrieval] Dense retrieval failed, using graph only:', err);
+      if (denseResult.modelMismatch) {
+        // Simulated/no-key mode against a baked corpus: provider vectors are
+        // per-call TF-IDF spaces that can't be cosine'd against the corpus
+        // embeddings. Fall back to lexical TF-IDF over chunk text so the
+        // corpus stays reachable without a key.
+        const lexResult = await queryDenseLexical({
+          queryText: symptomText,
+          topK: denseTopK,
+        });
+        denseMatches = lexResult.matches;
+        hasDenseData = lexResult.hasData && lexResult.matches.length > 0;
+        denseTier = denseMatches.length > 0 ? 'lexical' : undefined;
+      } else {
+        denseMatches = denseResult.matches;
+        hasDenseData = denseResult.hasData && denseResult.matches.length > 0;
+        denseTier = denseMatches.length > 0 ? 'embedding' : undefined;
+      }
     }
+  } catch (err) {
+    // Embedding call failed — degrade gracefully to graph-only
+    console.warn('[HybridRetrieval] Dense retrieval failed, using graph only:', err);
   }
 
   return {
     graphChains: graphResult.chains,
     denseMatches,
     hasDenseData,
+    denseTier,
     nodeMatchTrace: graphResult.nodeMatchTrace,
     queryText: symptomText,
     timestamp: Date.now(),

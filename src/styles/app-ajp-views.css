@@ -125,6 +125,22 @@
   letter-spacing: 0.04em;
 }
 
+/* Tier badge on dense results — labels keyword-fallback hits so a lexical
+   match is never presented as a semantic one. */
+.dense-tier-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
 .in-op-results-block {
   margin-bottom: 1.5rem;
 }

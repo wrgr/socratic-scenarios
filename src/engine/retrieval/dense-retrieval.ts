@@ -93,7 +93,20 @@ function loadChunks(): Promise<DenseChunk[]> {
 
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}${ref}`);
-      if (!res.ok) return (_chunks = []);
+      if (!res.ok) {
+        console.error(`[DenseRetrieval] Corpus fetch failed: ${ref} → HTTP ${res.status}`);
+        return (_chunks = []);
+      }
+      // Guard against the SPA fallback: a missing file behind try_files
+      // returns 200 + index.html, and res.json() would throw with a message
+      // that hides the real cause.
+      const contentType = res.headers.get('content-type') ?? '';
+      if (contentType.includes('text/html')) {
+        console.error(
+          `[DenseRetrieval] Corpus fetch for ${ref} returned HTML (SPA fallback) — file missing from the deploy`,
+        );
+        return (_chunks = []);
+      }
       const data = await res.json() as { chunks?: DenseChunk[]; model?: string };
       _chunks = Array.isArray(data.chunks) ? data.chunks : [];
       _corpusModel = data.model;
@@ -101,7 +114,8 @@ function loadChunks(): Promise<DenseChunk[]> {
         `[DenseRetrieval] Loaded ${_chunks.length} corpus chunks from ${ref} (model: ${_corpusModel ?? 'unknown'})`,
       );
       return _chunks;
-    } catch {
+    } catch (err) {
+      console.error(`[DenseRetrieval] Corpus load failed for ${ref}:`, err);
       return (_chunks = []);
     }
   })();
@@ -188,6 +202,98 @@ export interface DenseRetrievalResult {
   modelMismatch?: boolean;
 }
 
+// ─── Lexical Fallback Query ───────────────────────────────────────
+
+/**
+ * TF-IDF lexical scoring over chunk *text*, for providers whose vectors
+ * can't be compared against the baked corpus embeddings (the simulated
+ * TF-IDF provider has no modelId and emits per-call vector spaces). This
+ * keeps the dense corpus reachable in no-key/simulated mode: matches are
+ * genuine keyword-overlap hits on the ingested SOP text, not semantic
+ * neighbors, and callers should label them as such.
+ */
+let _lexicalIndex: { docTerms: Map<string, number>[]; docFreq: Map<string, number> } | null = null;
+
+function tokenizeLexical(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t.length > 2);
+}
+
+function buildLexicalIndex(chunks: DenseChunk[]) {
+  const docTerms: Map<string, number>[] = [];
+  const docFreq = new Map<string, number>();
+  for (const chunk of chunks) {
+    const tf = new Map<string, number>();
+    const tokens = tokenizeLexical(`${chunk.section} ${chunk.text}`);
+    for (const t of tokens) tf.set(t, (tf.get(t) ?? 0) + 1);
+    for (const t of tf.keys()) docFreq.set(t, (docFreq.get(t) ?? 0) + 1);
+    docTerms.push(tf);
+  }
+  return { docTerms, docFreq };
+}
+
+export interface LexicalRetrievalQuery {
+  queryText: string;
+  topK?: number;
+  /** Minimum normalized lexical score to include. Default 0.05. */
+  minScore?: number;
+}
+
+/**
+ * Query the dense corpus by TF-IDF keyword overlap with the query text.
+ * Loads the corpus if needed. Scores are cosine over TF-IDF weights,
+ * normalized to 0–1 — not comparable to embedding-cosine scores.
+ */
+export async function queryDenseLexical(query: LexicalRetrievalQuery): Promise<DenseRetrievalResult> {
+  const { queryText, topK = 5, minScore = 0.05 } = query;
+  const chunks = await loadChunks();
+  if (chunks.length === 0) return { matches: [], hasData: false };
+
+  if (!_lexicalIndex || _lexicalIndex.docTerms.length !== chunks.length) {
+    _lexicalIndex = buildLexicalIndex(chunks);
+  }
+  const { docTerms, docFreq } = _lexicalIndex;
+  const n = chunks.length;
+
+  const qtf = new Map<string, number>();
+  for (const t of tokenizeLexical(queryText)) qtf.set(t, (qtf.get(t) ?? 0) + 1);
+  if (qtf.size === 0) return { matches: [], hasData: true };
+
+  const idf = (term: string) => Math.log((n + 1) / ((docFreq.get(term) ?? 0) + 1)) + 1;
+  let qNorm = 0;
+  const qWeights = new Map<string, number>();
+  for (const [t, c] of qtf) {
+    const w = c * idf(t);
+    qWeights.set(t, w);
+    qNorm += w * w;
+  }
+  qNorm = Math.sqrt(qNorm);
+
+  const scored = chunks.map((chunk, i) => {
+    const tf = docTerms[i];
+    let dot = 0;
+    let dNorm = 0;
+    for (const [t, c] of tf) {
+      const w = c * idf(t);
+      dNorm += w * w;
+      const qw = qWeights.get(t);
+      if (qw) dot += qw * w;
+    }
+    dNorm = Math.sqrt(dNorm);
+    const score = qNorm > 0 && dNorm > 0 ? dot / (qNorm * dNorm) : 0;
+    return { chunk, score };
+  });
+
+  const matches = scored
+    .filter((m) => m.score >= minScore)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK);
+  return { matches, hasData: true };
+}
+
 /** Query the dense corpus tier. Returns empty results if no data is loaded. */
 export async function queryDense(query: DenseRetrievalQuery): Promise<DenseRetrievalResult> {
   const { queryEmbedding, queryModelId, topK = 5, minScore = 0.3 } = query;
@@ -201,10 +307,15 @@ export async function queryDense(query: DenseRetrievalQuery): Promise<DenseRetri
     return { matches: [], hasData: false };
   }
 
+  // An undefined queryModelId means the provider's vectors live in a per-call
+  // space (simulated TF-IDF) — those must never be cosine'd against baked
+  // embeddings either. The old `corpusModel && queryModelId &&` guard let
+  // undefined slip through: TF-IDF vectors were scored against 3072-dim
+  // Gemini vectors, producing NaN scores and silently-empty results.
   const corpusModel = backend.modelId();
-  if (corpusModel && queryModelId && corpusModel !== queryModelId) {
+  if (corpusModel && corpusModel !== queryModelId) {
     console.warn(
-      `[DenseRetrieval] Skipping dense tier — corpus model "${corpusModel}" does not match query provider "${queryModelId}"`,
+      `[DenseRetrieval] Skipping dense tier — corpus model "${corpusModel}" does not match query provider "${queryModelId ?? '(no modelId)'}" — use queryDenseLexical for keyword fallback`,
     );
     return { matches: [], hasData: true, modelMismatch: true };
   }

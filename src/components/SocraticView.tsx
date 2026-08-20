@@ -367,16 +367,26 @@ function ProbePanel({
         </div>
       )}
 
-      {simulatedResponse && !evaluation && (
-        <div className="sim-learner-bubble">
+      {simulatedResponse && (
+        <div className={`sim-learner-bubble${evaluation ? ' sim-learner-bubble--with-eval' : ''}`}>
           <span className="sim-bubble-label">🎓 LEARNER (simulated)</span>
           <p className="sim-bubble-text">{simulatedResponse}</p>
-          {(loading || simLoading) && (
+          {!evaluation && (loading || simLoading) && (
             <div className="sim-thinking">
               <span className="sim-spinner sim-spinner--inline" />
               <span>Mentor is evaluating…</span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Echo the typed answer once the Mentor replies — without this the
+          textarea (the only place the answer lived) unmounts on evaluation
+          and the learner's own words vanish from the exchange. */}
+      {!simulatedResponse && evaluation && response.trim() && (
+        <div className="sim-learner-bubble sim-learner-bubble--with-eval">
+          <span className="sim-bubble-label">🧑‍🎓 YOUR ANSWER</span>
+          <p className="sim-bubble-text">{response}</p>
         </div>
       )}
 
@@ -453,6 +463,16 @@ function ProbePanel({
               </>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Echo the follow-up answer alongside the final evaluation. */}
+      {followUpEval && (simFollowUpResponse || followUpResponse.trim()) && (
+        <div className="sim-learner-bubble sim-learner-bubble--with-eval">
+          <span className="sim-bubble-label">
+            {simFollowUpResponse ? '🎓 LEARNER (simulated)' : '🧑‍🎓 YOUR FOLLOW-UP'}
+          </span>
+          <p className="sim-bubble-text">{simFollowUpResponse ?? followUpResponse}</p>
         </div>
       )}
 

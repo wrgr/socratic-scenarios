@@ -568,6 +568,16 @@ function MentorReflectionPanel({
         </div>
       )}
 
+      {/* Echo the typed reflection once the Mentor replies — the textarea
+          (the only place the answer lived) unmounts on evaluation, so
+          without this the learner's own words vanish from the exchange. */}
+      {!simulatedResponse && evaluation && response.trim() && (
+        <div className="sim-learner-bubble sim-learner-bubble--with-eval">
+          <span className="sim-bubble-label">🧑‍🎓 YOUR ANSWER</span>
+          <p className="sim-bubble-text">{response}</p>
+        </div>
+      )}
+
       {evaluation && (
         <div className={`mentor-evaluation ${evaluation.masteryPassed ? 'eval--pass' : 'eval--partial'}`}>
           {evaluation.degraded ? (
