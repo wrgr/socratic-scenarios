@@ -58,14 +58,29 @@ function NodeLookupEngineViz({ queryText, trace }: { queryText: string; trace: N
       </p>
     );
   }
-  // Wrap the query into up to 3 short lines that actually fit the box —
-  // a single 42-char line overflowed it and collided with the node column.
+  // Layout: single vertical column of ranked matches with the query at the
+  // left. The old 2×3 grid was structurally broken — every edge from the
+  // query had to pass through the first column of cards to reach the
+  // others, so lines and arrowheads overprinted the cards. A one-column
+  // fan makes crossings impossible and leaves room for full node ids.
+  const rowH = 46;
+  const nh = 38;
+  const nx = 210;
+  const nw = 286;
+  const w = 520;
+  const h = 16 + top.length * rowH;
+  const qw = 150;
+  const qh = 52;
+  const qx = 20;
+  const qy = h / 2 - qh / 2;
+
+  // Wrap the query into up to 3 short lines that fit the box.
   const qLines: string[] = [];
   {
     const words = queryText.split(/\s+/);
     let line = '';
     for (const word of words) {
-      if ((line + ' ' + word).trim().length > 15 && line) {
+      if ((line + ' ' + word).trim().length > 22 && line) {
         qLines.push(line);
         line = word;
         if (qLines.length === 3) break;
@@ -75,15 +90,9 @@ function NodeLookupEngineViz({ queryText, trace }: { queryText: string; trace: N
     }
     if (qLines.length < 3 && line) qLines.push(line);
     if (qLines.length === 3 && words.join(' ').length > qLines.join(' ').length) {
-      qLines[2] = `${qLines[2].slice(0, 13)}…`;
+      qLines[2] = `${qLines[2].slice(0, 20)}…`;
     }
   }
-  const w = 520;
-  const h = 132;
-  const qx = 24;
-  const qy = 46;
-  const qw = 108;
-  const qh = 40;
 
   return (
     <div className="in-op-lookup-viz">
@@ -94,40 +103,30 @@ function NodeLookupEngineViz({ queryText, trace }: { queryText: string; trace: N
           </marker>
         </defs>
         <rect x={qx} y={qy} width={qw} height={qh} rx="8" className="in-op-svg-node in-op-svg-node--query" />
-        <text x={qx + qw / 2} y={qy + qh / 2 + 4 - (qLines.length - 1) * 5} textAnchor="middle" className="in-op-svg-label in-op-svg-label--query">
+        <text x={qx + qw / 2} y={qy + qh / 2 + 4 - (qLines.length - 1) * 5.5} textAnchor="middle" className="in-op-svg-label in-op-svg-label--query">
           {qLines.map((line, i) => (
             <tspan key={i} x={qx + qw / 2} dy={i === 0 ? 0 : 11}>{line}</tspan>
           ))}
         </text>
         {top.map((m, i) => {
-          const nx = 168 + (i % 3) * 112;
-          const ny = 18 + Math.floor(i / 3) * 58;
-          const nw = 104;
-          const nh = 36;
+          const ny = 8 + i * rowH;
           const scorePct = Math.round(m.score * 100);
-          const idShort = m.nodeId.length > 14 ? `${m.nodeId.slice(0, 13)}…` : m.nodeId;
-          const cx = qx + qw;
-          const cy = qy + qh / 2;
-          const tx = nx;
-          const ty = ny + nh / 2;
+          const idShort = m.nodeId.length > 34 ? `${m.nodeId.slice(0, 33)}…` : m.nodeId;
           return (
             <g key={m.nodeId}>
-              <line
-                x1={cx}
-                y1={cy}
-                x2={tx}
-                y2={ty}
+              {/* Curved edge: query right edge → this row's left edge. */}
+              <path
+                d={`M ${qx + qw} ${qy + qh / 2} C ${qx + qw + 30} ${qy + qh / 2}, ${nx - 34} ${ny + nh / 2}, ${nx - 3} ${ny + nh / 2}`}
+                fill="none"
                 className="in-op-svg-edge"
                 markerEnd={`url(#${markerId})`}
               />
               <rect x={nx} y={ny} width={nw} height={nh} rx="6" className={`in-op-svg-node in-op-svg-node--${m.nodeType === 'Symptom' ? 'symptom' : 'fault'}`}>
                 <title>{`${m.nodeId} — ${m.nodeType} · ${scorePct}% · ${m.matchMethod}`}</title>
               </rect>
-              <text x={nx + 6} y={ny + 14} className="in-op-svg-id">{idShort}</text>
-              {/* Abbreviated so the meta fits its box — full detail in the tooltip.
-                  The unabbreviated line overflowed and overprinted the next column. */}
-              <text x={nx + 6} y={ny + 28} className="in-op-svg-meta">
-                {m.nodeType === 'FailureMode' ? 'Fault' : m.nodeType} · {scorePct}% · {m.matchMethod === 'embedding' ? 'emb' : m.matchMethod}
+              <text x={nx + 8} y={ny + 15} className="in-op-svg-id">{idShort}</text>
+              <text x={nx + 8} y={ny + 30} className="in-op-svg-meta">
+                #{i + 1} · {m.nodeType} · {scorePct}% · {m.matchMethod}
               </text>
             </g>
           );
@@ -143,10 +142,10 @@ function CausalChainFlowSvg({ chain }: { chain: CausalChainResult }) {
   const symptoms = chain.symptoms.slice(0, 4);
   const actions = chain.correctiveActions.slice(0, 5);
   const rowH = 34;
-  const leftW = 118;
-  const midW = 132;
-  const rightW = 118;
-  const gap = 28;
+  const leftW = 190;
+  const midW = 200;
+  const rightW = 190;
+  const gap = 34;
   const pad = 16;
   const leftCount = Math.max(symptoms.length, 1);
   const rightCount = Math.max(actions.length, 1);
@@ -156,7 +155,7 @@ function CausalChainFlowSvg({ chain }: { chain: CausalChainResult }) {
   const midX = pad + leftW + gap;
   const midY = pad + (bodyRows * rowH) / 2 - 22;
 
-  const faultShort = chain.fault.id.length > 16 ? `${chain.fault.id.slice(0, 15)}…` : chain.fault.id;
+  const faultShort = chain.fault.id.length > 26 ? `${chain.fault.id.slice(0, 25)}…` : chain.fault.id;
 
   return (
     <div className="in-op-chain-flow-wrap">
@@ -175,7 +174,7 @@ function CausalChainFlowSvg({ chain }: { chain: CausalChainResult }) {
         ) : (
           symptoms.map((s, i) => {
             const y = pad + 22 + i * rowH;
-            const idS = s.id.length > 15 ? `${s.id.slice(0, 14)}…` : s.id;
+            const idS = s.id.length > 25 ? `${s.id.slice(0, 24)}…` : s.id;
             return (
               <g key={s.id}>
                 <rect x={pad} y={y} width={leftW} height={rowH - 6} rx="6" className="in-op-svg-node in-op-svg-node--symptom" />
@@ -201,7 +200,7 @@ function CausalChainFlowSvg({ chain }: { chain: CausalChainResult }) {
         {actions.map((a, i) => {
           const y = pad + 22 + i * rowH;
           const ax = midX + midW + gap;
-          const idA = a.id.length > 15 ? `${a.id.slice(0, 14)}…` : a.id;
+          const idA = a.id.length > 25 ? `${a.id.slice(0, 24)}…` : a.id;
           return (
             <g key={a.id}>
               <line
