@@ -18,6 +18,7 @@ import { setEmbeddingProvider } from './engine/retrieval';
 import { createGeminiProvider } from './engine/retrieval/gemini-provider';
 import { createSimulatedProvider } from './engine/retrieval/simulated-provider';
 import { setMentorService, createMentorService } from './engine/mentor';
+import { createDeterministicMentorService } from './engine/mentor/deterministic-mentor';
 import { setSimulatedLearnerService, createSimulatedLearnerService } from './engine/simulated-learner';
 import { setPromptEnricher, createPromptEnricher } from './engine/prompt-enhancer';
 import { createSimulatedEnricher } from './engine/prompt-enhancer/simulated-enricher';
@@ -84,6 +85,10 @@ if (chatProvider) {
   setSimulatedLearnerService(createSimulatedLearnerService(chatProvider));
   setPromptEnricher(createPromptEnricher(chatProvider));
 } else {
+  // Keyless: deterministic keyword-rubric Mentor so Socratic/Scenario/Workflow
+  // evaluation still works — clearly labeled in the UI (engine: 'deterministic').
+  // The simulated learner stays absent (it genuinely needs generation).
+  setMentorService(createDeterministicMentorService());
   setPromptEnricher(createSimulatedEnricher());
 }
 

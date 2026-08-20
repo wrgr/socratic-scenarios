@@ -11,6 +11,19 @@ import type { MentorEvaluation, AblationDiff } from '../engine/mentor';
 
 export function ProvenanceBadge({ evaluation }: { evaluation: MentorEvaluation }) {
   const { grounded, groundingNodeIds } = evaluation;
+  // The keyless deterministic fallback is a keyword rubric over the probe's
+  // expectedConcepts — honest labeling: never let it read as LLM judgment.
+  if (evaluation.engine === 'deterministic') {
+    return (
+      <div className="provenance-badge is-deterministic">
+        <span className="provenance-dot" aria-hidden="true">📏</span>
+        <span className="provenance-text">
+          Deterministic rubric (no API key) — keyword coverage of the probe’s expected concepts,
+          not language understanding. Add a Gemini key (⚙) for LLM evaluation.
+        </span>
+      </div>
+    );
+  }
   return (
     <div className={`provenance-badge ${grounded ? 'is-grounded' : 'is-naive'}`}>
       <span className="provenance-dot" aria-hidden="true">{grounded ? '⛓' : '○'}</span>

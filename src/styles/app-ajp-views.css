@@ -3633,6 +3633,7 @@
 }
 .provenance-badge.is-grounded { color: var(--accent); border-color: var(--accent); }
 .provenance-badge.is-naive { color: var(--warning); border-color: var(--warning); }
+.provenance-badge.is-deterministic { color: var(--text-muted); border-color: var(--border); border-style: dashed; }
 .provenance-dot { font-size: 0.8rem; }
 /* --text-muted (not --text-dim) so the grounding ids clear WCAG AA — they carry the payload. */
 .provenance-ids {
