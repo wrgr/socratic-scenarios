@@ -146,6 +146,79 @@ export const PILLARS = [
   },
 ] as const;
 
+// ─── Capability → evidence → metric map ───────────────────────────
+//
+// One row per capability the system claims, each mapped to the metric that
+// backs it and where that evidence lives. Status is deliberately graded:
+//   'live'             — observable in this build, on the named surface
+//   'measured-offline' — backed by committed experiment artifacts (paper/repo)
+//   'planned'          — no evidence yet; stated as a bet, not a result
+// Keep rows honest: a capability without a metric belongs in 'planned',
+// never dressed up with an aspirational number.
+
+export type CapabilityStatus = 'live' | 'measured-offline' | 'planned';
+
+export interface CapabilityEvidenceRow {
+  capability: string;
+  claim: string;
+  metric: string;
+  status: CapabilityStatus;
+  /** Where to see it — an in-app surface or a repo artifact. */
+  surface: string;
+}
+
+export const CAPABILITY_EVIDENCE: readonly CapabilityEvidenceRow[] = [
+  {
+    capability: 'Corpus-bound Narrator',
+    claim: 'Machine behavior is quoted from reviewed graph nodes — never generated from model weights.',
+    metric: 'Provenance badge on every Mentor reply; grounding node IDs are computed from the inputs, so the model cannot fake them.',
+    status: 'live',
+    surface: 'Socratic Practice · Scenario Mode · Reachback',
+  },
+  {
+    capability: 'Grounding changes answers',
+    claim: 'The corpus shifts the Mentor’s evaluation — it isn’t decoration on a baked-in answer.',
+    metric: 'Ablation probe: the same answer evaluated with and without corpus context at temperature 0; the diff is shown, and no effect is claimed if either call degraded.',
+    status: 'live',
+    surface: 'Provenance toggle in Socratic & Scenario modes',
+  },
+  {
+    capability: 'Retrieval coverage',
+    claim: 'Queries hit the right sources, and corpus gaps are made visible instead of papered over.',
+    metric: 'TP/FP/FN/TN confusion matrix from in-app relevance judgments; per-source coverage; dead-corpus (never-retrieved chunks); weak-query report.',
+    status: 'live',
+    surface: 'Retrieval Lab → RAG Coverage',
+  },
+  {
+    capability: 'Learner-calibrated retrieval',
+    claim: 'Content is ranked for this learner’s readiness, not just similarity to the query.',
+    metric: 'Scoring-policy ablations (semantic-only vs. +proficiency +role +transfer) with per-chunk score breakdowns.',
+    status: 'live',
+    surface: 'Retrieval Lab',
+  },
+  {
+    capability: 'Mastery & safety gates',
+    claim: 'Advance/hold decisions are transparent — an instructor can say exactly why the system advanced or held a learner.',
+    metric: 'Dual-axis gate state (declarative before procedural) with explicit thresholds; per-probe mastery map.',
+    status: 'live',
+    surface: 'Dashboard mastery map · gated Scenario steps',
+  },
+  {
+    capability: 'Corpus necessity',
+    claim: 'The tutor’s answers depend on the corpus — not on what the base model already knows.',
+    metric: 'Calibrated dose–response: teach the corpus facts into a model’s weights and necessity falls 1 → ~0; verified on five base-model lineages; offline backbone reproduces in one command (8/8 checks).',
+    status: 'measured-offline',
+    surface: 'necessity-audit paper · npm run reproduce',
+  },
+  {
+    capability: 'Human learning gains',
+    claim: 'Training produces far transfer — better diagnosis of novel fault combinations — in real learners.',
+    metric: 'Pre-registered human trial. Not yet run: everything above is simulation-based mechanism evidence, and this row stays "planned" until real-learner data exists.',
+    status: 'planned',
+    surface: '—',
+  },
+] as const;
+
 export type ReferenceItem = {
   title: string;
   summary: string;

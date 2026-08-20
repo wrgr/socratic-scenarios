@@ -33,7 +33,7 @@ import {
   allEdges,
   nodesByType,
 } from '../engine/retrieval/graph-utils';
-import { getDenseBackend } from '../engine/retrieval/dense-retrieval';
+import { getDenseBackend, loadChunkInventory } from '../engine/retrieval/dense-retrieval';
 import type { AJPNode } from '../types/ajp';
 import { SourceRefText } from './SourceRefText';
 import { ExpertFlagButton, ExpertFlagBadge } from './ExpertFlagButton';
@@ -113,7 +113,15 @@ function QueryLab() {
     setNodeIdInput('');
   }
 
-  const hasDenseBackend = getDenseBackend().hasData();
+  // hasData() is false until the lazy corpus load resolves — warm it on
+  // mount so the Dense-tier toggle doesn't read "run npm run ingest" while
+  // a perfectly good corpus is still downloading.
+  const [hasDenseBackend, setHasDenseBackend] = useState(getDenseBackend().hasData());
+  useEffect(() => {
+    let alive = true;
+    void loadChunkInventory().then((inv) => { if (alive) setHasDenseBackend(inv.length > 0); });
+    return () => { alive = false; };
+  }, []);
 
   return (
     <div className="retrieval-lab-query">
@@ -147,7 +155,7 @@ function QueryLab() {
               onChange={(e) => setDenseEnabled(e.target.checked)}
               disabled={!hasDenseBackend}
             />
-            Dense tier {!hasDenseBackend && '(run npm run ingest to activate)'}
+            Dense tier {!hasDenseBackend && '(no dense corpus loaded)'}
           </label>
         </div>
 

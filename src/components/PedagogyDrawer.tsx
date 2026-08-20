@@ -10,10 +10,17 @@
  * identical to what Architecture's FLOW_STEPS lightbox renders.
  */
 import { useState } from 'react';
-import { PILLARS, WHITEPAPER_URL } from './ajp-background-model.data';
+import { PILLARS, WHITEPAPER_URL, CAPABILITY_EVIDENCE } from './ajp-background-model.data';
+import type { CapabilityStatus } from './ajp-background-model.data';
 import { ExpansionBody } from './AjpExpansionLightbox';
 import { ReferencesModal } from './ReferencesModal';
 import { useEscapeToClose } from '../hooks/useEscapeStack';
+
+const STATUS_LABELS: Record<CapabilityStatus, string> = {
+  live: 'live',
+  'measured-offline': 'measured',
+  planned: 'planned',
+};
 
 export function PedagogyDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [expandedTitle, setExpandedTitle] = useState<string | null>(null);
@@ -89,6 +96,33 @@ export function PedagogyDrawer({ open, onClose }: { open: boolean; onClose: () =
               );
             })}
           </div>
+
+          <section className="pedagogy-evidence" aria-label="Capability, evidence, and metrics">
+            <h3 className="pedagogy-evidence-title">Capability → Evidence → Metric</h3>
+            <p className="pedagogy-evidence-intro">
+              Every capability the system claims, mapped to the metric that backs it and where to
+              see it. Graded honestly: <strong>live</strong> is observable in this build,{' '}
+              <strong>measured</strong> is backed by committed experiment artifacts, and{' '}
+              <strong>planned</strong> means no evidence yet.
+            </p>
+            {CAPABILITY_EVIDENCE.map((row) => (
+              <article key={row.capability} className={`pedagogy-evidence-row pedagogy-evidence-row--${row.status}`}>
+                <div className="pedagogy-evidence-head">
+                  <h4 className="pedagogy-evidence-capability">{row.capability}</h4>
+                  <span className={`pedagogy-evidence-status pedagogy-evidence-status--${row.status}`}>
+                    {STATUS_LABELS[row.status]}
+                  </span>
+                </div>
+                <p className="pedagogy-evidence-claim">{row.claim}</p>
+                <p className="pedagogy-evidence-metric">
+                  <span className="pedagogy-evidence-metric-label">Metric</span> {row.metric}
+                </p>
+                <p className="pedagogy-evidence-surface">
+                  <span className="pedagogy-evidence-metric-label">Where</span> {row.surface}
+                </p>
+              </article>
+            ))}
+          </section>
 
           <div className="ajp-refs-footer">
             <a href={WHITEPAPER_URL} target="_blank" rel="noreferrer" className="ajp-whitepaper-link">

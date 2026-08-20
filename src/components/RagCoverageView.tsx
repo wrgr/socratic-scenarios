@@ -18,6 +18,7 @@ import { getEmbeddingProvider } from '../engine/retrieval';
 import type { EmbeddingProvider } from '../engine/retrieval';
 import {
   queryDense,
+  queryDenseLexical,
   getDenseBackend,
   loadChunkInventory,
   type ChunkInventoryItem,
@@ -76,13 +77,21 @@ async function runEvalSet(
       const i = cursor++;
       const q = queries[i];
       try {
-        const [embedding] = await provider.embed([q.text]);
-        const res = await queryDense({
-          queryEmbedding: embedding,
-          queryModelId: provider.modelId,
-          topK,
-          minScore: 0, // keep the whole top-K; tau is applied in the UI
-        });
+        // Providers without a modelId (simulated TF-IDF) can't be scored
+        // against the baked embeddings — use the lexical corpus path so
+        // coverage analysis still works keyless.
+        let res;
+        if (provider.modelId) {
+          const [embedding] = await provider.embed([q.text]);
+          res = await queryDense({
+            queryEmbedding: embedding,
+            queryModelId: provider.modelId,
+            topK,
+            minScore: 0, // keep the whole top-K; tau is applied in the UI
+          });
+        } else {
+          res = await queryDenseLexical({ queryText: q.text, topK, minScore: 0 });
+        }
         const hits: ChunkHit[] = res.matches.map((m, rank) => ({
           chunkId: m.chunk.id,
           source: m.chunk.source,
@@ -167,8 +176,12 @@ export function RagCoverageView() {
   const provider = getEmbeddingProvider();
   const backend = getDenseBackend();
   const corpusModel = backend.modelId() ?? (inventory && inventory.length > 0 ? CORPUS_MODEL : undefined);
+  // Semantic mode needs a provider whose modelId matches the baked corpus;
+  // a provider without a modelId (simulated TF-IDF) now runs via the lexical
+  // corpus path instead, so coverage analysis stays available keyless.
+  const lexicalMode = !!provider && !provider.modelId;
   const denseReady =
-    !!provider && !!provider.modelId && (!corpusModel || provider.modelId === corpusModel);
+    !!provider && (lexicalMode || !corpusModel || provider.modelId === corpusModel);
 
   // Assemble the live query set from enabled groups + custom queries.
   const assembledQueries = useMemo<EvalQuery[]>(() => {
@@ -400,8 +413,12 @@ export function RagCoverageView() {
         <div className="lab-empty-state">
           <p>Assemble a query set above and press <strong>Run</strong>.</p>
           <p className="rag-run-note">
-            Each query is one embedding call against your Gemini key, then a cosine sweep over{' '}
-            {inventory ? inventory.length : '—'} corpus chunks. {assembledQueries.length} queries queued.
+            {lexicalMode
+              ? <>Keyless mode: queries run as TF-IDF keyword matches over{' '}
+                  {inventory ? inventory.length : '—'} corpus chunks (add a Gemini key for semantic
+                  scoring). {assembledQueries.length} queries queued.</>
+              : <>Each query is one embedding call against your Gemini key, then a cosine sweep over{' '}
+                  {inventory ? inventory.length : '—'} corpus chunks. {assembledQueries.length} queries queued.</>}
           </p>
         </div>
       ) : (

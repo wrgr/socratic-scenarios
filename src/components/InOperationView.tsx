@@ -58,12 +58,31 @@ function NodeLookupEngineViz({ queryText, trace }: { queryText: string; trace: N
       </p>
     );
   }
-  const qPreview = queryText.length > 42 ? `${queryText.slice(0, 41)}…` : queryText;
+  // Wrap the query into up to 3 short lines that actually fit the box —
+  // a single 42-char line overflowed it and collided with the node column.
+  const qLines: string[] = [];
+  {
+    const words = queryText.split(/\s+/);
+    let line = '';
+    for (const word of words) {
+      if ((line + ' ' + word).trim().length > 15 && line) {
+        qLines.push(line);
+        line = word;
+        if (qLines.length === 3) break;
+      } else {
+        line = (line + ' ' + word).trim();
+      }
+    }
+    if (qLines.length < 3 && line) qLines.push(line);
+    if (qLines.length === 3 && words.join(' ').length > qLines.join(' ').length) {
+      qLines[2] = `${qLines[2].slice(0, 13)}…`;
+    }
+  }
   const w = 520;
   const h = 132;
   const qx = 24;
   const qy = 46;
-  const qw = 100;
+  const qw = 108;
   const qh = 40;
 
   return (
@@ -75,8 +94,10 @@ function NodeLookupEngineViz({ queryText, trace }: { queryText: string; trace: N
           </marker>
         </defs>
         <rect x={qx} y={qy} width={qw} height={qh} rx="8" className="in-op-svg-node in-op-svg-node--query" />
-        <text x={qx + qw / 2} y={qy + qh / 2 + 4} textAnchor="middle" className="in-op-svg-label in-op-svg-label--query">
-          {qPreview}
+        <text x={qx + qw / 2} y={qy + qh / 2 + 4 - (qLines.length - 1) * 5} textAnchor="middle" className="in-op-svg-label in-op-svg-label--query">
+          {qLines.map((line, i) => (
+            <tspan key={i} x={qx + qw / 2} dy={i === 0 ? 0 : 11}>{line}</tspan>
+          ))}
         </text>
         {top.map((m, i) => {
           const nx = 168 + (i % 3) * 112;
@@ -99,10 +120,14 @@ function NodeLookupEngineViz({ queryText, trace }: { queryText: string; trace: N
                 className="in-op-svg-edge"
                 markerEnd={`url(#${markerId})`}
               />
-              <rect x={nx} y={ny} width={nw} height={nh} rx="6" className={`in-op-svg-node in-op-svg-node--${m.nodeType === 'Symptom' ? 'symptom' : 'fault'}`} />
+              <rect x={nx} y={ny} width={nw} height={nh} rx="6" className={`in-op-svg-node in-op-svg-node--${m.nodeType === 'Symptom' ? 'symptom' : 'fault'}`}>
+                <title>{`${m.nodeId} — ${m.nodeType} · ${scorePct}% · ${m.matchMethod}`}</title>
+              </rect>
               <text x={nx + 6} y={ny + 14} className="in-op-svg-id">{idShort}</text>
+              {/* Abbreviated so the meta fits its box — full detail in the tooltip.
+                  The unabbreviated line overflowed and overprinted the next column. */}
               <text x={nx + 6} y={ny + 28} className="in-op-svg-meta">
-                {m.nodeType} · {scorePct}% · {m.matchMethod}
+                {m.nodeType === 'FailureMode' ? 'Fault' : m.nodeType} · {scorePct}% · {m.matchMethod === 'embedding' ? 'emb' : m.matchMethod}
               </text>
             </g>
           );
@@ -398,12 +423,17 @@ function DenseMatchCard({ match, rank }: { match: DenseMatch; rank: number }) {
   );
 }
 
-function DenseResultsPanel({ matches }: { matches: DenseMatch[] }) {
+function DenseResultsPanel({ matches, tier }: { matches: DenseMatch[]; tier?: 'embedding' | 'lexical' }) {
   return (
     <div className="in-op-dense-results">
       <h3 className="in-op-section-title">SOP / Literature Context</h3>
       <p className="in-op-results-meta">
         {matches.length} relevant passage{matches.length > 1 ? 's' : ''} from ingested corpus
+        {tier === 'lexical' && (
+          <span className="dense-tier-badge" title="No embedding key — passages matched by TF-IDF keyword overlap, not semantic similarity">
+            keyword match (no key)
+          </span>
+        )}
       </p>
       {matches.map((m, i) => (
         <DenseMatchCard key={m.chunk.id} match={m} rank={i} />
@@ -520,6 +550,7 @@ export function InOperationView() {
   const [nodeMatchTrace, setNodeMatchTrace] = useState<NodeMatchTrace[]>([]);
   const [denseMatches, setDenseMatches] = useState<DenseMatch[]>([]);
   const [hasDenseData, setHasDenseData] = useState(false);
+  const [denseTier, setDenseTier] = useState<'embedding' | 'lexical' | undefined>(undefined);
   const [hybridResult, setHybridResult] = useState<HybridResult | null>(null);
   const [hasQueried, setHasQueried] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -536,6 +567,7 @@ export function InOperationView() {
       setNodeMatchTrace(result.nodeMatchTrace);
       setDenseMatches(result.denseMatches);
       setHasDenseData(result.hasDenseData);
+      setDenseTier(result.denseTier);
       setHybridResult(result);
       setCommittedQuery(trimmed);
       setQueryRunId((n) => n + 1);
@@ -618,7 +650,7 @@ export function InOperationView() {
             nodeMatchTrace={nodeMatchTrace}
             resultKey={String(queryRunId)}
           />
-          {hasDenseData && <DenseResultsPanel matches={denseMatches} />}
+          {hasDenseData && <DenseResultsPanel matches={denseMatches} tier={denseTier} />}
           {!hasDenseData && (
             <p className="in-op-dense-hint">
               Run <code>npm run ingest</code> to activate SOP / literature context from the dense corpus.

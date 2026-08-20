@@ -724,6 +724,13 @@ function ProbePracticePanel({
             </div>
           )}
 
+          {/* Echo the typed answer once the Mentor replies — the textarea
+              unmounts on evaluation, so without this the learner's own
+              words vanish from the exchange. */}
+          {evaluation && response.trim() && (
+            <LearnerBubble text={response} />
+          )}
+
           {evaluation && !mastered && !followUpEval && (
             <div className={`mentor-evaluation ${scoreClass(evaluation.score)}`}>
               {evaluation.degraded ? (
@@ -768,6 +775,11 @@ function ProbePracticePanel({
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Echo the follow-up answer alongside the final evaluation. */}
+          {followUpEval && followUpResponse.trim() && (
+            <LearnerBubble text={followUpResponse} />
           )}
 
           {currentEval && (mastered || followUpEval) && (
