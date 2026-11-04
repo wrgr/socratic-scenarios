@@ -36,7 +36,7 @@ local-sources/
 ## What ingest actually reads
 
 Only the files named in `scripts/ingest-corpus.ts`'s `ACTIVE_SOURCES` array are
-ingested — currently **11** local files:
+ingested — currently **14** configured local files:
 
 - `review-articles/` — all six papers (`chen-2018-overspray.pdf`,
   `gu-2017-fillets.pdf`, `fisher-2023-sensors.pdf`, `secor-2018-principles.pdf`,
@@ -44,6 +44,9 @@ ingested — currently **11** local files:
 - `oem-manuals/` — `9001094-motion-vision-kewb.pdf`, `9000876-health-safety.pdf`,
   `9000983-process-manual.pdf`, `hd2-block-diagram.pdf`.
 - `process-guides/` — `24450-process-dev-session11.pdf`.
+- `hd2-documentation/` — `hd2-training-manual.docx`, `hd2-qanda.docx`, and
+  `hd2-definitions.docx`. The last file is a 14-term list without definitions
+  and currently contributes no chunks; supply a fuller source to repair it.
 
 Everything else (the rest of `oem-manuals/` and `process-guides/`, all of
 `ink-materials/`, and all of `_excluded/`) is kept for reference only. To ingest
@@ -53,8 +56,8 @@ documents intended contents; dispositions live in `sources/SOURCES_LOG.md`).
 ## What's deliberately not ingested
 
 `scripts/ingest-corpus.ts` also exports `EXCLUDED_SOURCES` — documents left out
-of the public corpus after a sensitivity review (unnumbered vendor documents
-with unconfirmed redistribution rights, and raw machine-configuration exports
-from a real deployment). Their originals live under `_excluded/` above. See that
+of the public corpus after a sensitivity review (raw machine-configuration
+exports from a real deployment). The three Word documents are active inputs,
+not part of the current exclusion list. Their originals live under `_excluded/` above. See that
 file for the full list and rationale, and the app's Domain Sources panel
 (References & Whitepaper → Domain Sources) for the same list surfaced in-app.

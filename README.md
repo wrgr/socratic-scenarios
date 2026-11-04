@@ -233,8 +233,15 @@ The knowledge store has three parts (see [docs/DATA_CATALOG.md](docs/DATA_CATALO
 | **Dense** | `public/ajp-corpus.json` (+ node embeddings) | `npm run ingest` from sources in `scripts/ingest-corpus.ts` |
 
 ```bash
-npm run ingest             # rebuild dense corpus + embeddings (requires Gemini key + local-sources)
+npm run ingest             # rebuild dense corpus + node embeddings (Gemini key + local-sources)
+npm run ingest -- --sources=nature-line-quality,hd2-process-manual --extract=local # repair selected sources
 ```
+
+The 2026-11-04 repair contains **575 embedded chunks** across 18 populated sources.
+Selected-source repairs preserve every other chunk and abort without writing if a
+selected source fails. PDF text extraction is local by default; embeddings use
+`gemini-embedding-001`. The optional node-vector cache is not currently committed.
+See [the comparison and repair record](docs/corpus-comparison-2026-11-04.md).
 
 An older SQLite pipeline (`npm run db:*`, under `scripts/db/`) still exists but is **not** the authoritative path for the shipped dense corpus — don't mix it with `npm run ingest` mid-rebuild. Every source feeding Graph / Flow / Dense should resolve in [sources/SOURCES_LOG.md](sources/SOURCES_LOG.md).
 
@@ -326,7 +333,7 @@ The multi-stage [Dockerfile](Dockerfile) builds with `node:20` and serves with `
 **Known gaps**
 - Expert flags write to `localStorage` only; JSON export is manual (no DB persistence yet).
 - `VITE_GEMINI_API_KEY` is build-time inlined — use the gear-icon BYOK flow for shared builds.
-- A dense-corpus rebuild may still need a post-ingest scrub for site-specific terms — see [sources/SOURCES_LOG.md](sources/SOURCES_LOG.md).
+- Ingestion scrubs source text and rejects browser challenges; source-specific hygiene review still applies — see [sources/SOURCES_LOG.md](sources/SOURCES_LOG.md).
 
 </details>
 

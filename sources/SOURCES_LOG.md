@@ -33,8 +33,8 @@ names (Brocato, Pulscher, Sandoval, …) → redacted. Deterministic + idempoten
 - **`npm run scrub:kb`** — applies it to every `docs/kb-candidates/*.md` (`--check` for a
   CI gate). All 31 candidates currently clean.
 - **Ingest** (`scripts/ingest-corpus.ts`) applies `scrubText()` to every source's text
-  before chunking, so a rebuilt `public/ajp-corpus.json` never reintroduces the ~149
-  `Decathlon` / employee-name occurrences currently baked into the shipped corpus.
+  before chunking; the November repair also removes download watermarks and the
+  process manual employee revision log. Raw source documents remain local.
 
 Note: IPs / camera serials / COM ports are **not** regex-scrubbed (a generic IPv4
 pattern also matches document clause numbers like IPC `3.9.1.2`). Those values live
@@ -83,16 +83,16 @@ numbered Optomec manuals are **not** public — verify, cite by P/N otherwise).
 | `hd2-process-dev-session11` (24450) | local | likely none (verify) | **USE-SCRUB** |
 | `hd2-block-diagram` | local | likely none (verify) | **USE-SCRUB** |
 
-## 2. Currently excluded — reclassify?
-The raw originals are **not in the repo** (they live only in your local `CoreKB/…`
-folder). The 3 raw-config files carry **real IPs/serials/COM ports** → keep excluded
-or `USE-SCRUB` only after heavy scrubbing. The 3 `.docx` are just absent; reclassify
-if you want them (drop into `local-sources/`, then `USE-SCRUB`).
+## 2. Word sources and excluded raw configuration
+Raw originals are held in gitignored `local-sources/`, never committed. The Word
+documents were promoted to the active ingestion manifest on 2026-07-13; this
+ledger now reflects that implementation. The three raw-config exports remain
+excluded.
 | Key | Origin | Note | Disposition |
 |---|---|---|---|
-| `hd2-training-manual` | ? (.docx) | not in repo | EXCLUDED (reclassify if wanted) |
-| `hd2-qanda` | ? (.docx) | site-specific ops content | EXCLUDED (reclassify if wanted) |
-| `hd2-definitions` | ? (.docx) | not in repo | EXCLUDED (reclassify if wanted) |
+| `hd2-training-manual` | local (.docx) | held locally; 3 indexed chunks | USE-SCRUB |
+| `hd2-qanda` | local (.docx) | held locally; 4 indexed chunks | USE-SCRUB |
+| `hd2-definitions` | local (.docx) | 14 term names only; definitions needed, 0 chunks | USE-SCRUB; incomplete |
 | `hd2-sequences` | local (deployment) | raw config — recipe filenames | EXCLUDED (abstracted in `canonical-steps.ts`) |
 | `hd2-alarms` | local (deployment) | raw config | EXCLUDED (abstracted in `design-faults.ts`) |
 | `hd2-process-config` | local (deployment) | **real IPs, serials, COM port** | EXCLUDED (abstracted in `design-faults.ts`) |
@@ -151,3 +151,23 @@ use." J genericization applied.
 | 31–33 `eddie_*` (paper reading notes) | internal | USE (confirm no long verbatim quotes) |
 | 34–39 `hd2_*` (doc notes) | internal notes | USE — "Deployed Environment" genericized, recipe filenames scrubbed; the raw docs they describe remain EXCLUDED |
 | 40 `hd2_oem_pdfs` (OEM index) | internal index | USE — "Decathlon" codename removed |
+
+## 2026-11-04 extraction repair
+
+Re-extracted complete PDF text using the canonical local parser and regenerated
+3072-dimensional `gemini-embedding-001` vectors. The older database was not
+imported. No raw PDFs or Word documents were committed.
+
+- `nature-line-quality`: publisher PDF, 12 pages, 1 → 29 chunks;
+  https://www.nature.com/articles/s41598-023-47544-4.pdf (DOI
+  10.1038/s41598-023-47544-4). Replaces a browser-challenge page.
+- `hd2-process-manual`: held P/N 9000983 PDF, 176 pages, 6 → 105 chunks;
+  entire employee revision log removed, existing scrub policy reapplied.
+- `salary-2019-state-of-art`: held PDF, 16 pages, 19 → 44 chunks.
+- `fisher-2023-sensors`: held PDF, 37 pages, 58 → 104 chunks.
+
+The resulting corpus has 575 chunks. All 293 unrelated chunks and embeddings
+are unchanged. Counts include references/end matter and chunk overlap; larger
+counts are not a learning-effectiveness claim. Definitions remains incomplete
+until actual definitions or SME notes are supplied. Full evidence and input
+hashes are in `docs/corpus-comparison-2026-11-04.md`.

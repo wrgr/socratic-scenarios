@@ -6,8 +6,9 @@ This audit compares the current ExpertTrace retrieval data with the older local 
 
 Keep the current corpus as the baseline. Do not bulk-restore the old JSON,
 SQLite database, or embedding cache. Two sources have clear extraction failures;
-two others need a targeted completeness review. This change repairs startup
-registration only and does not change any corpus text or embeddings.
+two others need a targeted completeness review. The initial startup change repaired graph registration only. The subsequent
+source repair is recorded below; it selectively re-extracts current originals
+rather than restoring the older exports.
 
 ## Inputs and method
 
@@ -125,3 +126,48 @@ catalog/audit prose still describes older counts and excludes two documents
 that the July JSON actually includes; reconcile that documentation during the
 next deliberate corpus update. This audit does not establish new redistribution
 rights, change inclusion decisions, or restore historical content.
+
+## Source repair completed — 2026-11-04
+
+Rebuilt four sources with `--sources` and `--extract=local`. The publisher's
+Nature PDF and the three held local PDFs were parsed in full with `pdf-parse`.
+The Nature PDF's license page and the manual's Chapter 1 page were also rendered
+and visually checked against extracted content. The manual revision-log block
+was omitted under the standing employee-name policy, and reader-specific PDF
+download watermarks were removed. The existing deterministic scrub ran before
+chunking and before any embedding request.
+
+- Nature: 12 PDF pages, 1 → 29 chunks.
+- Process Manual: 176 PDF pages, 6 → 105 chunks.
+- Salary: 16 PDF pages, 19 → 44 chunks.
+- Fisher: 37 PDF pages, 58 → 104 chunks.
+
+All new chunks have finite 3072-dimensional vectors in the existing
+`gemini-embedding-001` model space. All 293 unrelated chunks (including their
+embeddings) were retained exactly. The total is 575 chunks, up from 377.
+References/end matter and overlap contribute to counts; counts are not a
+semantic-equivalence or retrieval-quality metric.
+
+The Definitions Word file was inspected independently: its text contains 14 term
+names and no definitions. It remains incomplete. A deliberate failed repair of
+that source returned nonzero and left the entire corpus byte-for-byte unchanged.
+No definitions were invented, and no old database data was bulk-imported.
+
+The added quality checks reject browser challenges, non-finite/wrong-size
+vectors, unfinished model output, and model text retaining less than 80% of the
+local PDF text layer. Model extraction falls back to complete local text.
+Selected-source repairs reject unknown/excluded IDs, enforce the embedding model,
+and only replace the corpus after every selected source succeeds.
+
+Repaired corpus SHA-256:
+`6e21900d25a8e095ac3aa9bbc99a5f3cebc2593575a54d2fd3b09d2b70d939c0`.
+
+Input PDF SHA-256 values (raw originals are not committed):
+
+- Nature publisher PDF: `e18a4bbdc017f11771d2a3cc07c267e38fffffec75e7ef25acd638f296eaabcd`.
+
+- HD2 Process Manual: `c3ea9748f01cb1332ba49efbf14ecff34fa3dbf0e1393602f7fac6f0f3b803c7`.
+
+- Salary 2019: `b5ff48e75c28f7b001c8ab7857a8718c626c84a3d72f2ce6b723f0609b929f54`.
+
+- Fisher 2023: `6fae8565c4aff66c028187bb8924ce638c064a165864b11f84ec7d9980a3b028`.

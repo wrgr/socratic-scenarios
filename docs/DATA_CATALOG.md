@@ -23,8 +23,8 @@ Graph and Dense are **independent stores** — rebuilding one does not touch the
 |---|---|---|---|---|---|
 | Graph nodes/edges | `src/corpus/ajp/{graph,graph-faults,design-faults,design-actions,consequences,tacit-knowledge,parameters,probes,concepts,chunks,corpus-gaps}.ts` | raw (authored) | in-memory at runtime | hand-authored | abstracted knowledge only; **no** real addresses/serials by policy |
 | Flow / procedures | `src/corpus/ajp/{canonical-steps,scenario-scripts,scenarios,problems}.ts` | raw (authored) | in-memory at runtime | hand-authored | same policy |
-| Dense corpus | `public/ajp-corpus.json` (~507 chunks) | derived | **runtime fetch** (browser) | `scripts/ingest-corpus.ts` (`npm run ingest`) | **contains restricted text today — see audit; clean rebuild pending** |
-| Node embeddings | `public/ajp-node-embeddings.json` (~128 nodes) | derived | runtime fetch | `npm run ingest` (final step) | derived from the authored graph — low risk |
+| Dense corpus | `public/ajp-corpus.json` (575 chunks; 2026-11-04) | derived | **runtime fetch** (browser) | `scripts/ingest-corpus.ts` (`npm run ingest`) | scrubbed extracts under the recorded source policy; see source audit |
+| Node embeddings | `public/ajp-node-embeddings.json` (optional; absent in current checkout) | derived | runtime fetch | `npm run ingest` (final step) | optional cache; current authored graph has 130 nodes |
 | External citations | `src/corpus/source-ref-registry.ts` (`SRC-001…020`) | raw | provenance / UI popovers | hand-authored | all public URLs |
 | Internal citations | `src/corpus/kb-doc-registry.ts` (`KB-DOC-01…10`) | raw | provenance | hand-authored | authored-internal |
 | Source-usage computer | `src/corpus/source-usage.ts` | code | flags dangling citations | — | — |
@@ -40,16 +40,19 @@ Graph and Dense are **independent stores** — rebuilding one does not touch the
 ## Pipelines
 
 **Canonical: `scripts/ingest-corpus.ts` (`npm run ingest`).** Reads `ACTIVE_SOURCES`
-(remote URLs + local files under gitignored `local-sources/`), extracts text via
-Gemini, chunks (~350 words, 50 overlap), embeds (`gemini-embedding-001`, 3072-dim),
-and writes `public/ajp-corpus.json` + `public/ajp-node-embeddings.json`. **This
-produced the shipped corpus.** Exclusions live in `EXCLUDED_SOURCES` and surface in
+(remote URLs + local files under gitignored `local-sources/`), extracts PDF text locally by default (optional Gemini output is checked for
+truncation against the PDF text layer), chunks (~350 words, 50 overlap), embeds (`gemini-embedding-001`, 3072-dim),
+and writes `public/ajp-corpus.json`. A full rebuild also writes the optional
+`public/ajp-node-embeddings.json`; targeted `--sources=id,id` updates preserve the
+other sources and skip node-cache regeneration. Source text is scrubbed before
+embedding; browser challenges and unfinished model output are rejected. **This
+is the canonical corpus pipeline.** Exclusions live in `EXCLUDED_SOURCES` and surface in
 the app's Domain Sources panel.
 
 **DEPRECATED: the SQLite pipeline (`scripts/db/*`, `npm run db:*`).** A parallel path
 (CSV catalog → `source-cache/` → `knowledge.db` → `db:export`) that also writes
 `public/ajp-corpus.json`. Its output (~978 chunks) **diverges** from the shipped
-507-chunk corpus and is **not authoritative**. Do not mix it with `npm run ingest`.
+575-chunk corpus and is **not authoritative**. Do not mix it with `npm run ingest`.
 Treat any migration to it as a separate, deliberate decision.
 
 **Removed:** `src/engine/retrieval/corpus-sources.ts` — an orphaned third source
@@ -59,11 +62,21 @@ registry whose IDs didn't match the real corpus and which nothing imported. Dele
 
 1. Browser fetches `public/ajp-corpus.json` → `dense-retrieval.ts` cosine-similarity
    search (dense tier). Degrades gracefully to graph-only if absent.
-2. Browser fetches `public/ajp-node-embeddings.json` → warms the graph-node vector
-   cache (`graph-utils.ts`), avoiding cold-start embedding.
+2. If present, `public/ajp-node-embeddings.json` warms the graph-node vector
+   cache (`graph-utils.ts`), avoiding cold-start embedding. This optional cache
+   is absent today; the document vectors are stored in `ajp-corpus.json`.
 3. The Graph + Flow stores are imported as TypeScript and held in memory.
 4. `retrieval-router.ts` → `hybrid-retrieval.ts` merges the graph tier and the dense
    tier for Reachback Lookup, Scenario Mode, Socratic Practice, and the Retrieval Lab.
 
 Everything else (`knowledge.db`, `source-cache/`, `full-corpus-source-catalog.csv`,
 `local-sources/`) is **build-time only** and never fetched by the client.
+
+## Repair status — 2026-11-04
+
+The corpus grew from 377 to 575 chunks by re-extracting the Nature study and
+HD2 Process Manual, plus the shorter Salary/Fisher review extracts. All 293
+unrelated chunks and their embeddings were retained exactly. See
+[comparison and repair record](corpus-comparison-2026-11-04.md).
+The Definitions Word file contains 14 terms with no definitions; its source
+remains incomplete rather than inventing definitions to fill the gap.

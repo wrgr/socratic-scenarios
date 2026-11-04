@@ -1,7 +1,10 @@
 # Source Provenance Audit
 
-**Status: DRAFT for explicit review.** Nothing is published or rebuilt until every
-source below has a signed-off disposition recorded in `sources/SOURCES_LOG.md`.
+**Status: historical recommendations with recorded dispositions below.** The
+July user review in `sources/SOURCES_LOG.md` governs extraction. Current corpus
+state and the November repair are documented in `DATA_CATALOG.md` and
+`corpus-comparison-2026-11-04.md`; original counts/recommendations below are dated
+audit evidence, not a claim about today's shipped counts.
 
 This audit enumerates **every input used to build the knowledge store** — across all
 three parts (**Graph**, **Flow**, **Dense**) — and classifies each by **origin**
@@ -202,8 +205,10 @@ statement. Summary of what changed from the recommendations above:
 - **§C OEM manuals** → USE verbatim, but **never ship the raw manual**, **scrub employee
   names/site params** (esp. `hd2-process-manual` revision log), link internet version
   where one exists. Redistribution flagged for later.
-- **§D excluded** → 3 raw-config stay excluded (real IPs/serials); 3 `.docx` not in repo,
-  reclassify only if you add them to `local-sources/`.
+- **§D excluded** → 3 raw-config stay excluded (real IPs/serials). The three
+  Word documents were added to the active manifest on 2026-07-13; Training Manual
+  and Questions and Answers have extracts, and Definitions is a terms-only list
+  requiring a fuller source. Originals remain gitignored.
 - **§E stubs** → agreed, remain stubs.
 - **§F `SRC-###`** → EXPAND to extraction (not citation-only) where full text is retrievable.
 - **§G `KB-DOC`** → USE but **scrub** for names/params/sensitivity.
