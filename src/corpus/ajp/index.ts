@@ -11,7 +11,7 @@ import { ajpTransferProblems } from './problems';
 import { registerDomain } from '../registry';
 import type { DomainDescriptor } from '../types';
 import { SCENARIO_PHASE_LABELS } from '../../engine/scenario/types';
-import { allNodes as ajpAllNodes, allEdges as ajpAllEdges } from '../../engine/retrieval/graph-utils';
+import { ajpDomain as ajpConfig } from '../../domains/ajp';
 import { consequenceNodes as ajpConsequenceNodes } from './consequences';
 import { ajpProbeNodes as ajpProbes } from './probes';
 import { ajpScenarioScripts as ajpScenarios } from './scenario-scripts';
@@ -63,9 +63,10 @@ export function getAJPProblemById(id: string): TransferProblem | undefined {
 }
 
 // ─── Domain registration ──────────────────────────────────────────
-// AJP is the original engine-backed domain: its graph is baked into the
-// retrieval + narrator layer (graph-utils / narrator), so the retrieval-heavy
-// surfaces and the AJP safety-gate pre-flight only apply here (fullEngine).
+// Register the assembled AJP graph directly. The retrieval engine starts with
+// empty arrays and rebinds them at boot; capturing those arrays during module
+// evaluation would leave this descriptor permanently empty. The full retrieval
+// surfaces and AJP safety-gate pre-flight apply here (fullEngine).
 
 export const ajpDomain: DomainDescriptor = registerDomain({
   id: 'ajp-electronics-repair',
@@ -73,8 +74,8 @@ export const ajpDomain: DomainDescriptor = registerDomain({
   masthead: 'Aerosol Jet Printer Demo',
   blurb:
     'Corpus-bound training for Optomec HD2 aerosol-jet PCB repair — startup/shutdown sequencing, clog and leak diagnosis, sinter decisions, and nanoparticle/ESD safety.',
-  nodes: ajpAllNodes,
-  edges: ajpAllEdges,
+  nodes: ajpConfig.graph.nodes,
+  edges: ajpConfig.graph.edges,
   scenarios: ajpScenarios,
   probes: ajpProbes,
   consequences: ajpConsequenceNodes,
