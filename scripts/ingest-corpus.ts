@@ -2,7 +2,7 @@
  * AJP Corpus Ingestion Pipeline — LightRAG pattern in TypeScript.
  *
  * Fetches public SOPs and peer literature, extracts text via Gemini Flash
- * (including PDF multimodal extraction), chunks and embeds with text-embedding-004,
+ * (including PDF multimodal extraction), chunks and embeds with gemini-embedding-001,
  * then saves to public/ajp-corpus.json for dense retrieval at runtime.
  *
  * Usage:
@@ -11,6 +11,7 @@
  *
  * Flags:
  *   --allow-partial       Exit 0 even if some sources failed (default: exit 1 on any failure).
+ *   --sources=id,id     Replace only named sources, preserving all other chunks; fail without writing on errors.
  *   --retry-failed-only   Only re-run sources that failed in the existing public/ajp-corpus.json,
  *                          carrying over chunks from sources that already succeeded.
  *   --extract=local|gemini  PDF text extraction mode (default: local). "local" parses the PDF's
@@ -22,8 +23,8 @@
  * Add to package.json scripts:
  *   "ingest": "npx tsx scripts/ingest-corpus.ts"
  *
- * Sources 1-2 (public SOPs + peer literature): processed automatically.
- * Sources 3-4 (Optomec manual + expert sessions): print acquisition instructions.
+ * Sources come from ACTIVE_SOURCES; unavailable expert-session and full-manual
+ * additions are tracked separately as stubs, not fabricated into the corpus.
  *
  * Output: public/ajp-corpus.json with { generatedAt, sourcesSummary, chunks[] }
  *
@@ -35,12 +36,12 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { PDFParse } from 'pdf-parse';
-import { writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
+import { writeFileSync, readFileSync, mkdirSync, existsSync, readdirSync, renameSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { readFile } from 'fs/promises';
 import { execSync } from 'child_process';
-import { scrubText } from './scrub';
+import { prepareSourceText, assertCompletePdfText, assertEmbedding, chunkBelongsToSource, safeSourceError } from './lib/source-quality';
 import { chunkWords } from './lib/chunk-text';
 import { withRetry } from './lib/with-retry';
 
@@ -87,6 +88,8 @@ interface IngestSource {
    * xml-config    — KEWB Config/*.xml files → prose via custom extractor
    */
   format: 'pdf' | 'html' | 'docx' | 'xml-sequences' | 'xml-config';
+  /** Remove the employee revision log from the OEM process manual. */
+  omitRevisionLog?: boolean;
   /** Person or org who curated / supplied this source (for provenance tracing). */
   curatedBy?: string;
   /**
@@ -120,8 +123,8 @@ const ACTIVE_SOURCES: IngestSource[] = [
   {
     id: 'nature-line-quality',
     label: 'AJP Line Quality Study — Nature Scientific Reports',
-    url: 'https://www.nature.com/articles/s41598-023-47544-4',
-    format: 'html',
+    url: 'https://www.nature.com/articles/s41598-023-47544-4.pdf',
+    format: 'pdf',
   },
   {
     id: 'frontiers-fault-analysis',
@@ -200,6 +203,7 @@ const ACTIVE_SOURCES: IngestSource[] = [
     label: 'Aerosol Jet Process Manual (OEM P/N 9000983)',
     localPath: './local-sources/oem-manuals/9000983-process-manual.pdf',
     format: 'pdf',
+    omitRevisionLog: true,
     curatedBy: 'OEM',
     sourceCategory: 'oem-corecorpus',
   },
@@ -351,6 +355,7 @@ async function extractPdfTextViaGemini(
   buffer: Buffer,
   flashModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']>,
   focusPrompt: string,
+  reference: string,
 ): Promise<string> {
   const base64 = buffer.toString('base64');
   const result = await withRetry(
@@ -359,10 +364,12 @@ async function extractPdfTextViaGemini(
       focusPrompt,
     ]),
     { onRetry: (attempt, attempts, err, delayMs) => console.warn(
-      `  ⟳ retrying extraction (attempt ${attempt + 1}/${attempts}, waiting ${(delayMs / 1000).toFixed(0)}s): ${err instanceof Error ? err.message : err}`,
+      `  ⟳ retrying extraction (attempt ${attempt + 1}/${attempts}, waiting ${(delayMs / 1000).toFixed(0)}s): ${safeSourceError(err)}`,
     ) },
   );
-  return result.response.text();
+  const text = result.response.text();
+  assertCompletePdfText(text, reference, result.response.candidates?.[0]?.finishReason);
+  return text;
 }
 
 /** Extract PDF text per `mode`; "gemini" mode falls back to local parsing if the Gemini call fails. */
@@ -372,15 +379,16 @@ async function extractPdfBuffer(
   flashModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']>,
   focusPrompt: string,
 ): Promise<string> {
-  if (mode === 'local') return extractPdfTextLocally(buffer);
+  const localText = await extractPdfTextLocally(buffer);
+  if (mode === 'local') return localText;
 
   try {
-    return await extractPdfTextViaGemini(buffer, flashModel, focusPrompt);
+    return await extractPdfTextViaGemini(buffer, flashModel, focusPrompt, localText);
   } catch (err) {
     console.warn(
-      `  ⚠ Gemini extraction failed, falling back to local PDF parsing: ${err instanceof Error ? err.message : err}`,
+      `  ⚠ Gemini extraction failed, falling back to local PDF parsing: ${safeSourceError(err)}`,
     );
-    return extractPdfTextLocally(buffer);
+    return localText;
   }
 }
 
@@ -416,7 +424,7 @@ async function extractLocalPdfText(
 
 /**
  * Extract plain text from a .docx file using macOS `textutil`.
- * Falls back gracefully if textutil is unavailable.
+ * Reports a source failure if textutil is unavailable; no text is fabricated.
  */
 function extractDocxText(localPath: string): string {
   console.log(`  Extracting DOCX: ${localPath}`);
@@ -429,7 +437,7 @@ function extractDocxText(localPath: string): string {
     return text;
   } catch (err) {
     throw new Error(
-      `DOCX extraction failed (requires macOS textutil): ${err instanceof Error ? err.message : String(err)}`,
+      `DOCX extraction failed (requires macOS textutil): ${safeSourceError(err)}`,
     );
   }
 }
@@ -622,12 +630,13 @@ async function embedChunks(
       batch.map((c) => withRetry(
         () => embeddingModel.embedContent(c.text),
         { onRetry: (attempt, attempts, err, delayMs) => console.warn(
-          `    ⟳ retrying embedding for ${c.id} (attempt ${attempt + 1}/${attempts}, waiting ${(delayMs / 1000).toFixed(0)}s): ${err instanceof Error ? err.message : err}`,
+          `    ⟳ retrying embedding for ${c.id} (attempt ${attempt + 1}/${attempts}, waiting ${(delayMs / 1000).toFixed(0)}s): ${safeSourceError(err)}`,
         ) },
       )),
     );
 
     for (let j = 0; j < batch.length; j++) {
+      assertEmbedding(embeddings[j].embedding.values);
       results.push({ ...batch[j], embedding: embeddings[j].embedding.values });
     }
 
@@ -642,12 +651,12 @@ async function embedChunks(
 // ─── CLI flags ────────────────────────────────────────────────────
 
 interface SourceSummaryEntry { id: string; label: string; chunks: number; status: string }
-interface ExistingCorpus { sourcesSummary: SourceSummaryEntry[]; chunks: ChunkWithEmbedding[] }
+interface ExistingCorpus { model?: string; sourcesSummary: SourceSummaryEntry[]; chunks: ChunkWithEmbedding[] }
 
 function loadExistingCorpus(): ExistingCorpus | null {
   if (!existsSync(OUTPUT_PATH)) return null;
   const raw = JSON.parse(readFileSync(OUTPUT_PATH, 'utf-8'));
-  return { sourcesSummary: raw.sourcesSummary ?? [], chunks: raw.chunks ?? [] };
+  return { model: raw.model, sourcesSummary: raw.sourcesSummary ?? [], chunks: raw.chunks ?? [] };
 }
 
 // ─── Main ─────────────────────────────────────────────────────────
@@ -658,6 +667,13 @@ async function main() {
   const args = process.argv.slice(2);
   const allowPartial = args.includes('--allow-partial');
   const retryFailedOnly = args.includes('--retry-failed-only');
+  const sourceArg = args.find((arg) => arg.startsWith('--sources='));
+  const requestedIds = sourceArg?.slice('--sources='.length).split(',').filter(Boolean) ?? [];
+  if (sourceArg && requestedIds.length === 0) throw new Error('--sources requires at least one source ID');
+  if (sourceArg && retryFailedOnly) throw new Error('Use --sources or --retry-failed-only, not both');
+  for (const id of requestedIds) {
+    if (!ACTIVE_SOURCES.some((source) => source.id === id)) throw new Error(`Unknown or excluded source ID: ${id}`);
+  }
   const extractModeArg = args.find((a) => a.startsWith('--extract='))?.split('=')[1];
   const extractMode: ExtractMode = extractModeArg === 'gemini' ? 'gemini' : 'local';
   console.log(`PDF extraction mode: ${extractMode}${extractModeArg && extractModeArg !== 'local' && extractModeArg !== 'gemini' ? ` (unrecognized "--extract=${extractModeArg}", defaulting to local)` : ''}\n`);
@@ -684,21 +700,22 @@ async function main() {
   const allChunks: ChunkWithEmbedding[] = [];
   const sourcesSummary: SourceSummaryEntry[] = [];
 
-  if (retryFailedOnly) {
+  if (retryFailedOnly || sourceArg) {
     const existing = loadExistingCorpus();
     if (!existing) {
-      console.error('--retry-failed-only requires an existing public/ajp-corpus.json to retry against.');
+      console.error('Targeted updates require an existing public/ajp-corpus.json.');
       process.exit(1);
     }
-    const failedIds = new Set(existing.sourcesSummary.filter((s) => s.status !== 'ok').map((s) => s.id));
+    if (existing.model !== EMBEDDING_MODEL) throw new Error('Targeted updates require matching embedding models');
+    const failedIds = new Set(sourceArg ? requestedIds : existing.sourcesSummary.filter((s) => s.status !== 'ok').map((s) => s.id));
     if (failedIds.size === 0) {
       console.log('No failed sources in the existing corpus — nothing to retry.');
       return;
     }
-    console.log(`─── Retrying ${failedIds.size} previously-failed source(s): ${[...failedIds].join(', ')} ───\n`);
+    console.log(`─── Updating ${failedIds.size} selected source(s): ${[...failedIds].join(', ')} ───\n`);
     sourcesToProcess = ACTIVE_SOURCES.filter((s) => failedIds.has(s.id));
     // Carry over chunks/summary entries for sources that already succeeded.
-    allChunks.push(...existing.chunks.filter((c) => ![...failedIds].some((id) => c.id.startsWith(`${id}-chunk-`))));
+    allChunks.push(...existing.chunks.filter((c) => ![...failedIds].some((id) => chunkBelongsToSource(c.id, id))));
     sourcesSummary.push(...existing.sourcesSummary.filter((s) => !failedIds.has(s.id)));
   }
 
@@ -726,11 +743,7 @@ async function main() {
       // Sensitivity scrub — codename, deployment framing, site-specific recipe
       // filenames, and OEM employee names — applied before chunking so no rebuild
       // reintroduces them. Single source of truth: scripts/scrub.ts.
-      rawText = scrubText(rawText);
-
-      if (rawText.trim().length < 200) {
-        throw new Error('Extracted text too short — source may be inaccessible or paywalled');
-      }
+      rawText = prepareSourceText(rawText, source.omitRevisionLog);
 
       console.log(`  Extracted ${rawText.split(/\s+/).length} words`);
       const chunks = chunkText(rawText, source.id, source.label, source.curatedBy, source.sourceCategory);
@@ -744,18 +757,22 @@ async function main() {
     } catch (err) {
       // Redact any Google API key that Gemini errors echo back, so it can never
       // reach the console log or the committed public/ajp-corpus.json metadata.
-      const msg = (err instanceof Error ? err.message : String(err)).replace(/AIza[0-9A-Za-z_-]{30,}/g, '[key-redacted]');
+      const msg = safeSourceError(err);
       console.warn(`  ✗ SKIPPED: ${msg}`);
       sourcesSummary.push({ id: source.id, label: source.label, chunks: 0, status: `error: ${msg}` });
     }
   }
 
-  // Restore original ACTIVE_SOURCES ordering (retry-failed-only appends carried-over
+  if (sourceArg && sourcesSummary.some((source) => requestedIds.includes(source.id) && source.status !== 'ok')) {
+    throw new Error('Targeted source repair failed; existing corpus has not been changed');
+  }
+
+  // Restore original ACTIVE_SOURCES ordering (targeted updates append carried-over
   // entries first, then newly-retried ones) so the summary reads predictably.
   const orderIndex = new Map(ACTIVE_SOURCES.map((s, i) => [s.id, i]));
   sourcesSummary.sort((a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0));
 
-  const hardFailures = sourcesSummary.filter((s) => s.status !== 'ok');
+  const hardFailures = sourcesSummary.filter((s) => s.status !== 'ok' && (!sourceArg || requestedIds.includes(s.id)));
   if (hardFailures.length > 0) {
     console.log('\n╔═══════════════════════════════════════════════════════════╗');
     console.log(`║  ${hardFailures.length} of ${sourcesSummary.length} source(s) FAILED to ingest — corpus is incomplete  `);
@@ -785,11 +802,12 @@ async function main() {
     chunks: allChunks,
   };
 
-  writeFileSync(OUTPUT_PATH, JSON.stringify(output));
+  writeFileSync(`${OUTPUT_PATH}.tmp`, JSON.stringify(output));
+  renameSync(`${OUTPUT_PATH}.tmp`, OUTPUT_PATH);
   const fileSizeKB = Math.round(JSON.stringify(output).length / 1024);
 
-  if (retryFailedOnly) {
-    console.log(`\n=== Retry Complete ===`);
+  if (retryFailedOnly || sourceArg) {
+    console.log(`\n=== Targeted Update Complete ===`);
     console.log(`Output: public/ajp-corpus.json (${fileSizeKB} KB)`);
     console.log(`Total chunks: ${allChunks.length}`);
     for (const s of sourcesSummary) {
@@ -804,7 +822,8 @@ async function main() {
   // Bake Gemini vectors for every graph node so runtime doesn't pay a
   // cold-start embedding call. Loaded by graph-utils.buildNodeEmbeddingCache.
   console.log('\n─── Graph Node Embeddings ───');
-  const { allNodes } = await import('../src/engine/retrieval/graph-utils.ts');
+  const { ajpDomain } = await import('../src/domains/ajp/index.ts');
+  const allNodes = ajpDomain.graph.nodes;
   console.log(`Embedding ${allNodes.length} graph nodes…`);
 
   const nodeEmbeddings: Array<{ id: string; type: string; content: string; embedding: number[] }> = [];
@@ -816,7 +835,7 @@ async function main() {
     const embs = await Promise.all(batch.map((n) => withRetry(
       () => embeddingModel.embedContent(n.content),
       { onRetry: (attempt, attempts, err, delayMs) => console.warn(
-        `    ⟳ retrying node embedding for ${n.id} (attempt ${attempt + 1}/${attempts}, waiting ${(delayMs / 1000).toFixed(0)}s): ${err instanceof Error ? err.message : err}`,
+        `    ⟳ retrying node embedding for ${n.id} (attempt ${attempt + 1}/${attempts}, waiting ${(delayMs / 1000).toFixed(0)}s): ${safeSourceError(err)}`,
       ) },
     )));
     batch.forEach((n, j) => nodeEmbeddings.push({
@@ -852,6 +871,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('\nIngestion failed:', err);
+  console.error('\nIngestion failed:', safeSourceError(err));
   process.exit(1);
 });
