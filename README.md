@@ -243,6 +243,13 @@ selected source fails. PDF text extraction is local by default; embeddings use
 `gemini-embedding-001`. The optional node-vector cache is not currently committed.
 See [the comparison and repair record](docs/corpus-comparison-2026-11-04.md).
 
+Reachback ranks document passages with BM25 keywords plus semantic ranks when a
+matching embedding provider is available. Explicit source/part constraints and
+conservative evidence checks can return **No supporting passage found**, withholding
+unrelated graph chains and mentor context. Similarity scores are not answer confidence.
+See [the ranking policy and regression checks](docs/retrieval-ranking.md) for the
+measured results and limitations.
+
 An older SQLite pipeline (`npm run db:*`, under `scripts/db/`) still exists but is **not** the authoritative path for the shipped dense corpus — don't mix it with `npm run ingest` mid-rebuild. Every source feeding Graph / Flow / Dense should resolve in [sources/SOURCES_LOG.md](sources/SOURCES_LOG.md).
 
 ### Source provenance

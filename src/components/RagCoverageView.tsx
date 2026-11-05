@@ -77,7 +77,7 @@ async function runEvalSet(
       const i = cursor++;
       const q = queries[i];
       try {
-        // Providers without a modelId (simulated TF-IDF) can't be scored
+        // Providers without a modelId (simulated keyword) can't be scored
         // against the baked embeddings — use the lexical corpus path so
         // coverage analysis still works keyless.
         let res;
@@ -85,6 +85,7 @@ async function runEvalSet(
           const [embedding] = await provider.embed([q.text]);
           res = await queryDense({
             queryEmbedding: embedding,
+            queryText: q.text,
             queryModelId: provider.modelId,
             topK,
             minScore: 0, // keep the whole top-K; tau is applied in the UI
@@ -177,7 +178,7 @@ export function RagCoverageView() {
   const backend = getDenseBackend();
   const corpusModel = backend.modelId() ?? (inventory && inventory.length > 0 ? CORPUS_MODEL : undefined);
   // Semantic mode needs a provider whose modelId matches the baked corpus;
-  // a provider without a modelId (simulated TF-IDF) now runs via the lexical
+  // a provider without a modelId (simulated keyword) now runs via the lexical
   // corpus path instead, so coverage analysis stays available keyless.
   const lexicalMode = !!provider && !provider.modelId;
   const denseReady =
@@ -414,7 +415,7 @@ export function RagCoverageView() {
           <p>Assemble a query set above and press <strong>Run</strong>.</p>
           <p className="rag-run-note">
             {lexicalMode
-              ? <>Keyless mode: queries run as TF-IDF keyword matches over{' '}
+              ? <>Keyless mode: queries run as keyword matches over{' '}
                   {inventory ? inventory.length : '—'} corpus chunks (add a Gemini key for semantic
                   scoring). {assembledQueries.length} queries queued.</>
               : <>Each query is one embedding call against your Gemini key, then a cosine sweep over{' '}

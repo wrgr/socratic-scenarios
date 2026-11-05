@@ -1,0 +1,840 @@
+{
+  "checkedAt": "2026-11-05T03:46:54.586Z",
+  "corpus": {
+    "url": "https://experttrace.org/ajp-corpus.json",
+    "sha256": "6e21900d25a8e095ac3aa9bbc99a5f3cebc2593575a54d2fd3b09d2b70d939c0",
+    "chunks": 575,
+    "model": "gemini-embedding-001"
+  },
+  "note": "Recall measures whether a predeclared source-PDF evidence chunk appears in the app's top 5 passages; not answer-generation accuracy.",
+  "summary": [
+    {
+      "mode": "keyless",
+      "hitAt5": 18,
+      "questions": 18,
+      "manualHitAt5": 15,
+      "manualQuestions": 15,
+      "rejectedControls": 4
+    },
+    {
+      "mode": "semantic",
+      "hitAt5": 18,
+      "questions": 18,
+      "manualHitAt5": 15,
+      "manualQuestions": 15,
+      "rejectedControls": 4
+    }
+  ],
+  "runs": [
+    {
+      "mode": "keyless",
+      "caseId": "soak",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-85",
+        "hd2-process-manual-chunk-90",
+        "hd2-process-manual-chunk-87",
+        "hd2-process-manual-chunk-88",
+        "hd2-process-manual-chunk-81"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "solvent",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-52",
+        "hd2-process-manual-chunk-64",
+        "hd2-process-manual-chunk-63",
+        "hd2-process-manual-chunk-50",
+        "hd2-process-manual-chunk-48"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "torque",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-53",
+        "hd2-process-manual-chunk-12",
+        "hd2-process-manual-chunk-60",
+        "hd2-process-manual-chunk-9",
+        "hd2-process-manual-chunk-47"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "viscosity",
+      "evidenceStatus": "passages-found",
+      "goldRank": 4,
+      "passageIds": [
+        "boise-state-iml-sop-chunk-2",
+        "hd2-process-manual-chunk-9",
+        "salary-2019-state-of-art-chunk-30",
+        "hd2-process-manual-chunk-47",
+        "fisher-2023-sensors-chunk-5"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "chiller",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-67",
+        "hd2-process-manual-chunk-68",
+        "hd2-process-manual-chunk-59",
+        "hd2-process-manual-chunk-88",
+        "hd2-process-manual-chunk-13"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "inspection",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-98",
+        "salary-2019-state-of-art-chunk-26",
+        "hd2-process-manual-chunk-6",
+        "hd2-process-manual-chunk-80",
+        "hd2-process-manual-chunk-69"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "volume",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-98",
+        "hd2-process-manual-chunk-99",
+        "hd2-process-manual-chunk-64",
+        "pmc9412835-chunk-3",
+        "hd2-process-manual-chunk-65"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "diaphragm",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-99",
+        "hd2-process-manual-chunk-52",
+        "hd2-process-manual-chunk-57",
+        "hd2-process-manual-chunk-81",
+        "hd2-process-manual-chunk-59"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "calibration",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-59",
+        "hd2-qanda-chunk-0",
+        "hd2-process-manual-chunk-68",
+        "hd2-qanda-chunk-2",
+        "hd2-process-manual-chunk-67"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "tubing",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-53",
+        "hd2-process-manual-chunk-65",
+        "hd2-process-manual-chunk-9",
+        "hd2-process-manual-chunk-1",
+        "stanford-snf-sop-chunk-8"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "nature",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "nature-line-quality-chunk-5",
+        "nature-line-quality-chunk-12",
+        "nature-line-quality-chunk-16",
+        "nature-line-quality-chunk-18",
+        "nature-line-quality-chunk-17"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "salary",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "salary-2019-state-of-art-chunk-31",
+        "salary-2019-state-of-art-chunk-30",
+        "salary-2019-state-of-art-chunk-0",
+        "salary-2019-state-of-art-chunk-28",
+        "salary-2019-state-of-art-chunk-33"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "fisher-microgravity",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "fisher-2023-sensors-chunk-80",
+        "fisher-2023-sensors-chunk-5",
+        "hd2-process-manual-chunk-51",
+        "fisher-2023-sensors-chunk-7",
+        "fisher-2023-sensors-chunk-47"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "unsupported",
+      "evidenceStatus": "insufficient-evidence",
+      "goldRank": null,
+      "passageIds": []
+    },
+    {
+      "mode": "keyless",
+      "caseId": "bypass-cleaning",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-34",
+        "hd2-process-manual-chunk-36",
+        "hd2-motion-vision-kewb-chunk-41",
+        "hd2-process-manual-chunk-33",
+        "hd2-process-manual-chunk-4"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "fine-tube",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-53",
+        "hd2-process-manual-chunk-65",
+        "hd2-process-manual-chunk-9",
+        "hd2-process-manual-chunk-89",
+        "hd2-process-manual-chunk-1"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "routine-cleaning",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-79",
+        "hd2-process-manual-chunk-80",
+        "hd2-process-manual-chunk-2",
+        "hd2-process-manual-chunk-91",
+        "hd2-process-manual-chunk-97"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "pneumatic-supply",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-99",
+        "wilkinson-2019-review-chunk-3",
+        "wilkinson-2019-review-chunk-4",
+        "hd2-process-manual-chunk-51",
+        "hd2-process-manual-chunk-2"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "transducer-failure",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-99",
+        "hd2-process-manual-chunk-49",
+        "hd2-process-manual-chunk-50",
+        "stanford-snf-sop-chunk-9",
+        "hd2-process-manual-chunk-5"
+      ]
+    },
+    {
+      "mode": "keyless",
+      "caseId": "unseen-part",
+      "evidenceStatus": "insufficient-evidence",
+      "goldRank": null,
+      "passageIds": []
+    },
+    {
+      "mode": "keyless",
+      "caseId": "weather",
+      "evidenceStatus": "insufficient-evidence",
+      "goldRank": null,
+      "passageIds": []
+    },
+    {
+      "mode": "keyless",
+      "caseId": "unknown-capability",
+      "evidenceStatus": "insufficient-evidence",
+      "goldRank": null,
+      "passageIds": []
+    },
+    {
+      "mode": "semantic",
+      "caseId": "soak",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-85",
+        "hd2-process-manual-chunk-90",
+        "hd2-process-manual-chunk-88",
+        "hd2-process-manual-chunk-89",
+        "hd2-process-manual-chunk-87"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "solvent",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-52",
+        "hd2-process-manual-chunk-50",
+        "hd2-process-manual-chunk-63",
+        "hd2-process-manual-chunk-48",
+        "hd2-process-manual-chunk-64"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "torque",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-53",
+        "hd2-process-manual-chunk-60",
+        "hd2-process-manual-chunk-47",
+        "hd2-process-manual-chunk-12",
+        "hd2-process-manual-chunk-9"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "viscosity",
+      "evidenceStatus": "passages-found",
+      "goldRank": 4,
+      "passageIds": [
+        "hd2-process-manual-chunk-9",
+        "boise-state-iml-sop-chunk-2",
+        "hd2-qanda-chunk-0",
+        "hd2-process-manual-chunk-47",
+        "salary-2019-state-of-art-chunk-30"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "chiller",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-67",
+        "hd2-process-manual-chunk-68",
+        "hd2-process-manual-chunk-59",
+        "hd2-process-manual-chunk-88",
+        "hd2-process-manual-chunk-13"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "inspection",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-98",
+        "salary-2019-state-of-art-chunk-26",
+        "hd2-process-manual-chunk-6",
+        "hd2-process-manual-chunk-80",
+        "hd2-process-dev-session11-chunk-3"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "volume",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-98",
+        "hd2-process-manual-chunk-99",
+        "hd2-process-manual-chunk-65",
+        "hd2-process-manual-chunk-64",
+        "pmc9412835-chunk-3"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "diaphragm",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-99",
+        "hd2-process-manual-chunk-52",
+        "hd2-process-manual-chunk-81",
+        "hd2-process-manual-chunk-59",
+        "hd2-process-manual-chunk-57"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "calibration",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-59",
+        "hd2-qanda-chunk-0",
+        "hd2-process-manual-chunk-68",
+        "hd2-process-manual-chunk-67",
+        "hd2-qanda-chunk-2"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "tubing",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-53",
+        "hd2-process-manual-chunk-54",
+        "hd2-process-manual-chunk-65",
+        "stanford-snf-sop-chunk-8",
+        "hd2-process-manual-chunk-9"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "nature",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "nature-line-quality-chunk-5",
+        "nature-line-quality-chunk-16",
+        "nature-line-quality-chunk-17",
+        "nature-line-quality-chunk-15",
+        "nature-line-quality-chunk-12"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "salary",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "salary-2019-state-of-art-chunk-31",
+        "salary-2019-state-of-art-chunk-30",
+        "salary-2019-state-of-art-chunk-28",
+        "salary-2019-state-of-art-chunk-0",
+        "salary-2019-state-of-art-chunk-27"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "fisher-microgravity",
+      "evidenceStatus": "passages-found",
+      "goldRank": 3,
+      "passageIds": [
+        "fisher-2023-sensors-chunk-5",
+        "fisher-2023-sensors-chunk-7",
+        "fisher-2023-sensors-chunk-80",
+        "hd2-process-manual-chunk-10",
+        "hd2-process-manual-chunk-51"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "unsupported",
+      "evidenceStatus": "insufficient-evidence",
+      "goldRank": null,
+      "passageIds": []
+    },
+    {
+      "mode": "semantic",
+      "caseId": "bypass-cleaning",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-34",
+        "hd2-process-manual-chunk-36",
+        "hd2-process-manual-chunk-33",
+        "hd2-motion-vision-kewb-chunk-41",
+        "hd2-process-manual-chunk-31"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "fine-tube",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-53",
+        "hd2-process-manual-chunk-89",
+        "hd2-process-manual-chunk-65",
+        "hd2-process-manual-chunk-9",
+        "stanford-snf-sop-chunk-8"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "routine-cleaning",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-79",
+        "hd2-process-manual-chunk-80",
+        "hd2-process-manual-chunk-2",
+        "hd2-process-manual-chunk-89",
+        "hd2-process-manual-chunk-97"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "pneumatic-supply",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-99",
+        "wilkinson-2019-review-chunk-3",
+        "hd2-process-manual-chunk-98",
+        "wilkinson-2019-review-chunk-4",
+        "hd2-process-manual-chunk-68"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "transducer-failure",
+      "evidenceStatus": "passages-found",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-99",
+        "hd2-process-manual-chunk-49",
+        "hd2-process-manual-chunk-50",
+        "hd2-process-manual-chunk-81",
+        "stanford-snf-sop-chunk-9"
+      ]
+    },
+    {
+      "mode": "semantic",
+      "caseId": "unseen-part",
+      "evidenceStatus": "insufficient-evidence",
+      "goldRank": null,
+      "passageIds": []
+    },
+    {
+      "mode": "semantic",
+      "caseId": "weather",
+      "evidenceStatus": "insufficient-evidence",
+      "goldRank": null,
+      "passageIds": []
+    },
+    {
+      "mode": "semantic",
+      "caseId": "unknown-capability",
+      "evidenceStatus": "insufficient-evidence",
+      "goldRank": null,
+      "passageIds": []
+    }
+  ],
+  "browser": [
+    {
+      "caseId": "soak",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-85",
+        "hd2-process-manual-chunk-90",
+        "hd2-process-manual-chunk-87",
+        "hd2-process-manual-chunk-88",
+        "hd2-process-manual-chunk-81"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "solvent",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-52",
+        "hd2-process-manual-chunk-64",
+        "hd2-process-manual-chunk-63",
+        "hd2-process-manual-chunk-50",
+        "hd2-process-manual-chunk-48"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "torque",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-53",
+        "hd2-process-manual-chunk-12",
+        "hd2-process-manual-chunk-60",
+        "hd2-process-manual-chunk-9",
+        "hd2-process-manual-chunk-47"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "viscosity",
+      "goldRank": 4,
+      "passageIds": [
+        "boise-state-iml-sop-chunk-2",
+        "hd2-process-manual-chunk-9",
+        "salary-2019-state-of-art-chunk-30",
+        "hd2-process-manual-chunk-47",
+        "fisher-2023-sensors-chunk-5"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "chiller",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-67",
+        "hd2-process-manual-chunk-68",
+        "hd2-process-manual-chunk-59",
+        "hd2-process-manual-chunk-88",
+        "hd2-process-manual-chunk-13"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "inspection",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-98",
+        "salary-2019-state-of-art-chunk-26",
+        "hd2-process-manual-chunk-6",
+        "hd2-process-manual-chunk-80",
+        "hd2-process-manual-chunk-69"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "volume",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-98",
+        "hd2-process-manual-chunk-99",
+        "hd2-process-manual-chunk-64",
+        "pmc9412835-chunk-3",
+        "hd2-process-manual-chunk-65"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "diaphragm",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-99",
+        "hd2-process-manual-chunk-52",
+        "hd2-process-manual-chunk-57",
+        "hd2-process-manual-chunk-81",
+        "hd2-process-manual-chunk-59"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "calibration",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-59",
+        "hd2-qanda-chunk-0",
+        "hd2-process-manual-chunk-68",
+        "hd2-qanda-chunk-2",
+        "hd2-process-manual-chunk-67"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "tubing",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-53",
+        "hd2-process-manual-chunk-65",
+        "hd2-process-manual-chunk-9",
+        "hd2-process-manual-chunk-1",
+        "stanford-snf-sop-chunk-8"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "nature",
+      "goldRank": 1,
+      "passageIds": [
+        "nature-line-quality-chunk-5",
+        "nature-line-quality-chunk-12",
+        "nature-line-quality-chunk-16",
+        "nature-line-quality-chunk-18",
+        "nature-line-quality-chunk-17"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "salary",
+      "goldRank": 1,
+      "passageIds": [
+        "salary-2019-state-of-art-chunk-31",
+        "salary-2019-state-of-art-chunk-30",
+        "salary-2019-state-of-art-chunk-0",
+        "salary-2019-state-of-art-chunk-28",
+        "salary-2019-state-of-art-chunk-33"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "fisher-microgravity",
+      "goldRank": 1,
+      "passageIds": [
+        "fisher-2023-sensors-chunk-80",
+        "fisher-2023-sensors-chunk-5",
+        "hd2-process-manual-chunk-51",
+        "fisher-2023-sensors-chunk-7",
+        "fisher-2023-sensors-chunk-47"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "unsupported",
+      "goldRank": 0,
+      "passageIds": [],
+      "status": [
+        "No supporting passage foundNo source passage mentions ZX-999999. Check the identifier or provide its documentation."
+      ]
+    },
+    {
+      "caseId": "bypass-cleaning",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-34",
+        "hd2-process-manual-chunk-36",
+        "hd2-motion-vision-kewb-chunk-41",
+        "hd2-process-manual-chunk-33",
+        "hd2-process-manual-chunk-4"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "fine-tube",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-53",
+        "hd2-process-manual-chunk-65",
+        "hd2-process-manual-chunk-9",
+        "hd2-process-manual-chunk-89",
+        "hd2-process-manual-chunk-1"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "routine-cleaning",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-79",
+        "hd2-process-manual-chunk-80",
+        "hd2-process-manual-chunk-2",
+        "hd2-process-manual-chunk-91",
+        "hd2-process-manual-chunk-97"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "pneumatic-supply",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-99",
+        "wilkinson-2019-review-chunk-3",
+        "wilkinson-2019-review-chunk-4",
+        "hd2-process-manual-chunk-51",
+        "hd2-process-manual-chunk-2"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "transducer-failure",
+      "goldRank": 1,
+      "passageIds": [
+        "hd2-process-manual-chunk-99",
+        "hd2-process-manual-chunk-49",
+        "hd2-process-manual-chunk-50",
+        "stanford-snf-sop-chunk-9",
+        "hd2-process-manual-chunk-5"
+      ],
+      "status": [
+        "Verify the answer in the cited passagesRetrieved passages are candidates for evidence. Verify the answer in the cited text; similarity is not answer confidence."
+      ]
+    },
+    {
+      "caseId": "unseen-part",
+      "goldRank": 0,
+      "passageIds": [],
+      "status": [
+        "No supporting passage foundNo source passage mentions QZ-888777. Check the identifier or provide its documentation."
+      ]
+    },
+    {
+      "caseId": "weather",
+      "goldRank": 0,
+      "passageIds": [],
+      "status": [
+        "No supporting passage foundNo source passage directly supports this question. Try a more specific equipment or procedure description."
+      ]
+    },
+    {
+      "caseId": "unknown-capability",
+      "goldRank": 0,
+      "passageIds": [],
+      "status": [
+        "No supporting passage foundNo source passage directly supports this question. Try a more specific equipment or procedure description."
+      ]
+    }
+  ]
+}

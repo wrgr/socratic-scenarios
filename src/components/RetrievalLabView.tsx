@@ -26,6 +26,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { retrieveHybrid, formatHybridContext } from '../engine/retrieval/hybrid-retrieval';
 import type { HybridResult } from '../engine/retrieval/hybrid-retrieval';
+import { PassageEvidenceNotice } from './PassageEvidenceNotice';
 import { retrieveForContext } from '../engine/retrieval/retrieval-router';
 import type { RetrievalMode } from '../engine/retrieval/retrieval-router';
 import {
@@ -232,6 +233,7 @@ function QueryLab() {
               </span>
             </h3>
 
+            <PassageEvidenceNotice evidence={hybridResult.evidence} />
             {hybridResult.graphChains.length > 0 && (
               <div className="lab-result-section">
                 <strong>Graph tier — causal chains:</strong>
@@ -268,7 +270,7 @@ function QueryLab() {
                     <div className="lab-dense-header">
                       <span className="dense-match-source">{m.chunk.source}</span>
                       <span className="dense-match-section">— {m.chunk.section}</span>
-                      <span className="dense-match-score">{Math.round(m.score * 100)}%</span>
+                      <span className="dense-match-score" title="Text similarity, not answer confidence">{Math.round(m.score * 100)}% similarity</span>
                       <ExpertFlagButton id={m.chunk.id} label="chunk" />
                     </div>
                     <p className="lab-dense-text">{m.chunk.text.slice(0, 200)}{m.chunk.text.length > 200 ? '…' : ''}</p>

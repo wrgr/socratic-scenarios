@@ -5,11 +5,14 @@
  * - Graph-only path (no embedding provider or dense data)
  * - formatHybridContext output shape
  */
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { retrieveHybrid, formatHybridContext } from '../hybrid-retrieval';
 import { setEmbeddingProvider } from '../index';
 import { setDenseBackend } from '../dense-retrieval';
 import type { DenseBackend, DenseChunk } from '../dense-retrieval';
+
+beforeEach(() => vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ chunks: [] }), { headers: { 'content-type': 'application/json' } }))));
+afterEach(() => vi.unstubAllGlobals());
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -183,4 +186,30 @@ describe('formatHybridContext', () => {
     };
     expect(formatHybridContext(fakeResult)).toBe('');
   });
+});
+
+it('does not turn rejected passage matches into mentor evidence', () => {
+  const context = formatHybridContext({
+    graphChains: [], nodeMatchTrace: [], queryText: 'unknown part', timestamp: 0, hasDenseData: false,
+    evidence: { status: 'insufficient-evidence', message: 'The requested identifier is absent.' },
+    denseMatches: [{ chunk: makeChunk('unrelated', 'Invented answer: 999 hours.'), score: 0.9 }],
+  });
+  expect(context).toContain('NO SUPPORTING PASSAGE');
+  expect(context).not.toContain('999 hours');
+});
+
+it('includes the fifth displayed passage in mentor context', () => {
+  const context = formatHybridContext({
+    graphChains: [], nodeMatchTrace: [], queryText: 'procedure', timestamp: 0, hasDenseData: true,
+    denseMatches: Array.from({ length: 5 }, (_, i) => ({ chunk: makeChunk(`chunk-${i}`, `Evidence passage ${i + 1}`), score: 0.8 })),
+  });
+  expect(context).toContain('Evidence passage 5');
+});
+
+it('keeps graph-only mode available when document search is disabled', async () => {
+  setEmbeddingProvider(null as unknown as Parameters<typeof setEmbeddingProvider>[0]);
+  const result = await retrieveHybrid({ symptomText: 'pressure elevated and line looks narrow', denseTopK: 0 });
+  expect(result.graphChains.length).toBeGreaterThan(0);
+  expect(result.denseMatches).toEqual([]);
+  expect(result.evidence).toBeUndefined();
 });
