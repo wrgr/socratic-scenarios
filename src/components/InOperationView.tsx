@@ -31,6 +31,7 @@ import {
 } from './in-operation-view.utils';
 import { SourceRefText } from './SourceRefText';
 import { MentorDegradedBanner } from './MentorDegradedBanner';
+import { PassageEvidenceNotice } from './PassageEvidenceNotice';
 
 // ─── Graph tier sub-renderers ─────────────────────────────────────
 
@@ -409,7 +410,7 @@ function DenseMatchCard({ match, rank }: { match: DenseMatch; rank: number }) {
       >
         <span className="dense-match-source">{match.chunk.source}</span>
         <span className="dense-match-section">— {match.chunk.section}</span>
-        <span className="dense-match-score">{scorePercent}% match</span>
+        <span className="dense-match-score" title="Text similarity, not answer confidence">{scorePercent}% similarity</span>
         <span className="chain-toggle">{expanded ? '▲' : '▼'}</span>
       </button>
       {expanded && (
@@ -427,9 +428,9 @@ function DenseResultsPanel({ matches, tier }: { matches: DenseMatch[]; tier?: 'e
     <div className="in-op-dense-results">
       <h3 className="in-op-section-title">SOP / Literature Context</h3>
       <p className="in-op-results-meta">
-        {matches.length} relevant passage{matches.length > 1 ? 's' : ''} from ingested corpus
+        {matches.length} retrieved passage{matches.length > 1 ? 's' : ''} from ingested corpus
         {tier === 'lexical' && (
-          <span className="dense-tier-badge" title="No embedding key — passages matched by TF-IDF keyword overlap, not semantic similarity">
+          <span className="dense-tier-badge" title="No embedding key — passages ranked by keyword overlap; the score does not verify an answer">
             keyword match (no key)
           </span>
         )}
@@ -460,7 +461,7 @@ function MentorInterpretPanel({
   const [loading, setLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
 
-  if (!mentorService) return null;
+  if (!mentorService || hybridResult.evidence?.status === 'insufficient-evidence') return null;
 
   const retrievalContext = formatHybridContext(hybridResult);
   if (!retrievalContext) return null;
@@ -643,14 +644,15 @@ export function InOperationView() {
 
       {hasQueried && (
         <>
-          <GraphResultsPanel
+          <PassageEvidenceNotice evidence={hybridResult?.evidence} />
+          {hybridResult?.evidence?.status !== 'insufficient-evidence' && <GraphResultsPanel
             chains={graphChains}
             queryText={committedQuery}
             nodeMatchTrace={nodeMatchTrace}
             resultKey={String(queryRunId)}
-          />
+          />}
           {hasDenseData && <DenseResultsPanel matches={denseMatches} tier={denseTier} />}
-          {!hasDenseData && (
+          {!hasDenseData && !hybridResult?.corpusAvailable && !hybridResult?.evidence && (
             <p className="in-op-dense-hint">
               Run <code>npm run ingest</code> to activate SOP / literature context from the dense corpus.
             </p>

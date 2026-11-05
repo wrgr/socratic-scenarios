@@ -12,6 +12,8 @@
  * to graph-only retrieval transparently.
  */
 import { getActiveDomain } from '../../domains/domain-context';
+import { rankPassages, missingPassageIdentifiers } from './passage-ranking';
+import type { PassageEvidence } from './passage-ranking';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -24,7 +26,7 @@ export interface DenseChunk {
   section: string;
   /** Raw chunk text (300–500 words). */
   text: string;
-  /** Gemini text-embedding-004 vector (768 dimensions). */
+  /** Vector in the model space recorded in the corpus metadata (currently 3072 dimensions). */
   embedding: number[];
   /** Optional: linked AJP graph node id if this chunk maps to a known node. */
   linkedNodeId?: string;
@@ -34,6 +36,8 @@ export interface DenseChunk {
 export interface DenseMatch {
   chunk: DenseChunk;
   score: number;
+  /** Fusion score controls ordering; raw similarity is not answer confidence. */
+  rankingScore?: number;
 }
 
 /** Swappable dense retrieval backend. */
@@ -123,6 +127,14 @@ function loadChunks(): Promise<DenseChunk[]> {
   return _loadPromise;
 }
 
+/** Reject absent part/model identifiers before graph or query embedding calls. */
+export async function preflightPassageEvidence(query: string): Promise<PassageEvidence | undefined> {
+  const chunks = await loadChunks();
+  if (!chunks.length) return undefined;
+  const missing = missingPassageIdentifiers(query, chunks);
+  return missing.length ? { status: 'insufficient-evidence', message: `No source passage mentions ${missing.join(', ')}. Check the identifier or provide its documentation.` } : undefined;
+}
+
 /** Lightweight chunk metadata (no embedding/text) for coverage analysis. */
 export interface ChunkInventoryItem {
   id: string;
@@ -183,6 +195,8 @@ export function getDenseBackend(): DenseBackend {
 export interface DenseRetrievalQuery {
   /** Pre-computed query embedding from the embedding provider. */
   queryEmbedding: number[];
+  /** When supplied, combine semantic and keyword ranks with evidence checks. */
+  queryText?: string;
   /**
    * ModelId of the provider that produced queryEmbedding. Dense retrieval
    * will refuse to score against indexed vectors from a different model,
@@ -200,103 +214,41 @@ export interface DenseRetrievalResult {
   hasData: boolean;
   /** True iff dense was skipped because query/doc model ids disagree. */
   modelMismatch?: boolean;
+  evidence?: PassageEvidence;
 }
 
 // ─── Lexical Fallback Query ───────────────────────────────────────
 
 /**
- * TF-IDF lexical scoring over chunk *text*, for providers whose vectors
+ * BM25 lexical scoring over source labels, sections, and chunk text, for providers whose vectors
  * can't be compared against the baked corpus embeddings (the simulated
  * TF-IDF provider has no modelId and emits per-call vector spaces). This
  * keeps the dense corpus reachable in no-key/simulated mode: matches are
  * genuine keyword-overlap hits on the ingested SOP text, not semantic
  * neighbors, and callers should label them as such.
  */
-let _lexicalIndex: { docTerms: Map<string, number>[]; docFreq: Map<string, number> } | null = null;
-
-function tokenizeLexical(text: string): string[] {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .filter((t) => t.length > 2);
-}
-
-function buildLexicalIndex(chunks: DenseChunk[]) {
-  const docTerms: Map<string, number>[] = [];
-  const docFreq = new Map<string, number>();
-  for (const chunk of chunks) {
-    const tf = new Map<string, number>();
-    const tokens = tokenizeLexical(`${chunk.section} ${chunk.text}`);
-    for (const t of tokens) tf.set(t, (tf.get(t) ?? 0) + 1);
-    for (const t of tf.keys()) docFreq.set(t, (docFreq.get(t) ?? 0) + 1);
-    docTerms.push(tf);
-  }
-  return { docTerms, docFreq };
-}
-
 export interface LexicalRetrievalQuery {
   queryText: string;
   topK?: number;
-  /** Minimum normalized lexical score to include. Default 0.05. */
+  /** Minimum bounded keyword score to include. Default 0.05. */
   minScore?: number;
 }
 
 /**
- * Query the dense corpus by TF-IDF keyword overlap with the query text.
- * Loads the corpus if needed. Scores are cosine over TF-IDF weights,
- * normalized to 0–1 — not comparable to embedding-cosine scores.
+ * Query the document corpus with BM25 keyword ranking and evidence constraints.
+ * Loads the corpus if needed. Keyword scores are bounded to 0–1 for display,
+ * not calibrated probabilities and not comparable to embedding-cosine scores.
  */
 export async function queryDenseLexical(query: LexicalRetrievalQuery): Promise<DenseRetrievalResult> {
   const { queryText, topK = 5, minScore = 0.05 } = query;
   const chunks = await loadChunks();
-  if (chunks.length === 0) return { matches: [], hasData: false };
-
-  if (!_lexicalIndex || _lexicalIndex.docTerms.length !== chunks.length) {
-    _lexicalIndex = buildLexicalIndex(chunks);
-  }
-  const { docTerms, docFreq } = _lexicalIndex;
-  const n = chunks.length;
-
-  const qtf = new Map<string, number>();
-  for (const t of tokenizeLexical(queryText)) qtf.set(t, (qtf.get(t) ?? 0) + 1);
-  if (qtf.size === 0) return { matches: [], hasData: true };
-
-  const idf = (term: string) => Math.log((n + 1) / ((docFreq.get(term) ?? 0) + 1)) + 1;
-  let qNorm = 0;
-  const qWeights = new Map<string, number>();
-  for (const [t, c] of qtf) {
-    const w = c * idf(t);
-    qWeights.set(t, w);
-    qNorm += w * w;
-  }
-  qNorm = Math.sqrt(qNorm);
-
-  const scored = chunks.map((chunk, i) => {
-    const tf = docTerms[i];
-    let dot = 0;
-    let dNorm = 0;
-    for (const [t, c] of tf) {
-      const w = c * idf(t);
-      dNorm += w * w;
-      const qw = qWeights.get(t);
-      if (qw) dot += qw * w;
-    }
-    dNorm = Math.sqrt(dNorm);
-    const score = qNorm > 0 && dNorm > 0 ? dot / (qNorm * dNorm) : 0;
-    return { chunk, score };
-  });
-
-  const matches = scored
-    .filter((m) => m.score >= minScore)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topK);
-  return { matches, hasData: true };
+  const result = rankPassages(queryText, chunks, [], topK, minScore);
+  return { ...result, hasData: chunks.length > 0 };
 }
 
 /** Query the dense corpus tier. Returns empty results if no data is loaded. */
 export async function queryDense(query: DenseRetrievalQuery): Promise<DenseRetrievalResult> {
-  const { queryEmbedding, queryModelId, topK = 5, minScore = 0.3 } = query;
+  const { queryEmbedding, queryModelId, queryText, topK = 5, minScore = 0.3 } = query;
   const backend = getDenseBackend();
 
   // Ensure the corpus (if any) has finished loading before checking readiness —
@@ -320,7 +272,15 @@ export async function queryDense(query: DenseRetrievalQuery): Promise<DenseRetri
     return { matches: [], hasData: true, modelMismatch: true };
   }
 
-  const matches = await backend.query(queryEmbedding, topK);
+  // Retrieve a broad semantic pool before fusing keyword candidates; this
+  // prevents one long paragraph from hiding a precise fact below the UI cutoff.
+  const poolSize = backend === jsonBackend ? _chunks?.length ?? 0 : Math.max(50, topK);
+  const matches = await backend.query(queryEmbedding, queryText ? poolSize : topK);
+  if (queryText) {
+    const chunks = backend === jsonBackend ? await loadChunks() : matches.map((m) => m.chunk);
+    const result = rankPassages(queryText, chunks, matches, topK, minScore);
+    return { ...result, hasData: true };
+  }
   const filtered = matches.filter((m) => m.score >= minScore);
   return { matches: filtered, hasData: true };
 }

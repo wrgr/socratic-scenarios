@@ -9,16 +9,16 @@
  * graph chains with relevant SOP passages. When it does not exist, the function
  * returns graph-only results — identical to the Phase 2 behaviour.
  *
- * Score fusion: graph chains are scored by causal chain confidence;
- * dense chunks are scored by cosine similarity. Both are normalised to 0–1 and
- * merged independently — callers receive both lists and can display them in
- * their own sections.
+ * Graph chains retain their causal-chain scores. Document ordering combines
+ * BM25 keyword and semantic ranks, source constraints, and evidence checks.
+ * Displayed similarity is not a probability that the question is answered.
  */
 import { getEmbeddingProvider } from './index';
 import { retrieveFromGraphAsync } from './graph-retrieval';
 import type { CausalChainResult, NodeMatchTrace } from './graph-retrieval';
-import { queryDense, queryDenseLexical } from './dense-retrieval';
+import { queryDense, queryDenseLexical, preflightPassageEvidence } from './dense-retrieval';
 import type { DenseMatch } from './dense-retrieval';
+import type { PassageEvidence } from './passage-ranking';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -38,9 +38,12 @@ export interface HybridResult {
   denseMatches: DenseMatch[];
   /** True when the dense corpus is loaded and returned results. */
   hasDenseData: boolean;
+  /** Availability is separate from finding support for the particular question. */
+  corpusAvailable?: boolean;
+  evidence?: PassageEvidence;
   /**
    * How the dense matches were scored: 'embedding' (semantic cosine over
-   * baked vectors — Gemini key mode) or 'lexical' (TF-IDF keyword overlap
+   * baked vectors — Gemini key mode) or 'lexical' (keyword overlap
    * on chunk text — simulated/no-key mode). Undefined when no dense tier ran.
    * Surfaces in the UI so a keyword hit is never presented as a semantic one.
    */
@@ -58,11 +61,15 @@ export interface HybridResult {
 // ─── Hybrid Retrieval ─────────────────────────────────────────────
 
 /**
- * Run graph + dense retrieval in parallel and merge results.
- * Falls back to graph-only when no embedding provider is set or corpus is empty.
+ * Run graph retrieval and ranked document lookup, then combine their results.
+ * Uses keyword lookup without a matching provider and graph fallback if the corpus is absent.
  */
 export async function retrieveHybrid(query: HybridQuery): Promise<HybridResult> {
   const { symptomText, graphTopK = 3, denseTopK = 5 } = query;
+
+  const rejected = denseTopK > 0 ? await preflightPassageEvidence(symptomText) : undefined;
+  if (rejected) return { graphChains: [], denseMatches: [], hasDenseData: false, corpusAvailable: true,
+    evidence: rejected, nodeMatchTrace: [], queryText: symptomText, timestamp: Date.now() };
 
   // Provider is checked once so both graph and dense tiers use the same instance
   const provider = getEmbeddingProvider();
@@ -76,9 +83,14 @@ export async function retrieveHybrid(query: HybridQuery): Promise<HybridResult> 
     embeddingProvider: provider ?? undefined,
   });
 
+  if (denseTopK === 0) return { graphChains: graphResult.chains, denseMatches: [], hasDenseData: false,
+    nodeMatchTrace: graphResult.nodeMatchTrace, queryText: symptomText, timestamp: Date.now() };
+
   let denseMatches: DenseMatch[] = [];
   let hasDenseData = false;
   let denseTier: 'embedding' | 'lexical' | undefined;
+  let evidence: PassageEvidence | undefined;
+  let corpusAvailable = false;
 
   // NOTE: do NOT pre-gate on getDenseBackend().hasData() — the corpus is
   // lazy-loaded inside queryDense*, so before the first query hasData() is
@@ -92,6 +104,7 @@ export async function retrieveHybrid(query: HybridQuery): Promise<HybridResult> 
       const [embedding] = await provider.embed([symptomText]);
       const denseResult = await queryDense({
         queryEmbedding: embedding,
+        queryText: symptomText,
         queryModelId: provider.modelId,
         topK: denseTopK,
         minScore: 0.35,
@@ -99,32 +112,46 @@ export async function retrieveHybrid(query: HybridQuery): Promise<HybridResult> 
       if (denseResult.modelMismatch) {
         // Simulated/no-key mode against a baked corpus: provider vectors are
         // per-call TF-IDF spaces that can't be cosine'd against the corpus
-        // embeddings. Fall back to lexical TF-IDF over chunk text so the
+        // embeddings. Fall back to BM25 keyword over chunk text so the
         // corpus stays reachable without a key.
         const lexResult = await queryDenseLexical({
           queryText: symptomText,
           topK: denseTopK,
         });
         denseMatches = lexResult.matches;
+        corpusAvailable = lexResult.hasData;
+        evidence = lexResult.evidence;
         hasDenseData = lexResult.hasData && lexResult.matches.length > 0;
         denseTier = denseMatches.length > 0 ? 'lexical' : undefined;
       } else {
         denseMatches = denseResult.matches;
+        corpusAvailable = denseResult.hasData;
+        evidence = denseResult.evidence;
         hasDenseData = denseResult.hasData && denseResult.matches.length > 0;
         denseTier = denseMatches.length > 0 ? 'embedding' : undefined;
       }
+    } else {
+      const lexical = await queryDenseLexical({ queryText: symptomText, topK: denseTopK });
+      denseMatches = lexical.matches;
+      corpusAvailable = lexical.hasData;
+      evidence = lexical.evidence;
+      hasDenseData = lexical.hasData && denseMatches.length > 0;
+      denseTier = hasDenseData ? 'lexical' : undefined;
     }
   } catch (err) {
-    // Embedding call failed — degrade gracefully to graph-only
+    evidence = { status: 'unavailable', message: 'Document search could not complete. Try again before relying on a source passage.' };
+    // A provider failure must not be reported as a successful answer lookup.
     console.warn('[HybridRetrieval] Dense retrieval failed, using graph only:', err);
   }
 
   return {
-    graphChains: graphResult.chains,
+    graphChains: evidence?.status === 'insufficient-evidence' ? [] : graphResult.chains,
     denseMatches,
     hasDenseData,
+    corpusAvailable,
+    evidence,
     denseTier,
-    nodeMatchTrace: graphResult.nodeMatchTrace,
+    nodeMatchTrace: evidence?.status === 'insufficient-evidence' ? [] : graphResult.nodeMatchTrace,
     queryText: symptomText,
     timestamp: Date.now(),
   };
@@ -136,7 +163,11 @@ export async function retrieveHybrid(query: HybridQuery): Promise<HybridResult> 
  * service when evaluating In-Operation free-text queries.
  */
 export function formatHybridContext(result: HybridResult): string {
+  if (result.evidence?.status === 'insufficient-evidence') {
+    return `NO SUPPORTING PASSAGE FOUND. ${result.evidence.message} Do not infer an answer from related topics or invent a value.`;
+  }
   const parts: string[] = [];
+  if (result.evidence) parts.push('Use only cited passages that directly answer the exact question. If a requested value or claim is absent, state that the retrieved evidence is insufficient. Similarity is not proof.');
 
   if (result.graphChains.length > 0) {
     parts.push('=== Knowledge Graph Results ===');
@@ -153,7 +184,7 @@ export function formatHybridContext(result: HybridResult): string {
 
   if (result.denseMatches.length > 0) {
     parts.push('=== SOP / Literature Context ===');
-    for (const m of result.denseMatches.slice(0, 3)) {
+    for (const m of result.denseMatches.slice(0, 5)) {
       parts.push(`[${m.chunk.source} — ${m.chunk.section}]\n${m.chunk.text}`);
     }
   }
