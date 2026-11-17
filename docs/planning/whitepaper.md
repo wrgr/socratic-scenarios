@@ -1,14 +1,25 @@
 # TeachMe AJP — Retrieval-Augmented Operational Training for the Optomec HD2 Aerosol Jet Printer
 
+Revised 17 November 2026
+
+Build the website PDF from [whitepaper.tex](whitepaper.tex) with `./scripts/build-whitepaper.sh`.
+
 ## 1. Abstract
-TeachMe AJP is an operational training system for technicians working with the Optomec HD2 Aerosol Jet Printer. The system applies retrieval-augmented generation principles to specialist equipment training: a typed knowledge graph replaces a flat document corpus, a two-agent architecture (Mentor + Narrator) replaces a single generative surface, and procedural and diagnostic competency replace generic Q&A as the primary outcome. The Narrator agent reads corpus nodes verbatim to report machine behavior, eliminating hallucination risk in a context where incorrect safety information has real consequences. Four instructional modes — Socratic Practice, Scenario Mode, Reachback Lookup, and Retrieval Lab — map naturally to technician training progression from onboarding through independent operation. Supporting surfaces — a global Mission/Pedagogy/AI Rationale drawer (reachable from every screen, not a training tab), an Architecture tab, and a RAG Coverage tab — expose the educational rationale, system flow, and evidence coverage without changing the instructional sequence. An interactive Workflow Demo with a Simulated Learner agent rounds out the system: it makes the full Mentor evaluation loop observable and inspectable without requiring a real learner in the seat. The central claim is that instructional utility, not topical overlap, should be the retrieval objective; and that safety-critical domains require retrieval systems whose outputs are traceable, auditable, and corpus-bounded by design. The system operationalizes this claim through what we call the TeachMe Loop: Signals → Retrieval → Mentor Loop → Safety Gate → Transfer.
+TeachMe is a research prototype for scenario-based training in safety-critical domains. This system-design reference focuses on the original Optomec HD2 Aerosol Jet Printing (AJP) case. A typed knowledge graph represents procedures, symptoms, failure modes, corrective actions, and hazards. A corpus-bounded Narrator reports simulated machine behavior from authored evidence, while a Mentor probes and evaluates learner reasoning. The AJP case also supports document lookup, retrieval inspection, and a workflow demo with a simulated learner. The platform now includes roadside tire change and maritime collision avoidance. This revision describes the shared training surfaces, the current AJP passage-ranking policy, and system-level checks. The evidence concerns retrieval and simulation behavior. Learning gains, delayed transfer, and readiness for independent operation remain questions for human evaluation.
 
 ## 2. Introduction
-Specialist equipment training presents a problem that general-purpose language models handle poorly: the knowledge required is narrow, procedurally structured, safety-critical, and embedded in tacit expertise that is rarely fully documented. A technician learning to operate the Optomec HD2 needs more than accurate answers — they need answers delivered at the right complexity level, sequenced to build procedural fluency before independent operation, and guaranteed never to hallucinate safety-relevant information.
+Specialist equipment training presents a problem that general-purpose language models handle poorly: the knowledge required is narrow, procedurally structured, safety-critical, and embedded in tacit expertise that is rarely fully documented. A technician learning to operate the Optomec HD2 needs more than accurate answers — they need answers delivered at the right complexity level, sequenced to build procedural fluency before independent operation, and grounded in source material that an instructor can inspect.
 
 Retrieval-augmented systems improve factual grounding and reduce hallucinated responses by selecting verified context before generation. However, most retrieval systems are optimized for semantic relevance, not instructional sequencing. In a learning setting, a semantically accurate answer can still be instructionally wrong if it is delivered at the wrong complexity level or disconnected from the learner's current procedural state.
 
-TeachMe AJP targets this gap. The system makes a direct claim: retrieval should optimize for instructional utility, and in safety-critical contexts, retrieval must be corpus-bounded so that every response is traceable to a verified source. This paper presents the conceptual grounding, architecture, and instructional design of that claim in practice.
+TeachMe AJP targets this gap. The design uses instructional utility as a retrieval objective. The Narrator draws on authored graph content. The Mentor can generate feedback, whose interpretation still depends on corpus quality, context selection, and model behavior. This paper presents the conceptual grounding, architecture, and instructional design of that claim in practice.
+
+### Current Platform and Research Scope
+
+TeachMe now hosts AJP, Roadside Tire Change, and COLREG Collision Avoidance. They share the dashboard, Socratic practice, and scenario infrastructure. Each domain defines its corpus, practice probes, scenarios, and safety or compliance rules. Reachback Lookup, Retrieval Lab, and the Workflow Demo remain AJP-specific. COLREG adds an interactive simulator that scores course and speed decisions using modeled collision risk and rule compliance.
+
+The COLREG research draft documents the transfer measurement design, reference-policy comparisons, and use of simulated learners to diagnose missing corpus knowledge. Its results characterize performance inside the simulator. A human study would need to measure performance on held-out tasks after instruction, with an appropriate comparison and a separate delayed assessment if retention is of interest.
+See the [COLREG research draft](colreg-whitepaper.md).
 
 ### 2.1 Target Learner and Problem Bounds
 
@@ -18,7 +29,7 @@ TeachMe AJP is designed for a specific learner in a specific situation. Defining
 - **Role**: Engineering technician (not a research scientist or equipment engineer)
 - **Equipment background**: Has completed general lab safety and instrumentation training; comfortable reading displays, following SOPs, and handling lab equipment, but has no prior hands-on experience with aerosol jet printing
 - **AJP exposure**: Newly assigned to AJP operations; may have attended an orientation session or read the operator manual, but has not yet executed machine procedures independently
-- **Goal**: Reach certified independent operation — able to run startup, execute print jobs, recognize fault signatures, and apply corrective actions without escalation
+- **Goal**: Prepare for supervised assessment toward independent operation — able to run startup, execute print jobs, recognize fault signatures, and apply corrective actions without escalation
 
 **What the system is not designed for:**
 - Learners outside the five-level progression (see below) who need capabilities the system does not explicitly target
@@ -305,7 +316,7 @@ Fault injection is deterministic and tied to the knowledge graph: when the Mento
 
 Reachback Lookup is designed for field reachback during live operations — a technician who encounters an unexpected machine state can query the system with a symptom description and receive a structured response: probable fault → causal chain → corrective actions → safety requirements. Retrieval fuses graph traversal with dense vector search against SOP text to maximize coverage. In high-stress ops mode it remains available while instructional surfaces are locked.
 
-Safety-first retrieval means SafetyHazard nodes are always co-retrieved and displayed before corrective action recommendations, regardless of whether the learner explicitly asked about safety.
+Fault chains surface the hazard links encoded in the graph. Applicable hazards and procedures still require expert review against the current operating documentation.
 
 ### 5.5 Retrieval Lab
 
@@ -321,10 +332,17 @@ The system tracks standard IR quality metrics against hand-labeled relevance set
 - nDCG
 - Retrieval diversity (avoidance of redundant node returns)
 
-Safety coverage is tracked separately: for any fault-related query, the fraction of responses that include at least one SafetyHazard node must be 1.0. This is a hard constraint, not an optimization target.
+For fault-related queries, evaluate whether the returned chain includes the applicable hazards. A coverage check requires expert judgment about which hazards apply.
+
+### November Passage Retrieval Check
+
+AJP document lookup ranks passages with BM25 and, when query and corpus embeddings are comparable, combines keyword and cosine ranks using weighted reciprocal rank fusion. It uses keyword ranking alone in keyless mode. The November check used 575 chunks from the repaired corpus. The incomplete HD2 glossary was excluded. Checks on part identifiers, identifiable named sources, topic terms, and selected units can withhold unsupported results. In Reachback, an insufficient-evidence result also suppresses graph chains and the Mentor panel for that lookup. These heuristics can reject valid paraphrases or admit passages that mention the right terms without answering the question.
+
+On 4 November 2026, an expected source passage appeared in the first five results for 18 of 18 supported questions with both keyword and fused retrieval. Both paths returned zero passages for four unsupported controls. The questions informed development, so the run is a regression check on annotated passages. It provides no estimate of held-out retrieval accuracy, generated-answer correctness, or learning gains.
+See the [ranking policy and run record](../retrieval-ranking.md) for the fixture and reproduction steps.
 
 ### 6.2 Operational Capability Metrics
-For production deployment evaluation, the system tracks:
+A production evaluation would need to measure:
 - **Problem resolution rate**: resolved technician queries within target window / total queries
 - **First-pass resolution rate**: cases resolved without escalation or reopen / total cases
 - **Time to detect, contain, and recover** (MTTD / MTTC / MTTR at p50/p90)
@@ -385,7 +403,7 @@ The AJP system is designed to deploy alongside physical hardware, not only in si
 The four-mode structure maps to training roles: Socratic for onboarding, Scenario for supervised practice, Reachback Lookup for independent operations, Lab for continuous improvement and quality review. Source dispositions for every corpus input are recorded in `sources/SOURCES_LOG.md`; the data-store map lives in `docs/DATA_CATALOG.md`.
 
 ### 8.2 Human-Subjects Validation Plan
-Current evaluation is system-level (retrieval quality, node coverage, gate accuracy). The next validation step is a controlled study with real HD2 technicians comparing training outcomes with and without the system. Key outcomes: fault diagnosis accuracy, time-to-correct-diagnosis, retention at 30 days, and perceived cognitive load.
+Current evidence comes from system checks and simulations. The predictive validity of the mastery gates remains to be measured. The next validation step is a controlled study with real HD2 technicians comparing training outcomes with and without the system. Key outcomes: fault diagnosis accuracy, time-to-correct-diagnosis, retention at 30 days, and perceived cognitive load.
 
 ### 8.3 Broader Domain Portability
 The architecture is domain-agnostic if three ingredients are present:
@@ -404,7 +422,7 @@ Future research directions include:
 - multi-technician collaborative training scenarios
 
 ## 9. Conclusion
-TeachMe AJP demonstrates that retrieval can function as pedagogy, not only search — and that in safety-critical domains, the retrieval system's trustworthiness is as important as its relevance. A knowledge graph replaces a flat chunk corpus to make causal structure retrievable. A corpus-only Narrator replaces a generative response surface to make safety-relevant outputs verifiable. Mastery gates replace passive content delivery to make progression controlled and inspectable. Together, these design choices operationalize a single principle: instructional utility and safety traceability, not topical overlap alone, should be the retrieval objective.
+TeachMe AJP illustrates how retrieval can support instructional sequencing, not only search — and that in safety-critical domains, the retrieval system's trustworthiness is as important as its relevance. A knowledge graph replaces a flat chunk corpus to make causal structure retrievable. A corpus-only Narrator replaces a generative response surface to make safety-relevant outputs verifiable. Mastery gates replace passive content delivery to make progression controlled and inspectable. Together, these design choices operationalize a single principle: instructional utility and safety traceability, not topical overlap alone, should be the retrieval objective.
 
 ## 10. References
 See the annotated bibliography in [references.md](./references.md).
